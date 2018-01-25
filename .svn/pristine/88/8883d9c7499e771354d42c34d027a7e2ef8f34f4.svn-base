@@ -1,0 +1,88 @@
+//
+//  RegisterViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+import SnapKit
+
+final class RegisterViewController: BaseLoginViewController {
+
+    fileprivate lazy var loginRegisterView: LoginRegisterView = {
+        let loginRegisterView = LoginRegisterView(title: "欢迎加入米橙", type: .big, { (view) in
+            view.addTextField { (textField) in
+                textField.placeholder = "手机号"
+                textField.setRightViewType(type: .phone)
+            }
+            view.addTextField { (textField) in
+                textField.placeholder = "验证码"
+                textField.setRightViewType(type: .code)
+                textField.loginGetCodeView?.codeButton.addTarget(self, action: #selector(getCode), for: .touchUpInside)
+            }
+        })
+
+        loginRegisterView.button.setTitle("注册", for: .normal)
+        loginRegisterView.button.addTarget(self, action: #selector(signIn), for: .touchUpInside)
+        return loginRegisterView
+    }()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Do any additional setup after loading the view.
+        view.addSubview(loginRegisterView)
+        loginRegisterView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+    }
+
+}
+
+extension RegisterViewController {
+
+    @objc fileprivate func getCode(button: MemberTimerButton) {
+        let phoneNumber = loginRegisterView.text
+
+        let (isValid, validateError) = LoginValidate.validatePhoneNumber(text: phoneNumber)
+        guard isValid else {
+//            MSGToast.show(validateError, inView: self.view)
+            return
+        }
+
+//        MSGToast.show("获取中", isloading: true, inView: view)
+//        LoginService.sendPhoneMessage(phoneNumber: phoneNumber, source: .register, successHandler: { (_) in
+//            MSGToast.cancel()
+//            button.scheduleTimer()
+//        }) { (interval, error) in
+//            MSGToast.show(error.errorMessage, inView: self.view)
+//            if let interval = interval {
+//                button.scheduleTimer(leftTime: interval)
+//            }
+//        }
+    }
+
+    @objc fileprivate func signIn() {
+        let phoneNumber = loginRegisterView.text
+        let code = loginRegisterView.text2
+
+        let (isValid, validateError) = LoginValidate.validatePhoneNumber(text: phoneNumber)
+        guard isValid else {
+//            MSGToast.show(validateError, inView: self.view)
+            return
+        }
+
+        view.endEditing(true)
+//        MSGToast.show("注册中", isloading: true, inView: view)
+//        LoginService.validateMessageCode(phoneNumber: phoneNumber, code: code, source: .register, successHandler: { (_) in
+//            MSGToast.cancel()
+//            let viewController = RegisterSettingPasswordViewController(type: .register(phoneNumber))
+//            self.navigationController?.pushViewController(viewController, animated: true)
+//        }) { (_, error) in
+//            MSGToast.show(error.errorMessage, inView: self.view)
+//        }
+    }
+
+}

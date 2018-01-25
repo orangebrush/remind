@@ -1,0 +1,144 @@
+//
+//  SoundVC.swift
+//  Remind
+//
+//  Created by gg on 04/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+
+///声音类型
+let soundList = ["男声", "女声", "Cricket", "Doodle Dang", "Doodle", "Guitar", "Religion", "Rhythm", "Ring Ring Ring"]
+
+class SoundVC: UIViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    var selectClosure: ((Int)->())?
+    
+    var sound: String?
+    fileprivate var selectedIndex = 1       //默认女声
+    
+    fileprivate var audioPlayer: AVAudioPlayer?
+    
+    //MARK:- init------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if let s = sound {
+            if s == "boy"{
+                selectedIndex = 0
+            }else if s == "girl"{
+                selectedIndex = 1
+            }else{
+                if let index = soundList.index(of: s){
+                    selectedIndex = index
+                }
+            }
+        }
+        
+        //默认选择
+        let initSelectedIndexPath = IndexPath(row: selectedIndex, section: 0)
+        tableView.selectRow(at: initSelectedIndexPath, animated: true, scrollPosition: .bottom)
+        
+        let cell = tableView.cellForRow(at: initSelectedIndexPath) as? SoundCell
+        cell?.showSelected = true
+    }
+    
+    private func config(){
+        tableView.backgroundColor = UIColor(colorHex: 0xeeeeee)
+    }
+    
+    private func createContents(){
+        navigationItem.rightBarButtonItem?.tintColor = .confirm
+    }
+    
+    @IBAction func save(_ sender: UIBarButtonItem){
+        selectClosure?(selectedIndex)
+        navigationController?.popViewController(animated: true)
+    }
+}
+
+//MARK:- tableview delegate
+extension SoundVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return soundList.count
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 60
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = indexPath.row
+        let data = soundList[row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! SoundCell
+        cell.nameLabel.text = data
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0{
+            isTopFlag = true
+        }
+        if row == soundList.count - 1{
+            isBottomFlag = true
+        }
+        
+        if row != 0{
+            cell.addTopSeparator()
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath) as? SoundCell
+        cell?.showSelected = false
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedIndex = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath) as? SoundCell
+        cell?.showSelected = true
+        
+        //播放个声音
+        var soundName = "newSounds.bundle/"
+        if selectedIndex == 0{  //男声
+            soundName += "12clock_boy"
+        }else if selectedIndex == 1{    //女声
+            soundName += "12clock_girl"
+        }else{
+            soundName += soundList[selectedIndex]
+        }
+        soundName += ".mp3"
+        
+//        AudioServicesDisposeSystemSoundID(soundid)
+        audioPlayer?.pause()
+        if let url = Bundle.main.url(forResource: soundName, withExtension: "") {
+//            var soundid: SystemSoundID = 0 //UInt32(selectedIndex)
+//            AudioServicesCreateSystemSoundID(url as CFURL, &soundid)
+//            AudioServicesPlayAlertSound(soundid)
+            do{
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.play()
+            }catch let error {
+                print("av audio error: \(error)")
+            }
+            
+        } else {
+            AudioServicesPlaySystemSound(1007)
+        }
+    }
+}

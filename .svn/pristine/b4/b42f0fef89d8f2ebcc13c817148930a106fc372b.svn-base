@@ -1,0 +1,92 @@
+//
+//  GANCollectionFlowLayout.swift
+//  Remind
+//
+//  Created by gg on 25/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANCollectionFlowLayout: UICollectionViewFlowLayout {
+    var itemCountPerRow = 7
+    //var rowCount = 6        //4~6
+    
+    var allAttributes = [[UICollectionViewLayoutAttributes]]()
+    
+
+    override func prepare() {
+        super.prepare()
+        
+        for section in 0..<3{
+            var list = [UICollectionViewLayoutAttributes]()
+            if let count = collectionView?.numberOfItems(inSection: section){
+                for i in 0..<count{
+                    let indexPath = IndexPath(row: i, section: section)
+                    if let attributes = layoutAttributesForItem(at: indexPath){
+                        list.append(attributes)
+                    }
+                }
+            }
+            allAttributes.append(list)
+        }
+    }
+    
+//    override var collectionViewContentSize: CGSize{
+//        get{
+//            return super.collectionViewContentSize
+//        }
+//    }
+
+    
+    override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+        let item = indexPath.item
+        var x = 0, y = 0
+        let numberOfItems = self.collectionView?.numberOfItems(inSection: indexPath.section)
+        
+        targetPosition(withItem: item, withNumberOfItems: numberOfItems!, resultX: &x, resultY: &y)
+        let item2 = originItem(withNumberOfItems: numberOfItems!, atX: x, atY: y)
+        
+        let theNewIndexPath = IndexPath.init(item: item2, section: indexPath.section)
+        
+        let theNewAttr = super.layoutAttributesForItem(at: theNewIndexPath)
+        theNewAttr?.indexPath = indexPath
+        return theNewAttr
+    }
+    
+    override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+        let attributes = super.layoutAttributesForElements(in: rect)
+        
+        var tmp = [UICollectionViewLayoutAttributes]()
+        
+        if let list = attributes{
+            for attr in list{
+                for allList in allAttributes{
+                    for attr2 in allList{
+                        if attr.indexPath.item == attr2.indexPath.item{
+                            tmp.append(attr2)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        return tmp
+    }
+    
+    func targetPosition(withItem item: Int, withNumberOfItems numberOfItems: Int, resultX x: inout Int, resultY y: inout Int){
+        let rowCount = numberOfItems / itemCountPerRow
+        
+        let page = item / (itemCountPerRow * rowCount)
+        let theX = item % itemCountPerRow + page * itemCountPerRow
+        let theY = item / itemCountPerRow - page * rowCount
+        
+        x = theX
+        y = theY
+    }
+    
+    func originItem(withNumberOfItems numberOfItems: Int, atX x: Int, atY y: Int) -> Int{
+        let rowCount = numberOfItems / itemCountPerRow
+        
+        return x * rowCount + y
+    }
+}

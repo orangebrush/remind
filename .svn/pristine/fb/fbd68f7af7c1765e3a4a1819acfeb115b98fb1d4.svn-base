@@ -1,0 +1,19 @@
+//
+//  TableViewCell+Extension.swift
+//  Remind
+//
+//  Created by gg on 18/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UITableViewCell{
+    ///手动添加分割线
+    func addTopSeparator(){
+        //分割线
+        let separatorFrame = CGRect(x: .edge16, y: 0, width: frame.width - .edge16, height: 1)
+        let separator = UIView(frame: separatorFrame)
+        separator.backgroundColor = UIColor.separator
+        addSubview(separator)
+    }
+}

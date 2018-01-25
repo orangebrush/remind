@@ -1,0 +1,309 @@
+//
+//  Authority.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/13.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+import CoreLocation
+protocol AuthorityDelegate:class {
+    func deleteButtonClick()
+    func openRemainClick(tag:Int)
+}
+class Authority: UIView {
+    weak var delegate : AuthorityDelegate?
+    fileprivate lazy var label1 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withSemiboldFontSize: 17)
+        label.textAlignment = .center
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var label2 : UILabel = {
+       let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        label.textAlignment = .center
+        return label
+    }()
+    fileprivate lazy var label3 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var label4 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 12)
+        label.textColor = UIColor.subSubWord
+        return label
+    }()
+    fileprivate lazy var label5 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var label6 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 12)
+        label.textColor = UIColor.subSubWord
+        return label
+    }()
+    fileprivate lazy var label7 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var label8 : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 12)
+        label.textColor = UIColor.subSubWord
+        return label
+    }()
+    
+    fileprivate lazy var button1 : UIButton = {
+        let button = UIButton.init()
+        button.setTitle("开启", for: .normal)
+        button.setTitleColor(UIColor.confirm, for: .normal)
+        button.titleLabel?.font = UIFont.init(withNormalFontSize: 14)
+        button.layer.cornerRadius = 4
+        button.tag = 1
+        button.addTarget(self, action: #selector(Authority.selectButtonClick(_:)), for: .touchUpInside)
+        button.layer.borderColor = UIColor(colorHex:0xe6e6e6).cgColor
+        button.layer.borderWidth = 1
+        return button
+    }()
+    fileprivate lazy var button2 : UIButton = {
+        let button = UIButton.init()
+        button.setTitle("开启", for: .normal)
+        button.setTitleColor(UIColor.confirm, for: .normal)
+        button.titleLabel?.font = UIFont.init(withNormalFontSize: 14)
+        button.layer.cornerRadius = 4
+        button.tag = 2
+        button.addTarget(self, action: #selector(Authority.selectButtonClick(_:)), for: .touchUpInside)
+        button.layer.borderColor = UIColor(colorHex:0xe6e6e6).cgColor
+        button.layer.borderWidth = 1
+        return button
+    }()
+    fileprivate lazy var cutLable: UILabel = {
+        let lable = UILabel.init()
+        lable.backgroundColor = UIColor.separator
+        return lable
+    }()
+    fileprivate lazy var cutLable1: UILabel = {
+        let lable = UILabel.init()
+        lable.backgroundColor = UIColor.separator
+        return lable
+    }()
+     lazy var button3 : UIButton = {
+        let button = UIButton.init()
+        button.setTitle("开启", for: .normal)
+        button.titleLabel?.font = UIFont.init(withNormalFontSize: 14)
+        button.setTitleColor(UIColor.confirm, for: .normal)
+        button.layer.cornerRadius = 4
+        button.layer.borderColor = UIColor(colorHex:0xe6e6e6).cgColor
+        button.tag = 3
+        button.addTarget(self, action: #selector(Authority.selectButtonClick(_:)), for: .touchUpInside)
+        button.layer.borderWidth = 1
+        return button
+    }()
+    
+     fileprivate lazy var backView : UIView = {
+       let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        view.layer.cornerRadius = CGFloat.cornerRadius
+        view.clipsToBounds = true
+        return view
+       }()
+    
+     fileprivate lazy var image1 : UIImageView = {
+       let img = UIImageView.init()
+        img.image = #imageLiteral(resourceName: "authorize_popup")
+        return img
+       }()
+    fileprivate lazy var closeButton : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setImage(#imageLiteral(resourceName: "close_x"), for: .normal)
+        btn.addTarget(self, action: #selector(Authority.deleteButtonClick), for: .touchUpInside)
+        return btn
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        
+        backView.bounds = CGRect.init(x: 0, y: 0, width: 300, height: 400)
+        backView.center = self.center
+        self.addSubview(backView)
+        
+        backView.addSubview(image1)
+        backView.addSubview(label1)
+        backView.addSubview(label2)
+        backView.addSubview(label3)
+        backView.addSubview(label4)
+        backView.addSubview(button1)
+        backView.addSubview(cutLable)
+        backView.addSubview(label5)
+        backView.addSubview(label6)
+        backView.addSubview(label7)
+        backView.addSubview(label8)
+        backView.addSubview(cutLable1)
+        backView.addSubview(button2)
+        backView.addSubview(button3)
+        backView.addSubview(closeButton)
+        
+        image1.snp.makeConstraints { (make) in
+            make.width.equalTo(66)
+            make.height.equalTo(70)
+            make.top.equalTo(35)
+            make.centerX.equalToSuperview()
+        }
+        label1.snp.makeConstraints { (make) in
+            make.top.equalTo(image1.snp.bottom).offset(13)
+            make.height.equalTo(23)
+            make.width.equalTo(260)
+            make.centerX.equalToSuperview()
+        }
+        label2.snp.makeConstraints { (make) in
+            make.top.equalTo(label1.snp.bottom)
+            make.centerX.equalToSuperview()
+            make.height.equalTo(20)
+        }
+        label3.snp.makeConstraints { (make) in
+            make.height.equalTo(18)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(label2.snp.bottom).offset(32.5)
+        }
+        label4.snp.makeConstraints { (make) in
+            make.height.equalTo(15)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(label3.snp.bottom)
+        }
+        button1.snp.makeConstraints { (make) in
+            make.height.equalTo(30)
+            make.width.equalTo(54)
+            make.right.equalTo(-20)
+            make.top.equalTo(label3.snp.top).offset(1.5)
+        }
+        cutLable.snp.makeConstraints { (make) in
+            make.height.equalTo(kLineHeight)
+            make.right.equalTo(-20)
+            make.left.equalTo(20)
+            make.top.equalTo(label4.snp.bottom).offset(13.5)
+        }
+        label5.snp.makeConstraints { (make) in
+            make.height.equalTo(18)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(cutLable.snp.bottom).offset(13.5)
+        }
+        label6.snp.makeConstraints { (make) in
+            make.height.equalTo(15)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(label5.snp.bottom)
+        }
+        button2.snp.makeConstraints { (make) in
+            make.height.equalTo(30)
+            make.width.equalTo(54)
+            make.right.equalTo(-20)
+            make.top.equalTo(label5.snp.top).offset(1.5)
+        }
+        cutLable1.snp.makeConstraints { (make) in
+            make.height.equalTo(kLineHeight)
+            make.right.equalTo(-20)
+            make.left.equalTo(20)
+            make.top.equalTo(label6.snp.bottom).offset(13.5)
+        }
+        label7.snp.makeConstraints { (make) in
+            make.height.equalTo(18)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(cutLable1.snp.bottom).offset(13.5)
+        }
+        label8.snp.makeConstraints { (make) in
+            make.height.equalTo(15)
+            make.left.equalTo(20)
+            make.width.equalTo(196)
+            make.top.equalTo(label7.snp.bottom)
+        }
+        button3.snp.makeConstraints { (make) in
+            make.height.equalTo(30)
+            make.width.equalTo(54)
+            make.right.equalTo(-20)
+            make.top.equalTo(label7.snp.top).offset(1.5)
+        }
+        closeButton.snp.makeConstraints { (make) in
+            make.width.height.equalTo(28)
+            make.top.equalTo(12)
+            make.right.equalTo(-12)
+        }
+        self.configview()
+    }
+    //MARK:- 删除按钮被点击
+    @objc func deleteButtonClick(){
+        self.removeFromSuperview()
+        delegate?.deleteButtonClick()
+    }
+    //MARK:- 选择按钮点击
+    @objc func selectButtonClick(_ button:UIButton){
+        delegate?.openRemainClick(tag: button.tag)
+    }
+    func buttonValueShouldChange(_ tag:Int){
+        if tag == 1{
+            DispatchQueue.main.async {
+                self.button1.isEnabled = false
+                self.button1.setTitle("已开启", for: .normal)
+                self.button1.setTitleColor(UIColor.subSubWord, for: .normal)
+            }
+            
+        }
+        if tag == 2{
+            DispatchQueue.main.async {
+                self.button2.isEnabled = false
+                self.button2.setTitle("已开启", for: .normal)
+                self.button2.setTitleColor(UIColor.subSubWord, for: .normal)
+            }
+        }
+        if tag == 3{
+            DispatchQueue.main.async {
+                self.button3.isEnabled = false
+                self.button3.setTitle("已开启", for: .normal)
+                self.button3.setTitleColor(UIColor.subSubWord, for: .normal)
+            }
+        }
+    }
+    //MARK:- 配置view
+    func configview(){
+            switch CLLocationManager.authorizationStatus(){
+            case .authorizedWhenInUse,.authorizedAlways:
+                self.buttonValueShouldChange(2)
+              break
+            default:
+                break
+            }
+        
+        if UIApplication.shared.currentUserNotificationSettings?.types.rawValue != 0{
+            self.buttonValueShouldChange(1)
+        }
+        if StepManager.share().isOpenHealthKit(){
+            self.buttonValueShouldChange(3)
+        }
+        label1.text = "获得更好的体验"
+        label2.text = "开启相关权限请在随后弹窗中点允许"
+        label3.text = "推送通知"
+        label4.text = "所有提醒都要用到通知，请务必允许"
+        label5.text = "位置"
+        label6.text = "天气预报需要使用定位功能"
+        label7.text = "健康"
+        label8.text = "运动计步需要访问健康数据"
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}

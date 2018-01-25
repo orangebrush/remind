@@ -1,0 +1,97 @@
+//
+//  SettingVC.swift
+//  Remind
+//
+//  Created by gg on 21/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class SettingVC: BasedViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    
+    fileprivate let list = ["每日天气", "节日节气", "生日", "重要事件"]//, "股票行情", "走路记步"]
+    
+    
+    //MARK:- init------------------------------------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item = BarButtonItem(textStr: "",imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+    }
+    
+    private func config(){
+        
+    }
+}
+
+
+extension SettingVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return list.count
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 44
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = indexPath.row
+        
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! SettingCell
+        cell.label.text = list[row]
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0{
+            isTopFlag = true
+        }else if row == list.count - 1{
+            isBottomFlag = true
+            cell.addTopSeparator()
+        }else{
+            cell.addTopSeparator()
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        return cell
+    }        
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let row = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath)
+        cell?.setSelected(false, animated: true)
+        
+        switch row {
+        case 0:         //每日天气
+            let vc = weathCardSettingViewController()
+            navigationController?.show(vc, sender: nil)
+        case 1:         //节日节气
+            let vc = CardSettingViewController()
+            vc.cardid = 2
+            self.navigationController?.show(vc, sender: nil)
+        case 2:         //生日
+            let vc = CardSettingElseViewController()
+            vc.cardid = 3
+            self.navigationController?.show(vc, sender: nil) //卡片（重要事件，生日）
+        case 3:         //重要事件
+            let vc = CardSettingElseViewController()
+            vc.cardid = 4
+            self.navigationController?.show(vc, sender: nil) //卡片（重要事件，生日）
+        case 4:         //股票行情
+            break
+        case 5:         //走路记步
+            break
+        default:
+            break
+        }
+    }
+}

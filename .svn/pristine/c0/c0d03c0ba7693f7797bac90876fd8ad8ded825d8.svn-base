@@ -1,0 +1,74 @@
+//
+//  DM+Feedback.swift
+//  RemindData
+//
+//  Created by gg on 08/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+
+//Feedback
+public struct Feedback{
+    public var content = ""                 //内容
+    public var contactWay = ""              //联系方式
+    public var appVersion = ""              //app版本
+}
+
+//Version(目测用不到)
+public struct Version{
+    public var versionNo = ""               //版本号
+    public var versionName = ""             //版本名
+    public var description = ""             //描述
+    public var packageSize = 0              //单位KB
+    public var dloadUrl = ""                //下载地址
+    public var isForceUpdate = false        //是否强制更新
+}
+
+
+extension DataHandler{
+    //MARK:- 保存反馈
+    public func addFeedback(withFeedback feedback: Feedback, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "content": feedback.content,
+            "contactWay": feedback.contactWay,
+            "appVersion": feedback.appVersion
+        ]
+        
+        Session.session(withAction: Actions.addFeedback, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 获取app最新版本（目测用不到）
+    public func getLastVersion(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ version: Version)->()){
+        Session.session(withAction: Actions.getLastVersion, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, Version())
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else{
+                    return
+                }
+                
+                var version = Version()
+                version.versionNo = dataDic["versionNo"] as? String ?? ""
+                version.versionName = dataDic["versionName"] as? String ?? ""
+                version.description = dataDic["description"] as? String ?? ""
+                if let packageSize = dataDic["packageSize"] as? Int{
+                    version.packageSize = packageSize
+                }
+                version.dloadUrl = dataDic["dloadUrl"] as? String ?? ""
+                if let isForceUpdateInt = dataDic["isForceUpdate"] as? Int{
+                    version.isForceUpdate = isForceUpdateInt == 1
+                }
+                closure(.success, message, version)
+            }
+        }
+    }
+}

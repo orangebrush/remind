@@ -1,0 +1,170 @@
+//
+//  SoundVC.swift
+//  Remind
+//
+//  Created by gg on 04/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+
+///声音类型
+let soundList = ["男声", "女声", "Cricket", "Doodle Dang", "Doodle", "Guitar", "Religion", "Rhythm", "Ring Ring Ring"]
+
+class SoundVC: UIViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    var selectClosure: ((Int)->())?
+    
+    ///传入的默认声音
+    var sound: String?
+    fileprivate var selectedIndex = 1       //默认女声
+    
+    fileprivate var audioPlayer: AVAudioPlayer?
+    
+    ///如果为公共事件 无男声女声
+    var isPublicEvent = false
+    
+    ///传入的类型
+    var type = 0
+    
+    
+    ///传入的是否为每日提醒
+    var isClient = false
+    
+    
+    //MARK:- init------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if let s = sound {
+            if s == "boy"{
+                selectedIndex = 0
+            }else if s == "girl"{
+                selectedIndex = 1
+            }else{
+                if let index = soundList.index(of: s){
+                    selectedIndex = index
+                }
+            }
+        }
+        
+        //默认选择
+        let initSelectedIndexPath = IndexPath(row: selectedIndex, section: 0)
+        tableView.selectRow(at: initSelectedIndexPath, animated: true, scrollPosition: .bottom)
+        
+        let cell = tableView.cellForRow(at: initSelectedIndexPath) as? SoundCell
+        cell?.showSelected = true
+        
+        
+        let item1 = BarButtonItem(textStr: "返回", imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(textStr: "确定", tSelector: #selector(save(_:)))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    
+    private func config(){
+        tableView.backgroundColor = UIColor(colorHex: 0xeeeeee)
+    }
+    
+    private func createContents(){
+        navigationItem.rightBarButtonItem?.tintColor = .confirm
+    }
+    
+    @objc func save(_ sender: UIBarButtonItem){
+        selectClosure?(selectedIndex)
+        navigationController?.popViewController(animated: true)
+    }
+}
+
+//MARK:- tableview delegate
+extension SoundVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        let offset = isPublicEvent ? 2 : 0
+        return soundList.count - offset
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = indexPath.row
+        let offset = isPublicEvent ? 2 : 0
+        let data = soundList[row + offset]
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! SoundCell
+        cell.nameLabel.text = data
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0{
+            isTopFlag = true
+        }
+        if row == soundList.count - 1{
+            isBottomFlag = true
+        }
+        
+        if row != 0{
+            cell.addTopSeparator()
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath) as? SoundCell
+        cell?.showSelected = false
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedIndex = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath) as? SoundCell
+        cell?.showSelected = true
+        
+        //播放个声音
+        var soundName = "newSounds.bundle/"
+        if isPublicEvent{       //公共事件无男声女声
+            soundName += soundList[selectedIndex + 2]
+        }else{
+            if selectedIndex == 0 || selectedIndex == 1{  //男声女声
+                var perfix = ""
+                if isClient && type == 1{
+                    perfix = "12clock"
+                }else{
+                    perfix = isClient ? "b_\(type)" : "a_\(type)"
+                }
+                let sex = selectedIndex == 0 ? "boy" : "girl"
+                soundName += perfix + "_" + sex
+            }else{
+                soundName += soundList[selectedIndex]
+            }
+        }
+        
+        soundName += ".mp3"
+        print(soundName)
+        
+        audioPlayer?.pause()
+        if let url = Bundle.main.url(forResource: soundName, withExtension: "") {
+            do{
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.play()
+            }catch let error {
+                print("av audio error: \(error)")
+            }
+            
+        } else {
+            AudioServicesPlaySystemSound(1007)
+        }
+    }
+}

@@ -1,0 +1,16 @@
+//
+//  extension+UItableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/7.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+ extension UITableViewCell{
+    func removeAllSubview(){
+        if (self.contentView.subviews.last != nil){
+            self.contentView.subviews.last?.removeFromSuperview()
+        }
+    }
+ }

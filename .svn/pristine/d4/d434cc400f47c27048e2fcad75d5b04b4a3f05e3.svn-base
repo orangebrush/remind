@@ -1,0 +1,17 @@
+//
+//  EventEnumTypeHeader.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventEnumTypeHeader: UICollectionReusableView {
+    @IBOutlet weak var titleLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        titleLabel.font = UIFont.content
+        titleLabel.textColor = .subWord
+    }
+}

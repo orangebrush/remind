@@ -1,0 +1,117 @@
+//
+//  MineHeaderView.swift
+//  Remind
+//
+//  Created by dong on 2018/1/11.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class MineHeaderView: UIView {
+    
+    var contentView: UIView = UIView()
+    
+    var textLabel = UILabel()
+    
+    var whiteView = UIView()
+    
+    var imageView: UIImageView = UIImageView()
+    
+    var nameLabel: UILabel = UILabel()
+    
+    var infoLabel: UILabel = UILabel()
+    
+    var rightImageView : UIImageView = UIImageView()
+    
+    var clickBlock :(() -> ())?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        addSubview(contentView)
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        contentView.layer.cornerRadius = 6
+        contentView.clipsToBounds = true
+        contentView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.right.equalToSuperview().offset(-10)
+            make.top.equalTo(12)
+            make.bottom.equalToSuperview()
+        }
+        
+        textLabel.textColor = UIColor.subWord
+        textLabel.font = UIFont.content
+        contentView.addSubview(textLabel)
+        textLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.top.right.equalToSuperview()
+            make.height.equalTo(36)
+        }
+        
+        contentView.addSubview(whiteView)
+        whiteView.backgroundColor = .white
+        whiteView.layer.cornerRadius = 6
+        whiteView.clipsToBounds = true
+        whiteView.snp.makeConstraints { (make) in
+            make.left.right.bottom.equalToSuperview()
+            make.top.equalTo(textLabel.snp.bottom)
+        }
+        
+        
+        whiteView.addSubview(imageView)
+        imageView.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.width.height.equalTo(44)
+            make.bottom.equalToSuperview().offset(-18)
+        }
+        
+        whiteView.addSubview(nameLabel)
+        nameLabel.textColor = UIColor.word
+        nameLabel.font = UIFont.navTitle
+        nameLabel.textAlignment = .left
+        nameLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(imageView.snp.right).offset(15)
+            make.top.equalTo(19)
+            make.height.equalTo(23)
+            make.right.equalToSuperview()
+        }
+        
+        
+        whiteView.addSubview(infoLabel)
+        infoLabel.textColor = UIColor.subSubWord
+        infoLabel.font = UIFont.content
+        infoLabel.textAlignment = .left
+        infoLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(imageView.snp.right).offset(15)
+            make.top.equalTo(nameLabel.snp.bottom)
+            make.height.equalTo(20)
+            make.right.equalToSuperview()
+        }
+        
+        
+        whiteView.addSubview(rightImageView)
+        rightImageView.image = UIImage.init(named: "list_arrow_right")
+        rightImageView.snp.makeConstraints { (make) in
+            make.right.equalToSuperview().offset(-cellSpace)
+            make.width.height.equalTo(16)
+            make.centerY.equalToSuperview()
+        }
+        
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(clickUser))
+        whiteView.addGestureRecognizer(tap)
+       
+        
+        
+    }
+    
+    @objc func clickUser() {
+        clickBlock?()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+}

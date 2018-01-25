@@ -1,0 +1,25 @@
+//
+//  CollectionCell+Extension.swift
+//  Remind
+//
+//  Created by gg on 15/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UICollectionViewCell{
+    ///MARK:- cell绘制圆角并修改缩小宽度
+    func customCollectionDraw(withRectCorner rectCorner: UIRectCorner, byForceDraw forceDraw: Bool = false){
+        
+        let size  = CGSize(width: CGFloat.cornerRadius, height: .cornerRadius)
+        let corner : UIRectCorner = [rectCorner]
+        
+        let maskFrame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
+        let path = UIBezierPath(roundedRect: maskFrame, byRoundingCorners: corner, cornerRadii: size)
+        let maskLayer = CAShapeLayer()
+        maskLayer.frame = frame
+        maskLayer.path = path.cgPath
+        layer.mask = maskLayer
+        
+    }
+}

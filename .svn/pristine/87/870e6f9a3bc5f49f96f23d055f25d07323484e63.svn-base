@@ -1,0 +1,207 @@
+//
+//  PlayCountPickView.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/19.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol closeBtnClick:class  {
+    func closeBtnClick(_ selfview:PlayCountPickView)
+    func cellClick(_ indexPath:IndexPath,_ selfview:PlayCountPickView)
+}
+class PlayCountPickView: UIView ,UIPickerViewDelegate,UIPickerViewDataSource{
+    
+    
+   
+    var nameArr = [String]()
+    var selectIndex = 0
+    weak var delegate : closeBtnClick?
+    fileprivate lazy var pickView : UIPickerView = {
+       let pick = UIPickerView.init()
+       pick.delegate = self
+       pick.dataSource = self
+       pick.backgroundColor = UIColor(colorHex:0xf4f4f4)
+       return pick
+    }()
+    fileprivate lazy var backView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor(colorHex:0xf4f4f4)
+        view.layer.cornerRadius = 6
+        view.clipsToBounds = true
+        return view
+    }()
+    fileprivate lazy var danweiLabel : UILabel = {
+        let label1 = UILabel.init()
+        label1.textAlignment = .left
+        label1.font = UIFont.init(withNormalFontSize: 9)
+        label1.text = "  个"
+        label1.textColor = UIColor.word
+        return label1
+    }()
+    fileprivate lazy var topLable : UILabel = {
+        let label = UILabel.init()
+        label.text = "首页显示个数"
+        label.textAlignment = .center
+        label.font = UIFont.init(withNormalFontSize: 17)
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var cancelButton : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setTitle("取消", for: .normal)
+        btn.titleLabel?.font = UIFont.init(withNormalFontSize: 15)
+        btn.setTitleColor(UIColor.subWord, for: .normal)
+        btn.addTarget(self, action: #selector(PlayCountPickView.cancelBtnClick), for: .touchUpInside)
+        return btn
+    }()
+    fileprivate lazy var confrimButton : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setTitle("确定", for: .normal)
+        btn.titleLabel?.font = UIFont.init(withNormalFontSize: 15)
+        btn.setTitleColor(UIColor.confirm, for: .normal)
+        btn.addTarget(self, action: #selector(PlayCountPickView.confrimBtnClick), for: .touchUpInside)
+        return btn
+    }()
+    fileprivate lazy var cutLable1 : UILabel = {
+       let label = UILabel.init()
+       label.backgroundColor = UIColor(colorHex:0xe6e6e6)
+       return label
+    }()
+    fileprivate lazy var cutLable2 : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor(colorHex:0xe6e6e6)
+        return label
+    }()
+    fileprivate lazy var cutLable3 : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor(colorHex:0xe6e6e6)
+        return label
+    }()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        self.addSubview(backView)
+        backView.addSubview(topLable)
+        backView.addSubview(pickView)
+        backView.addSubview(danweiLabel)
+        backView.addSubview(cancelButton)
+        backView.addSubview(confrimButton)
+        backView.addSubview(cutLable1)
+        backView.addSubview(cutLable2)
+        backView.addSubview(cutLable3)
+        backView.snp.makeConstraints { (make) in
+            make.bottom.right.equalTo(-10)
+            make.left.equalTo(10)
+            make.height.equalTo(304)
+        }
+        pickView.snp.makeConstraints { (make) in
+           make.top.equalTo(56)
+           make.left.equalTo(0)
+           make.right.equalTo(0)
+           make.height.equalTo(304-56-48)
+        }
+        topLable.snp.makeConstraints { (make) in
+            make.left.right.top.equalTo(0)
+            make.height.equalTo(56)
+        }
+        cutLable1.snp.makeConstraints { (make) in
+            make.left.right.equalTo(0)
+            make.top.equalTo(55)
+            make.height.equalTo(1)
+        }
+        cutLable2.snp.makeConstraints { (make) in
+            make.left.right.equalTo(0)
+            make.bottom.equalTo(-48)
+            make.height.equalTo(1)
+        }
+        cutLable3.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.bottom.equalTo(-12)
+            make.height.equalTo(24)
+            make.width.equalTo(1)
+        }
+        danweiLabel.snp.makeConstraints { (make) in
+            make.width.left.equalTo((keyDeviceWidth-20)/2)
+            make.top.equalTo(56 + (304-56-48-54)/2 + 4)
+            make.height.equalTo(54-4)
+        }
+        cancelButton.snp.makeConstraints { (make) in
+            make.left.bottom.equalTo(0)
+            make.height.equalTo(48)
+            make.width.equalTo((keyDeviceWidth-20)/2)
+        }
+        confrimButton.snp.makeConstraints { (make) in
+            make.left.equalTo(cancelButton.snp.right)
+            make.bottom.equalTo(0)
+            make.height.equalTo(48)
+            make.width.equalTo((keyDeviceWidth-20)/2)
+        }
+        
+    }
+    func congfigView(_ nameArr : [String],_ selectInsex:Int){
+        self.nameArr = nameArr
+        self.selectIndex = selectInsex
+        self.pickView.selectRow(selectInsex, inComponent: 0, animated: false)
+     }
+    
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return nameArr.count
+    }
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return 50
+    }
+//    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+//        return nameArr[row]
+//    }
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        for view1 in pickerView.subviews{
+          if view1.frame.size.height <= 1{
+                view1.backgroundColor = UIColor(colorHex:0xe6e6e6)
+                view1.frame.size.height = 1
+            }
+        }
+        let smallView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 54))
+        smallView.backgroundColor = UIColor.white
+        
+        let label = UILabel.init()
+        label.frame = CGRect.init(x: 0, y: 0, width: (keyDeviceWidth-20)/2, height: 54)
+        label.textAlignment = .right
+        label.font = UIFont.init(withNormalFontSize: 17)
+        label.textColor = UIColor.word
+        label.text = nameArr[row]
+        smallView.addSubview(label)
+        return smallView
+    }
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        self.selectIndex = row
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+    }
+    
+    @objc func cancelBtnClick(){
+        delegate?.closeBtnClick(self)
+    }
+    @objc func confrimBtnClick(){
+        delegate?.cellClick(IndexPath.init(row: self.selectIndex, section: 0), self)
+    }
+   
+    
+    
+     
+    
+    
+    
+}

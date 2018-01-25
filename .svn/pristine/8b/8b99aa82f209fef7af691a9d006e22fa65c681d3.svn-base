@@ -1,0 +1,109 @@
+//
+//  CardSettingVC.swift
+//  Remind
+//
+//  Created by gg on 19/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class CardSettingVC: BasedViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    //MARK:- init------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        
+        tableView.reloadRows(at: [IndexPath(row: 0, section: 0)], with: .automatic)
+    }
+}
+
+
+extension CardSettingVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return section == 0 ? 2 : 3
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0 && row == 1 {
+            return 60
+        }
+        return 44
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell: UITableViewCell
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        
+        if section == 0{
+            cell = tableView.dequeueReusableCell(withIdentifier: row == 0 ? "cell0" : "cell1")!
+            
+            if row == 0{
+                let cell0 = cell as! CardSettingCell0
+                
+                //获取并显示APP通知状态
+                if let setting = UIApplication.shared.currentUserNotificationSettings{
+                    let text = setting.types.rawValue == 0 ? "已关闭" : "已打开"
+                    cell0.valueLabel.text = text
+                }
+                
+                isTopFlag = true
+            }else {
+                cell.addTopSeparator()
+                isBottomFlag = true
+            }
+        }else{
+            cell = tableView.dequeueReusableCell(withIdentifier: "cell2")!
+            let text: String
+            if row == 0{
+                text = "清理缓存"
+                isTopFlag = true
+            }else if row == 1{
+                text = "给我们打分"
+                cell.addTopSeparator()
+            }else{
+                text = "关于我们"
+                isBottomFlag = true
+                cell.addTopSeparator()
+            }
+            
+            let cell2 = cell as! CardSettingCell2
+            cell2.keyLabel.text = text
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        return cell
+    }    
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        guard section == 1 else {
+            return
+        }
+        
+        let row = indexPath.row
+        if row == 0{                //清理缓存
+            
+        }else if row == 1{          //给我们打分
+            
+        }else{                      //关于我们
+            
+        }
+    }
+}

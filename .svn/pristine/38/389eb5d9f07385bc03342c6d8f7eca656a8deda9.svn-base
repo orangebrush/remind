@@ -1,0 +1,199 @@
+//
+//  DM+Step.swift
+//  RemindData
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+public struct StepsDetailModel{
+    public init(){
+        
+    }
+    public var highestStep = StepModel()
+    public var todayStep = StepModel()
+    public var log = [StepModel]()
+}
+
+extension DataManager{
+    ///用户步数上传？
+    public func addStep(withSteps steps: Int, withDistanceM distanceM: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "steps": "\(steps)",
+            "distance": "\(distanceM)"
+        ]
+        
+        Session.session(withAction: Actions.addStep, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    ///批量步数上传
+    public func addSteps(withStepModelList stepModelList: [StepModel], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var jsonDicList = [[String: String]]()
+        for stepModel in stepModelList{
+            let jsonDic = [
+                "step": "\(stepModel.step)",
+                "distance": "\(stepModel.distanceM)",
+                "createTime": "\(Int(stepModel.date.timeIntervalSince1970 * 1000))"
+            ]
+            jsonDicList.append(jsonDic)
+        }        
+        let dic = ["data": jsonDicList]
+        Session.session(withAction: Actions.addSteps, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 保存目标步数
+    public func addTargetStep(withTargetSteps targetSteps: Int, withTargetDistanceM targetDistanceM: Int, withTargetCaloria targetCaloria: Int? = nil, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var dic = [
+            "targetStep": "\(targetSteps)",
+            "targetDistance": "\(targetDistanceM)"
+        ]
+        if let caloria = targetCaloria{
+            dic["targetCal"] = "\(caloria)"
+        }
+        
+        Session.session(withAction: Actions.addTargetStep, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 获取步数
+    public func getTargetStep(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ targetStep: Int, _ targetDistanceM: Int, _ targetCaloria: Int?)->()){
+        Session.session(withAction: Actions.getTargetStep, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, 0, 0, nil)
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else{
+                    closure(.failure, "error json data", 0, 0, nil)
+                    return
+                }
+                
+                //, let targetDistance = dataDic["targetDistance"] as? Int
+                guard let targetStep = dataDic["targetStep"] as? Int else{
+                    return
+                }
+                
+                var targetCaloria: Int? = nil
+                if let targetCal = dataDic["targetCal"] as? Double{
+                    targetCaloria = Int(targetCal)
+                }
+                
+                closure(.success, message, targetStep, 0, targetCaloria)
+            }
+        }
+    }
+    
+    ///获取历史步数(按日期分页)
+    public func getStepLogList(withPage page: Int, withPageSize pageSize: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ stepModelList: [StepModel])->()){
+        let dic = [
+            "page": "\(page)",
+            "pageSize": "\(pageSize)"
+        ]
+        
+        Session.session(withAction: Actions.getStepLog, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let dicListData = data as? [[String: Any]] else{
+                    closure(.failure, "data json error", [])
+                    return
+                }
+                
+                var list = [StepModel]()
+                for dicData in dicListData{
+                    var stepModel = StepModel()
+                    stepModel.step = dicData["step"] as? Int ?? 0
+                    stepModel.distanceM = dicData["distance"] as? Int ?? 0
+                    if let createTime = dicData["createTime"] as? TimeInterval{
+                        stepModel.date = Date(timeIntervalSince1970: createTime / 1000)
+                    }
+                    list.append(stepModel)
+                }
+                closure(.success, message, list)
+                
+            }
+        }
+    }
+    
+    ///获取步数列表详情
+    public func getStepsDetailLogList(withBeginDate beginDate: Date, withEndDate endDate: Date, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ stepDetailModel: StepsDetailModel)->()){
+        let dic = [
+            "startDate": beginDate.formatString(with: "yyyy-MM-dd"),
+            "endDate": endDate.formatString(with: "yyyy-MM-dd")
+        ]
+        
+        Session.session(withAction: Actions.getStepsDetailList, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                
+                var stepsDetailModel = StepsDetailModel()
+                
+                guard codeResult == .success else{
+                    closure(.failure, message, stepsDetailModel)
+                    return
+                }
+                
+                guard let dicData = data as? [String: Any] else{
+                    closure(.failure, "data json error", stepsDetailModel)
+                    return
+                }
+                
+                //最高记录
+                stepsDetailModel.highestStep = self.getStepModel(fromJsonData: dicData["highest"])
+                
+                //今日
+                stepsDetailModel.todayStep = self.getStepModel(fromJsonData: dicData["today"])
+                
+                //范围列表
+                if let logsData = dicData["log"] as? [[String: Any]]{
+                    for logData in logsData{
+                        let model = self.getStepModel(fromJsonData: logData)
+                        stepsDetailModel.log.append(model)
+                    }
+                }
+                
+                closure(.success, message, stepsDetailModel)
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    //******************************************************************************************************************************************************
+    //MARK:- 解析StepModel数据
+    func getStepModel(fromJsonData jsonData: Any?) -> StepModel{
+        var stepModel = StepModel()
+        guard let dicData = jsonData as? [String: Any] else{
+            return stepModel
+        }
+        
+        stepModel.step = dicData["step"] as? Int ?? 0
+        stepModel.distanceM = dicData["distance"] as? Int ?? 0
+        if let createTime = dicData["createTime"] as? TimeInterval{
+            stepModel.date = Date(timeIntervalSince1970: createTime / 1000)
+        }
+        stepModel.caloria = dicData["cal"] as? Int ?? 0
+        stepModel.targetStep = dicData["targetStep"] as? Int ?? 0
+        return stepModel
+    }
+}

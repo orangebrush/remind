@@ -1,0 +1,180 @@
+//
+//  LoginCodeView.swift
+//  Remind
+//
+//  Created by dong on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+import Kingfisher
+
+enum VerifyLoginCode: Int {
+    case username
+    case phone
+}
+
+
+final class LoginCodeView: UIView {
+    
+    fileprivate let username: String
+    
+    fileprivate let source: VerifyLoginCode
+    
+    fileprivate let textField = TextField()
+    
+    fileprivate let confirmButton = UIButton()
+    
+    let imageView = UIImageView()
+    
+    fileprivate var action: ((_ view: LoginCodeView, _ code: String) -> Void)?
+    
+    init(username: String, source: VerifyLoginCode) {
+        self.username = username
+        self.source = source
+        super.init(frame: CGRect.zero)
+        backgroundColor = .white
+        layer.cornerRadius = 6
+        
+        let titleLabel = UILabel()
+        titleLabel.text = "请输入图片中的验证码"
+        titleLabel.textColor = UIColor.word
+        titleLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        addSubview(titleLabel)
+        titleLabel.snp.makeConstraints { (make) in
+            make.top.equalToSuperview().offset(30)
+            make.centerX.equalToSuperview()
+        }
+        
+        let codeView = UIView()
+        codeView.backgroundColor = UIColor.separator
+        addSubview(codeView)
+        codeView.snp.makeConstraints { (make) in
+            make.top.equalTo(titleLabel.snp.bottom).offset(17)
+            make.leading.trailing.equalToSuperview().inset(25)
+            make.height.equalTo(45)
+        }
+        
+        codeView.addSubview(imageView)
+        imageView.snp.makeConstraints { (make) in
+            make.leading.top.bottom.equalToSuperview()
+        }
+        
+        let refreshButton = UIButton()
+        refreshButton.setImage(UIImage(named: "refresh_login_code"), for: .normal)
+        refreshButton.addTarget(self, action: #selector(refreshLoginCode), for: .touchUpInside)
+        codeView.addSubview(refreshButton)
+        refreshButton.snp.makeConstraints { (make) in
+            make.leading.equalTo(imageView.snp.trailing).offset(15)
+            make.trailing.equalToSuperview().inset(15)
+            make.centerY.equalTo(imageView)
+        }
+        
+        textField.range = 0...4
+        textField.autocorrectionType = .no
+        textField.autocapitalizationType = .none
+        textField.keyboardType = .asciiCapable
+        textField.borderStyle = .roundedRect
+        textField.returnKeyType = .done
+        textField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        addSubview(textField)
+        textField.snp.makeConstraints { (make) in
+            make.top.equalTo(imageView.snp.bottom).offset(12)
+            make.leading.trailing.equalTo(codeView)
+            make.height.equalTo(44)
+        }
+        
+        let cancelButton = UIButton()
+        cancelButton.setBackgroundImage(UIImage.image(color: .white), for: .normal)
+        cancelButton.setBackgroundImage(UIImage.image(color: UIColor.highlightedColor), for: .highlighted)
+        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16)
+        cancelButton.setTitle("取消", for: .normal)
+        cancelButton.layer.borderWidth = 0.5
+        cancelButton.layer.borderColor = UIColor.highlightedColor.cgColor
+        cancelButton.layer.cornerRadius = 3
+        cancelButton.setTitleColor(UIColor.word, for: .normal)
+        cancelButton.addTarget(self, action: #selector(dismiss), for: .touchUpInside)
+        addSubview(cancelButton)
+        cancelButton.snp.makeConstraints { (make) in
+            make.leading.equalTo(textField)
+            make.top.equalTo(textField.snp.bottom).offset(12)
+            make.height.equalTo(38)
+            make.bottom.equalToSuperview().inset(25)
+        }
+        
+        confirmButton.isEnabled = false
+        confirmButton.titleLabel?.font = UIFont.systemFont(ofSize: 16)
+        confirmButton.setTitle("确定", for: .normal)
+        confirmButton.clipsToBounds = true
+        confirmButton.setTitleColor(.white, for: .normal)
+        confirmButton.setTitleColor(UIColor.white.withAlphaComponent(0.5), for: .disabled)
+        let themeColor = UIColor.orangeFont
+        confirmButton.setBackgroundImage(UIImage.image(color: themeColor), for: .normal)
+        confirmButton.setBackgroundImage(UIImage.image(color: themeColor), for: .disabled)
+        confirmButton.layer.cornerRadius = 3
+        confirmButton.addTarget(self, action: #selector(confirm), for: .touchUpInside)
+        addSubview(confirmButton)
+        confirmButton.snp.makeConstraints { (make) in
+            make.centerY.equalTo(cancelButton)
+            make.trailing.equalTo(textField)
+            make.width.height.equalTo(cancelButton)
+            make.leading.equalTo(cancelButton.snp.trailing).offset(14)
+        }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    static func show(window: UIWindow, username: String, source: VerifyLoginCode, _ action: @escaping (_ view: LoginCodeView, _ code: String) -> Void) {
+        let loginCodeView = LoginCodeView(username: username, source: source)
+        loginCodeView.action = action
+        
+        let maskView = UIView(frame: UIScreen.main.bounds)
+        maskView.backgroundColor = .clear
+        maskView.addSubview(loginCodeView)
+        loginCodeView.snp.makeConstraints { (make) in
+            make.width.equalTo(300)
+            make.centerX.equalToSuperview()
+            make.centerY.equalToSuperview().offset(-100)
+        }
+        loginCodeView.updateConstraintsIfNeeded()
+        
+        
+        window.addSubview(maskView)
+        UIView.animate(withDuration: 0.3) {
+            maskView.backgroundColor = UIColor(white: 0, alpha: 0.3)
+        }
+        loginCodeView.refreshLoginCode()
+        loginCodeView.textField.becomeFirstResponder()
+    }
+    
+    @objc func refreshLoginCode() {
+        textField.text = ""
+        confirmButton.isEnabled = false
+//        LoginService.getLoginCode(username: username, source: source.rawValue, successHandler: { (url) in
+//            guard let imageURL = URL(string: url) else {
+//                return
+//            }
+//
+//            self.imageView.kf.setImage(with: imageURL, placeholder: nil, options: [.forceRefresh], progressBlock: nil, completionHandler: nil)
+//        }) { (error) in
+//            MSGToast.show(error.errorMessage, inView: self)
+//        }
+    }
+    
+    @objc fileprivate func confirm() {
+        let code = textField.text ?? ""
+        action?(self, code)
+    }
+    
+    @objc func dismiss() {
+        superview?.removeFromSuperview()
+        removeFromSuperview()
+    }
+    
+    @objc fileprivate func editingChanged(textField: UITextField) {
+        confirmButton.isEnabled = !(textField.text?.isEmpty ?? false)
+    }
+    
+}

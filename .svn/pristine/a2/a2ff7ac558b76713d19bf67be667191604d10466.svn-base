@@ -1,0 +1,50 @@
+//
+//  CardSettingCell.swift
+//  Remind
+//
+//  Created by gg on 19/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class CardSettingCell0: UITableViewCell {
+    
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        keyLabel.text = "提醒"
+        
+        valueLabel.font = .normal
+        valueLabel.textColor = .subWord
+    }
+}
+
+class CardSettingCell1: UITableViewCell {
+    
+    @IBOutlet weak var contentLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        contentLabel.font = .content
+        contentLabel.textColor = .subWord
+        contentLabel.text = "如果要开启或停用消息提醒，请在手机\"设置>通知>爱思提醒\"中手动设置。"
+    }
+}
+
+class CardSettingCell2: UITableViewCell {
+    
+    @IBOutlet weak var keyLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+    }
+}

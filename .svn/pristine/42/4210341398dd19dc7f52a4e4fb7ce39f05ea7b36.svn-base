@@ -1,0 +1,237 @@
+//
+//  weathCardSettingViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class weathCardSettingViewController: BasedViewController {
+    //临时存储
+    var isLocked = false
+    var selector: GANSelector?
+    var eventDate = Date()
+    var eventSound = "boy"
+    var weatherSetting : WeatherSetting?
+    var tempSetting : WeatherSetting?
+    var backTitle = ""
+    lazy var tableView : UITableView = {
+        let table = UITableView.init(frame: .zero, style: .grouped)
+        table.delegate = self
+        table.dataSource = self
+        table.backgroundColor = UIColor.clear
+        table.separatorStyle = .none
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        let navHeight = (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height
+        tableView.frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight)
+        tableView.register(weatherSettingTableViewCell.self, forCellReuseIdentifier: "weatherSettingTableViewCell")
+        tableView.register(connectWechatTableViewCell.self, forCellReuseIdentifier: "connectWechatTableViewCell")
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.view.addSubview(tableView)
+        self.title = "天气设置"
+        self.view.backgroundColor = UIColor.bgColor
+        self.getMianData()
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item = BarButtonItem(imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+    }
+   
+   override func backToPrevious(){
+        self.navigationController?.popViewController(animated: true)
+        guard self.weatherSetting != nil else {
+            return
+        }
+        self.weatherSetting?.date = self.eventDate
+        self.weatherSetting?.ring = self.eventSound
+        DataManager.share().setWeatherSetting(withWeatherSetting: weatherSetting!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refreshEventAll), object: nil)
+        }
+    }
+    //MARK:-获取页面内的数据
+    func getMianData(){
+        DataManager.share().getWeatherSetting { (result, message, weathSetting) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.weatherSetting = weathSetting
+            self.eventDate = self.weatherSetting?.date ?? Date()
+            self.eventSound = self.weatherSetting?.ring ?? "boy"
+            self.tableView.reloadData()
+        }
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+}
+extension weathCardSettingViewController : UITableViewDelegate,UITableViewDataSource,weatherSettingTableViewCellDelegate,connectWechatTableViewCellDelegate{
+    func switchValueChange(_ ison: Bool) {
+        
+    }
+    
+    func swithValueChange(_ row: Int) {
+        if weatherSetting != nil{
+            self.tempSetting = self.weatherSetting!
+            if row == 0{
+                if (self.tempSetting!.isBindingWeixin){
+                    self.tempSetting!.isWeixinOpen = !self.tempSetting!.isWeixinOpen
+                    self.saveSeting(IndexPath.init(row: 0, section: 2))
+                }else{
+                    showWXBinding(closure: { (confrim, message) in
+                        wxVC?.dismissThis()
+                        if confrim{
+                            self.weatherSetting?.wxNickName = message
+                            self.weatherSetting?.isBindingWeixin = confrim
+                            self.tempSetting?.wxNickName = message
+                            self.tempSetting?.isBindingWeixin = confrim
+                            self.tempSetting?.isWeixinOpen = true
+                            self.saveSeting(IndexPath.init(row: 0, section: 2))
+                        }
+                    })
+                }
+            }else{
+                if (self.tempSetting!.isBindingEmail){
+                    self.tempSetting!.isEmailOpen = !self.tempSetting!.isEmailOpen
+                    self.saveSeting(IndexPath.init(row: 1, section: 2))
+                }else{
+                    showEmailBinding(closure: { (confrim, message, message1) in
+                        emailVC?.dismissThis()
+                        if confrim{
+                            self.weatherSetting?.email = message1 ?? ""
+                            self.weatherSetting?.isBindingEmail = confrim
+                            self.tempSetting?.email = message1 ?? ""
+                            self.tempSetting?.isBindingEmail = confrim
+                            self.tempSetting?.isEmailOpen = true
+                            self.saveSeting(IndexPath.init(row: 1, section: 2))
+                            }
+                    })
+                }
+            }
+            
+            
+        }
+        
+    }
+    func saveSeting(_ indexPath:IndexPath){
+        if self.tempSetting == nil{
+            return
+        }
+        DataManager.share().setWeatherSetting(withWeatherSetting: self.tempSetting!, closure: { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                self.tableView.reloadData()
+                return
+            }
+            self.weatherSetting = self.tempSetting
+            self.tableView.reloadRows(at: [indexPath], with: .none)
+        })
+        
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if (weatherSetting != nil) {
+            if weatherSetting?.isPause == true{
+                if section == 0{
+                    return 1
+                }else if section == 1{
+                    return 1
+                }else{
+                    return 0
+                }
+            }
+        }
+        if section == 0{
+            return 1
+        }else if section == 1{
+            return 3
+        }else{
+            return 0
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 3
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return indexPath.section == 2 ? 60 : 50
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if indexPath.section == 0 || indexPath.section == 1{
+            let cell = tableView.dequeueReusableCell(withIdentifier: "weatherSettingTableViewCell")as!weatherSettingTableViewCell
+            cell.configView(indexPath, tableView.numberOfRows(inSection: indexPath.section)-1==indexPath.row, self.weatherSetting, eventDate, eventSound)
+            cell.delegate = self
+            return cell
+        }else{
+            let cell = tableView.dequeueReusableCell(withIdentifier: "connectWechatTableViewCell")as!connectWechatTableViewCell
+            cell.configView(indexPath, weatherSetting, nil)
+            cell.delegate = self
+            return cell
+       }
+        
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 0{
+            let vc = cityManngerTableViewController()
+            self.navigationController?.pushViewController(vc, animated: true)
+        }else if indexPath.section == 1{
+            if indexPath.row == 0{
+                var setting = self.weatherSetting!
+                setting.isPause = !setting.isPause
+                DataManager.share().setWeatherSetting(withWeatherSetting: setting) { (result, message) in
+                    if result == .failure{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    self.weatherSetting?.isPause = setting.isPause
+                    self.tableView.reloadData()
+                }
+            } else if indexPath.row == 1{
+                edit(withSelectorType: .time(withHasZero: true), withDefultValue: eventDate)
+            }else if indexPath.row == 2{
+                if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+                    soundVC.isPublicEvent = true
+                    soundVC.sound = eventSound
+                    soundVC.selectClosure = {
+                        selectedSoundIndex in
+                        self.eventSound = soundList[selectedSoundIndex]
+                        self.tableView.reloadData()
+                    }
+                    navigationController?.show(soundVC, sender: nil)
+                }
+            }
+        }
+    }
+    
+}

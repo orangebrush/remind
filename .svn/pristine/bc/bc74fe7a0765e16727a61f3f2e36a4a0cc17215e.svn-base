@@ -1,0 +1,242 @@
+//
+//  GANCalendar.swift
+//  Remind
+//
+//  Created by gg on 24/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//  日历详情
+
+import Foundation
+class GANCalendarVC: BaseBackViewController {
+    
+    @IBOutlet weak var todayBarButtonItem: UIBarButtonItem!
+    @IBOutlet weak var settingBarButtonItem: UIBarButtonItem!
+    @IBOutlet weak var contentHeaderView: UIView!
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var selectedDateLabel: UILabel!
+    @IBOutlet weak var selectDateButton: UIButton!
+    @IBOutlet weak var weekdayListView: UIView!         //包含周一～日
+    @IBOutlet weak var bottomConstraint: NSLayoutConstraint!
+    
+    
+    //MARK:- public----------------------------------------------------------------------------------------------------------------------------------
+    
+    
+    //MARK:- private--------------------------------------------------------------------------------------------------------
+    private var tableView: GANCalendarTableView?
+    ///当前选择日期
+    private var selectDate: Date? {
+        didSet{
+            guard let date = selectDate else{
+                return
+            }
+            selectedDateLabel.text = date.formatString(with: "yyyy年M月d日") + " " + date.weekdayString()
+            tableView?.reloadData()
+        }
+    }
+    
+    
+    //MARK:- init-------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    //跳转
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let identifier = segue.identifier
+        let destination = segue.destination
+        
+        if identifier == "more" {                      //预提醒
+            let tag = sender as? Int
+            let ganCalendarMoreVC = destination as? GANCalendarMoreVC
+            ganCalendarMoreVC?.selectedMenuTag = tag == 0 ? 0 : nil
+            ganCalendarMoreVC?.navigationItem.title = tag == nil ? "法定节假日" : "节日节气"
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if selectDate == nil{
+            selectDate = Date()
+        }
+        
+        bottomConstraint.constant = 20 + (isIphoneX ? 34 : 0)
+    }
+    
+    private func config(){
+        
+        updateBackground()
+        
+        contentHeaderView.layer.cornerRadius = .cornerRadius
+        contentHeaderView.backgroundColor = UIColor.white.withAlphaComponent(0.3)
+        
+        contentView.layer.cornerRadius = .cornerRadius
+        
+        selectedDateLabel.textColor = UIColor(colorHex: 0x333333)
+        selectedDateLabel.font = UIFont(withNormalFontSize: 14)
+        
+        
+        for subview in weekdayListView.subviews{
+            if let label = subview as? UILabel{
+                label.font = UIFont(withThinFontSize: 12)
+                label.textColor = UIColor(colorHex: 0x666666)
+            }
+        }
+        
+        //绘制weekday分割线
+        let seq = UIView(frame: CGRect(x: 15, y: weekdayListView.frame.origin.y + weekdayListView.frame.height - kLineHeight, width: weekdayListView.frame.width, height: kLineHeight))
+        seq.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        
+        todayBarButtonItem.imageInsets = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: -20)
+    }
+    
+    private func createContents(){
+        
+        let tableViewFrame = CGRect(x: 0, y: weekdayListView.frame.origin.y + weekdayListView.frame.height, width: contentView.frame.width, height: contentView.frame.height - weekdayListView.frame.origin.y - weekdayListView.frame.height)
+        tableView = GANCalendarTableView(frame: tableViewFrame)
+        tableView?.delegate = self
+        tableView?.dataSource = self
+        contentView.addSubview(tableView!)        
+    }
+    
+    //MARK:- 点击选择日期 选择器
+    @IBAction func selectDate(_ sender: UIButton){
+        
+    }
+    
+    //MARK:- 点击返回今天
+    @IBAction func selectToday(_ sender: UIBarButtonItem){
+        
+    }
+}
+
+
+//MARK:- tableview delegate
+extension GANCalendarVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 4
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 2{
+            return 3
+        }
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let section = indexPath.section
+        if section == 0 {
+            return 51 * 5 + 10 * 2 + 3 * 4
+        }else if section == 1{
+            return 83
+        }else{
+            return 44
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 || section == 1 {
+            return kLineHeight
+        }
+        return 36
+    }
+    
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        if section == 3{
+            return 20
+        }
+        return 10
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        if section == 0 || section == 1 {
+            return nil
+        }
+        
+        let buttonWidth: CGFloat = 56
+        
+        let header = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 36))
+        
+        let labelFrame = CGRect(x: .edge10 * 2, y: 0, width: view.frame.width - buttonWidth - .edge10 * 4, height: 36)
+        let label = UILabel(frame: labelFrame)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.font = UIFont(withNormalFontSize: 14)
+        header.addSubview(label)
+        
+        let buttonFrame = CGRect(x: view.frame.width - .edge10 * 4 - buttonWidth, y: 0, width: buttonWidth, height: 36)
+        let button = UIButton(frame: buttonFrame)
+        button.setTitle("更多", for: .normal)
+        button.setTitleColor(UIColor(colorHex: 0xff8000), for: .normal)
+        button.titleLabel?.font = UIFont(withNormalFontSize: 12)
+        button.contentHorizontalAlignment = .right
+        button.addTarget(self, action: #selector(clickMore(_:)), for: .touchUpInside)
+        header.addSubview(button)
+        
+        if section == 2{        //节日节气
+            label.text = "节日节气"
+            button.tag = 0
+        }else{
+            label.text = (selectDate?.formatString(with: "yyy") ?? "") + "年法定节假日"
+            button.tag = 1
+        }
+        return header
+    }
+    
+    //点击更多
+    @objc func clickMore(_ sender: UIButton){
+        let tag = sender.tag
+        performSegue(withIdentifier: "more", sender: tag)
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        let identifier = "\(section)_\(row)"
+        
+        var cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+        if cell == nil {
+            if section == 0 {
+                cell = GANCalendarCell(reuseIdentifier: identifier)
+                let cell0 = cell as? GANCalendarCell
+            }else if section == 1{
+                cell = GANCalendarInfoCell(reuseIdentifier: identifier)
+                let cell1 = cell as? GANCalendarInfoCell
+                if let selDate = selectDate{
+                    cell1?.texts0 = [selDate.formatString(with: "d"), "hello world"]
+                    cell1?.text1 = selDate.formatString(with: "yyy-M-d") + " " + selDate.weekdayString()
+                    let lDate = transformGregorianToLunar(byDate: selDate)
+                    cell1?.text2 = lunarMonthList[lDate.lunarMonth - 1] + lunarDayList[Int(lDate.lunarDay) - 1]
+                    cell1?.text3 = lunarYearList[(lDate.lunarYear - 1900 + 36) % lunarYearList.count] + "年"
+                }else{
+                    cell1?.texts0 = nil
+                    cell1?.text1 = nil
+                    cell1?.text2 = nil
+                    cell1?.text3 = nil
+                }
+            }else if section == 2 || section == 3{          //节日节气、法定节假日
+                cell = GANCalendarDefaultCell(reuseIdentifier: identifier)
+                let cell2 = cell as? GANCalendarDefaultCell
+                cell2?.keys = ["hello", identifier]
+                cell2?.value = "123天后"
+                
+                var topFlag = false
+                var bottomFlag = false
+                if row == 0{
+                    topFlag = true
+                }else{
+                    cell?.addTopSeparator()
+                }
+                if row == tableView.numberOfRows(inSection: section) - 1{
+                    bottomFlag = true
+                }
+                cell?.customDraw(withTopCornerRadius: topFlag, withBottomCornerRadius: bottomFlag, byForceDraw: false, byCornerRadius: 4)
+            }
+        }
+        return cell!
+    }
+}

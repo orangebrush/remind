@@ -1,0 +1,117 @@
+//
+//  EventTimeCell.swift
+//  Remind
+//
+//  Created by gg on 15/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventTimeCell: UICollectionViewCell {
+    
+    @IBOutlet weak var label: UILabel!
+    @IBOutlet weak var imageView: UIImageView!
+    
+    @IBOutlet weak var cornerRadius0: UIView!
+    @IBOutlet weak var cornerRadius1: UIView!
+    @IBOutlet weak var cornerRadius2: UIView!
+    @IBOutlet weak var cornerRadius3: UIView!
+    
+    var rectCorner: UIRectCorner = []{
+        didSet{
+            if rectCorner.contains(.topLeft){
+                cornerRadius0.isHidden = true
+            }
+            if rectCorner.contains(.topRight){
+                cornerRadius1.isHidden = true
+            }
+            if rectCorner.contains(.bottomRight){
+                cornerRadius2.isHidden = true
+            }
+            if rectCorner.contains(.bottomLeft) {
+                cornerRadius3.isHidden = true
+            }
+            
+            let v = UIView(frame: bounds)
+            v.backgroundColor = .white
+            v.layer.cornerRadius = .cornerRadius
+            insertSubview(v, at: 0)
+        }
+    }
+    
+    override var isSelected: Bool{
+        didSet{
+            
+            //backgroundColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.5)
+            imageView.isHidden = !isSelected
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        label.textColor = .word
+        label.font = .normal
+        
+        backgroundColor = .clear
+        imageView.isHidden = true
+        //layer.cornerRadius = .cornerRadius
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+    }
+}
+
+class EventTimeAddCell: UICollectionViewCell {
+    
+    @IBOutlet weak var imageView: UIImageView!
+    
+    @IBOutlet weak var cornerRadius0: UIView!
+    @IBOutlet weak var cornerRadius1: UIView!
+    @IBOutlet weak var cornerRadius2: UIView!
+    @IBOutlet weak var cornerRadius3: UIView!
+    
+    var rectCorner: UIRectCorner = []{
+        didSet{
+            cornerRadius0.isHidden = false
+            cornerRadius1.isHidden = false
+            cornerRadius2.isHidden = false
+            cornerRadius3.isHidden = false
+            
+            if rectCorner.contains(.topLeft){
+                cornerRadius0.isHidden = true
+            }
+            if rectCorner.contains(.topRight){
+                cornerRadius1.isHidden = true
+            }
+            if rectCorner.contains(.bottomRight){
+                cornerRadius2.isHidden = true
+            }
+            if rectCorner.contains(.bottomLeft) {
+                cornerRadius3.isHidden = true
+            }
+            let v = UIView(frame: bounds)
+            v.backgroundColor = .white
+            v.layer.cornerRadius = .cornerRadius
+            insertSubview(v, at: 0)
+        }
+    }
+    
+    override var isSelected: Bool{
+        didSet{
+            
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        backgroundColor = UIColor.clear
+        //layer.cornerRadius = .cornerRadius
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+    }
+}

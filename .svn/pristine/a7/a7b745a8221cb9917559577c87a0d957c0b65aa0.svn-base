@@ -1,0 +1,270 @@
+//
+//  EventTimeVC.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventTimeVC: BasedViewController {
+    
+    @IBOutlet weak var collectionView: UICollectionView!
+    @IBOutlet weak var confirmBarButtonItem: UIBarButtonItem!
+    
+    var times: Times?
+    
+    var newTimes = Times()
+    
+    var isLocked = false
+    var selector: GANSelector?
+    
+    ///是否为重点报时
+    var isWholePoint = false
+    
+    //MARK:- init---------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        createContents()
+    }
+    
+    private func config(){
+        automaticallyAdjustsScrollViewInsets = false
+        collectionView.allowsMultipleSelection = true
+        
+        confirmBarButtonItem.tintColor = .confirm
+    }
+    
+    private func createContents(){
+        
+        collectionView.reloadData()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        //更新一选择
+        updateView()
+    }
+    
+    func updateView(){
+        
+        //提取times中的自定义字段
+        guard let t = times else {
+            return
+        }
+        
+        //数据完成载入之后,设置默认勾选
+        for tuple in t.list{
+            let hour = tuple.hour
+            let minute = tuple.minute
+            var row: Int
+            if isWholePoint{
+                row = hour
+            }else{
+                row = hour * 2 + (minute == 30 ? 1 : 0)
+            }
+            let indexPath = IndexPath(row: row, section: 0)
+            collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            let cell = collectionView.cellForItem(at: indexPath)
+            cell?.isSelected = true
+        }
+        
+        //所有自定义时间全部勾选
+        if !isWholePoint{
+            for i in 0..<newTimes.list.count{
+                let row = i + 24 * 2
+                let indexPath = IndexPath(row: row, section: 0)
+                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        }
+    }
+    
+    //MARK:- 保存时间选择
+    @IBAction func save(_ sender: UIBarButtonItem){
+        if let viewControllers = navigationController?.viewControllers{
+            if let parentVC = viewControllers[viewControllers.count - 2] as? EventEditorVC{
+                let tempTimes = times ?? Times()
+                
+                var dTimes = [TimesTuple]()
+                for tuple in tempTimes.list{
+                    let tList = dTimes.filter{$0.hour == tuple.hour && $0.minute == tuple.minute}
+                    if tList.isEmpty{
+                        dTimes.append(tuple)
+                    }
+                }
+                
+                dTimes += newTimes.list
+                tempTimes.list = dTimes
+                parentVC.eventClientTimes = tempTimes
+                parentVC.isPoping = true
+            }
+            navigationController?.popViewController(animated: true)
+        }
+    }
+}
+
+
+//MARK:- collectionView delegate
+extension EventTimeVC: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 1
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        let temp = isWholePoint ? 0 : 1
+        return 24 * (temp + 1) + temp + newTimes.list.count
+    }
+    
+    //MARK:- cell
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let row = indexPath.row
+        let identifier = "cell"
+        
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: identifier, for: indexPath) as! EventTimeCell
+        
+        if isWholePoint{                    //24
+            cell.label.text = "\(row):00"
+            cell.imageView.image = #imageLiteral(resourceName: "select")
+        }else{                              //24 * 2 + 1
+            if row == 24 * 2 + newTimes.list.count{
+                cell.label.text = "自定义"
+                cell.imageView.image = UIImage(named: "add")
+            }else{
+                let text: String
+                if row < 24 * 2{
+                    let hourStr = "\(row / 2):"
+                    let minuteStr = row % 2 == 0 ? "00" : "30"
+                    text = hourStr + minuteStr
+                }else{
+                    let newTimesTuple = newTimes.list[row - 24 * 2]
+                    let hourStr = newTimesTuple.hour < 10 ? "0\(newTimesTuple.hour)" : "\(newTimesTuple.hour)"
+                    let minuteStr = newTimesTuple.minute < 10 ? "0\(newTimesTuple.minute)" : "\(newTimesTuple.minute)"
+                    text = hourStr + ":" + minuteStr
+                }
+                cell.label.text = text
+                cell.imageView.image = #imageLiteral(resourceName: "select")
+            }
+        }
+        
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        return
+        let row = indexPath.row
+        if let list = times?.list{
+            for tuple in list{
+                if isWholePoint{
+                    if tuple.hour == row && tuple.minute == 0{
+                        collectionView.selectItem(at: indexPath, animated: false, scrollPosition: .bottom)
+                    }
+                }else{
+                    if tuple.hour == row / 2 && (tuple.minute == 0 || tuple.minute == 30){
+                        if tuple.minute == 0 && row % 2 == 0{
+                            collectionView.selectItem(at: indexPath, animated: false, scrollPosition: .bottom)
+                        }else if tuple.minute == 30 && row % 2 == 1{
+                            collectionView.selectItem(at: indexPath, animated: false, scrollPosition: .bottom)
+                        }
+                    }
+                }
+            }
+            
+            //所有自定义时间全部勾选
+            if !isWholePoint{
+                if row > 24 * 2 && row != 24 * 2 + newTimes.list.count {
+                    collectionView.selectItem(at: indexPath, animated: false, scrollPosition: .bottom)
+                }
+            }
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+    
+    //flow layout
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        let width = (view_size.width - 4 * 4) / 3
+        let height: CGFloat = 55
+        return CGSize(width: width, height: height)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
+        return UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 4
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 3.9
+    }
+    
+    //delegate
+    func collectionView(_ collectionView: UICollectionView, shouldHighlightItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let row = indexPath.row
+        if row == 24 * 2 + newTimes.list.count {
+            collectionView.deselectItem(at: indexPath, animated: true)
+            
+            //添加自定义时间
+            edit(withSelectorType: .time(withHasZero: true))
+        }else{
+            saveIndexPathsToTimesAndNewTimes()
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        let row = indexPath.row
+        if row == 24 * 2 + newTimes.list.count {
+        }else{
+            
+            if row < 24 * 2{
+                saveIndexPathsToTimesAndNewTimes()
+            }else {
+                newTimes.list.remove(at: row - 24 * 2)
+                collectionView.reloadData()
+            }
+        }
+    }
+    
+    
+    //MARK:- 存储所有时间到times与newtime中
+    func saveIndexPathsToTimesAndNewTimes(){
+        //保存
+        let indexPaths = collectionView.indexPathsForSelectedItems ?? []
+        if isWholePoint{            //整点
+            let tupleList = indexPaths.map{($0.row, 0)}
+            times?.list = tupleList
+        }else{                      //其他
+            times?.list.removeAll()
+            
+            for ip in indexPaths{
+                if ip.row < 24 * 2{
+                    let tuple = (ip.row / 2, (ip.row % 2) == 0 ? 0 : 30)
+                    self.times?.list.append(tuple)
+                    
+                }else {
+                    //let tuple = newTimes.list[ip.row - 24 * 2]
+                }
+            }
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, shouldShowMenuForItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+}
+

@@ -1,0 +1,77 @@
+//
+//  BasedViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/28.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class BasedViewController: UIViewController, UIGestureRecognizerDelegate {
+    //判断viewcontroller是push  还是
+    var viewcontrollerCount = 0
+    
+    var backButtonTitle = "" {
+        didSet {
+            let item = BarButtonItem(textStr: backButtonTitle, imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+            self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+        }
+    }//返回按钮标题
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        self.navigationController?.interactivePopGestureRecognizer?.delegate = self
+    }
+
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        guard  (self.navigationController != nil) else {
+            return
+        }
+        viewcontrollerCount = self.navigationController!.viewControllers.count
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        if self.navigationController != nil {
+            let newcount = self.navigationController!.viewControllers.count
+            if newcount > viewcontrollerCount{
+                
+            }else{
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.view.frame.origin.x = 50
+                }) { (completed) in
+                    self.view.frame.origin.x = 0
+                }
+            }
+        }else{
+            UIView.animate(withDuration: 0.2, animations: {
+                self.view.frame.origin.x = 50
+            }) { (completed) in
+                self.view.frame.origin.x = 0
+            }
+        }
+    }
+    
+    
+    
+    
+    //MARK: 点击返回方法
+    @objc override func backToPrevious(){
+        guard navigationController?.popViewController(animated: true) == nil else{
+            return
+        }
+        
+        dismiss(animated: true, completion: nil)
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+
+   
+
+}

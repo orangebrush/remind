@@ -1,0 +1,72 @@
+//
+//  Color+Extension.swift
+//  Remind
+//
+//  Created by gg on 09/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UIColor{
+    convenience init(colorHex hex: UInt, alpha: CGFloat = 1) {
+        var aph = alpha
+        if aph < 0 {
+            aph = 0
+        }else if aph > 1 {
+            aph = 1
+        }
+        
+        self.init(red: CGFloat((hex & 0xFF0000) >> 16) / 255,
+                  green: CGFloat((hex & 0x00FF00) >> 8) / 255,
+                  blue: CGFloat(hex & 0x0000FF) / 255,
+                  alpha: aph)
+    }
+    
+    ///标题文字颜色
+    static let word =       UIColor(colorHex: 0x333333, alpha: 1)
+    ///内容文字颜色
+    static let subWord =    UIColor(colorHex: 0x666666, alpha: 1)
+    ///子文字颜色
+    static let subSubWord = UIColor(colorHex: 0x999999, alpha: 1)
+    
+    
+    
+    
+    ///头部颜色（cell头部）
+    static let header = UIColor(colorHex:0xffffff,alpha:0.9)
+    ///背景颜色（日历选择器背景）(添加事件背景)
+    static let headerBg = UIColor(colorHex: 0xe6e6e6)
+    ///导航栏上title颜色
+    static let navTitle = UIColor(colorHex: 0x33b2ef)
+    ///确认按钮颜色（确定、保存） ------------主--------色--------调
+    static let confirm = UIColor(colorHex: 0xff8000)
+    ///pagecontroll为选中色
+    static let pageControll = UIColor(colorHex: 0xff9000)
+    ///空数据颜色
+    static let nodata = UIColor(colorHex:0x666666)
+    ///灰掉的按钮颜色
+    static let grayBtn = UIColor(colorHex:0xbbbbbb)
+    ///分割线
+    static let separator = UIColor(colorHex:0xeeeeee)
+    ///编辑栏分割线
+    static let edtingSeparator = UIColor(colorHex:0xd2d2d2)
+    //编辑button
+    static let edting = UIColor(colorHex:0x33b2ef)
+    ///橙色提醒
+    static let remindOringe = UIColor(colorHex:0xffa200)
+    ///红色提醒
+     static let remindRed = UIColor(colorHex:0xff4848)
+    ///橙色字体
+    static let orangeFont = UIColor(colorHex:0xff8000)
+    ///个性化背景色
+    static let styleColor = UIColor(colorHex:0xcccccc)
+    ///按钮高亮颜色
+    static let highlightedColor = UIColor(colorHex:0xdddddd)
+    
+    /// 导航栏背景色
+    static let navibarTintColor =  UIColor(colorHex: 0x000000, alpha: 0.6)
+    /// 导航栏标题颜色
+    static let navititleTextColor =  UIColor(colorHex: 0xffffff, alpha: 1)
+    
+
+}

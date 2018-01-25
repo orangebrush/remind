@@ -1,0 +1,105 @@
+//
+//  Image+Extension.swift
+//  Remind
+//
+//  Created by gg on 27/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UIImage{
+    
+    static let redDotCircle: UIImage = {
+        let scaleFactor = UIScreen.main.scale
+        let size = CGSize(width: 9, height: 9)
+        let newSize = CGSize(width: size.width * scaleFactor, height: size.height * scaleFactor)
+        
+        let v = UIView(frame: CGRect(origin: .zero, size: newSize))
+        v.backgroundColor = .red
+        v.layer.cornerRadius = newSize.width / 2
+        
+        UIGraphicsBeginImageContext(newSize)
+        let context = UIGraphicsGetCurrentContext()
+        v.layer.render(in: context!)
+
+        let cgimage = context?.makeImage()
+        return UIImage(cgImage: cgimage!, scale: scaleFactor, orientation: .up)
+    }()
+    
+    ///绘制右上角小红点
+    func drawRedDotCircle() -> UIImage{
+        let scaleFactor = UIScreen.main.scale
+        
+        let newSize = CGSize(width: size.width * scaleFactor, height: size.height * scaleFactor)
+        
+        guard let ctx = CGContext(data: nil, width: Int(newSize.width), height: Int(newSize.height), bitsPerComponent: cgImage!.bitsPerComponent, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: cgImage!.bitmapInfo.rawValue) else{
+            print("处理自定义背景图失败")
+            return self
+        }
+        
+        ctx.setAllowsAntialiasing(true)
+        
+        let newRect = CGRect(x: 0, y: 0, width: newSize.height, height: newSize.width)
+        ctx.draw(cgImage!, in: newRect)
+
+        let dotSize = CGSize(width: 8 * scaleFactor, height: 8 * scaleFactor)
+        let dotPoint = CGPoint(x: newSize.width - dotSize.width / 2, y: newSize.height - dotSize.height / 2)
+        ctx.addArc(center: dotPoint, radius: dotSize.width / 2, startAngle: 0, endAngle: .pi * 2, clockwise: true)
+        ctx.setFillColor(UIColor.red.cgColor)
+        ctx.drawPath(using: .fill)
+        
+        let cgImg = ctx.makeImage()!
+        let newImg = UIImage(cgImage: cgImg, scale: scaleFactor, orientation: .up)
+
+        return newImg
+    }
+    
+    class func image(color: UIColor) -> UIImage? {
+        let rect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        UIGraphicsBeginImageContext(rect.size)
+        let context = UIGraphicsGetCurrentContext()
+        context?.setFillColor(color.cgColor)
+        context?.fill(rect)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    static func imageFromColor(color: UIColor) -> UIImage {
+        let rect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        
+        // create a 1 by 1 pixel context
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 0)
+        color.setFill()
+        UIRectFill(rect)
+        
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image!
+        
+    }
+    
+    
+    /**
+     获取图片中的像素颜色值
+     
+     - parameter pos: 图片中的位置
+     
+     - returns: 颜色值
+     */
+    func getPixelColorAtPoint(point: CGPoint, sourceView: UIView) -> UIColor {
+        let pixel = UnsafeMutablePointer<CUnsignedChar>.allocate(capacity: 4)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+        let context = CGContext(data: pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: colorSpace, bitmapInfo: bitmapInfo.rawValue)
+        
+        context!.translateBy(x: -point.x, y: -point.y)
+        
+        sourceView.layer.render(in: context!)
+        let color: UIColor = UIColor(red: CGFloat(pixel[0])/255.0,
+                                     green: CGFloat(pixel[1])/255.0,
+                                     blue: CGFloat(pixel[2])/255.0,
+                                     alpha: CGFloat(pixel[3])/255.0)
+        pixel.deallocate(capacity: 4)
+        return color
+    }
+}

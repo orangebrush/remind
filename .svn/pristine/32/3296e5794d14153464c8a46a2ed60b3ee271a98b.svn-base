@@ -1,0 +1,205 @@
+//
+//  StockSettingViewController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/22.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class StockSettingViewController: BasedViewController ,UITableViewDelegate,UITableViewDataSource{
+    var selectIndex = 0
+    var stockSetting : StockSetting?
+    var eventBeginningModel = BeginningModel(){
+        didSet{
+            //更新
+            self.mainTbale.reloadData()
+        }
+    }
+    //临时存储
+    var isLocked = false
+    var selector: GANSelector?
+    var eventDate = Date()
+    var eventSound = "Ring Ring Ring"
+    var eventRate = "5"
+    var status = false
+    
+    
+    var tempamplitude = ["1","2","3","4","5","6","7","8","9","10"]
+    lazy var mainTbale : UITableView = {
+        let table = UITableView.init(frame: CGRect.zero, style: .plain)
+        table.backgroundColor = UIColor.bgColor
+        table.delegate = self
+        table.dataSource = self
+        table.separatorStyle = .none
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.view.backgroundColor = UIColor.bgColor
+        mainTbale.frame = CGRect.init(x: 10, y: (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth-20, height: keyDeviceHeight-((navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height))
+        mainTbale.register(AloneStockSettingCell.self, forCellReuseIdentifier: "AloneStockSettingCell")
+        self.view.addSubview(mainTbale)
+        switch selectIndex {
+        case 0:
+            self.title = "开盘提醒"
+        case 1:
+            self.title = "收盘提醒"
+        case 2:
+            self.title = "涨跌提醒"
+        default:
+            break
+        }
+        self.getMainSetting()
+    }
+    func getMainSetting(){
+        DataManager.share().getStockSetting { (result, message, stock) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.stockSetting = stock
+            self.resetData()
+            self.mainTbale.reloadData()
+        }
+    }
+    
+    func resetData(){
+        switch selectIndex {
+        case 0:
+            self.eventSound = self.stockSetting?.openRing ?? ""
+            self.eventBeginningModel = self.stockSetting?.openBeginning ?? BeginningModel()
+            self.status = self.stockSetting?.isOpenStatus ?? false
+        case 1:
+            self.eventSound = self.stockSetting?.closeRing ?? ""
+            self.eventBeginningModel = self.stockSetting?.closeBeginning ?? BeginningModel()
+            self.status = self.stockSetting?.isCloseStatus ?? false
+        case 2:
+            self.eventSound = self.stockSetting?.changeRing ?? ""
+            self.eventRate = "\(self.stockSetting?.changeRate ?? 0)"
+            self.status = self.stockSetting?.isChangeStatus ?? false
+        default:
+            break
+        }
+        
+        
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 3
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 10))
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "AloneStockSettingCell") as! AloneStockSettingCell
+        cell.configView(indexPath.row == 0, tableView.numberOfRows(inSection: indexPath.section) == indexPath.row + 1, indexPath, selectIndex, eventSound, eventDate, eventBeginningModel,status, self.eventRate)
+        cell.delegate = self
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+         if indexPath.row == 1{    //编辑预提醒
+            
+            if selectIndex == 2{
+                var arr = tempamplitude
+                var selectIndex = 0
+                for i in 0 ..< arr.count{
+            
+                    if arr[i] == self.eventRate{
+                        selectIndex = i
+                    }
+                    
+                }
+                let view = PlayCountPickView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+                view.delegate = self
+                view.danweiLabel.text = "  %"
+                view.topLable.text = "涨跌幅"
+                view.congfigView(arr, selectIndex)
+                view.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+                UIApplication.shared.keyWindow?.addSubview(view)
+            }else{
+                if let eventBeginningVC = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "beginning") as? EventBeginningVC{
+                    eventBeginningVC.beginningModel = eventBeginningModel
+                    eventBeginningVC.maxLocal = (.hour, 1)
+                    navigationController?.show(eventBeginningVC, sender: nil)
+                }
+            }
+            
+        }else if indexPath.row == 2{    //编辑声音
+            editSound()
+        }
+    }
+    func editSound(){
+        if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+            soundVC.isPublicEvent = true
+            soundVC.sound = eventSound
+            soundVC.selectClosure = {
+                selectedSoundIndex in
+                self.eventSound = soundList[selectedSoundIndex]
+                self.mainTbale.reloadData()
+            }
+            navigationController?.show(soundVC, sender: nil)
+        }
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        guard var stocking = self.stockSetting else{
+            return
+        }
+        switch selectIndex {
+        case 0:
+            stocking.isOpenStatus = status
+            stocking.openRing = self.eventSound
+            stocking.openBeginning = self.eventBeginningModel
+            break
+        case 1:
+            stocking.isCloseStatus = status
+            stocking.closeRing = self.eventSound
+            stocking.closeBeginning = self.eventBeginningModel
+            break
+        case 2:
+            stocking.isChangeStatus = status
+            stocking.changeRing = self.eventSound
+            stocking.changeRate = Double(self.eventRate) ?? 0
+            break
+        default:
+            break
+        }
+        DataManager.share().saveStockSetting(withStockSetting: stocking) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+        }
+    }
+}
+extension StockSettingViewController:AloneStockSettingCellDelegate,closeBtnClick{
+    func closeBtnClick(_ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+    }
+    
+    func cellClick(_ indexPath: IndexPath, _ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+        self.eventRate = tempamplitude[indexPath.row]
+        self.mainTbale.reloadData()
+    }
+    
+    func switchValueChange(_ ison: Bool) {
+        self.status = ison
+    }
+    
+    
+}

@@ -1,0 +1,56 @@
+//
+//  BasedNavgationController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/4.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class BasedNavgationController: UINavigationController {
+    var pushing : Bool?
+    override func awakeFromNib() {
+//        self.delegate = self
+        self.navigationBar.backgroundColor = UIColor.white
+    }
+    
+    override func pushViewController(_ viewController: UIViewController, animated: Bool) {
+        
+        if self.pushing == true{
+            
+            return
+        }else{
+            super.pushViewController(viewController, animated: animated)
+            self.pushing = true
+        }
+        
+    }
+    
+    override func show(_ vc: UIViewController, sender: Any?) {
+       
+        if self.pushing == true{
+            return
+        }else{
+            
+            self.pushing = true
+        }
+        super.show(vc, sender: sender)
+    }
+    
+    
+    
+//    func navigationController(_ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool) {
+//
+//        self.pushing = false
+//    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    
+    
+    
+}

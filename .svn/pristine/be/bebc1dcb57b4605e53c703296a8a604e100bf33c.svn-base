@@ -1,0 +1,151 @@
+//
+//  cityManngerTableViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/9.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class cityManngerTableViewController: BasedViewController ,UITableViewDelegate,UITableViewDataSource{
+    var  cityArr = [WeatherModel]()
+    var mainTableView : UITableView!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "城市管理"
+        self.automaticallyAdjustsScrollViewInsets = false
+        let navHeight = UIApplication.shared.statusBarFrame.size.height+(navigation_height ?? 64)
+
+        self.view.backgroundColor = UIColor.bgColor
+        mainTableView = UITableView.init(frame: CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight),style:.grouped)
+        mainTableView.delegate = self
+        mainTableView.dataSource = self
+        mainTableView.separatorStyle = .none
+        mainTableView.backgroundColor = UIColor.bgColor
+        mainTableView.showsVerticalScrollIndicator = false
+        mainTableView.isEditing = true
+        mainTableView.register(cityManngerTableViewCell.self, forCellReuseIdentifier: "cityManngerTableViewCell")
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem.init(image: #imageLiteral(resourceName: "navbar_icon_add").withRenderingMode(.alwaysOriginal), style: .done, target: self, action: #selector(cityManngerTableViewController.addCity))
+        self.view.addSubview(mainTableView)
+    }
+    override func backToPrevious() {
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        self.navigationController?.popViewController(animated: true)
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        backButtonTitle = "首页"
+        self.getMainData()
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        var smallCityArr = [City]()
+        for item in cityArr{
+            smallCityArr.append(item.city)
+        }
+        DataManager.share().addCityList(withCityList: smallCityArr) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+        }
+    }
+    //MARK:- 获取城市列表
+    func getMainData(){
+        DataManager.share().getMarkedWeatherList { (result, message, list ) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.cityArr = list
+            self.mainTableView.reloadData()
+        }
+        
+    }
+    //MARK:- 右侧导航按钮点击
+    @objc func addCity(){
+        let vc = addCityViewController()
+        var smallCityArr = [City]()
+        for item in cityArr{
+            smallCityArr.append(item.city)
+        }
+        vc.addCityArr = smallCityArr
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+   
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    // MARK: - Table view data source
+ func numberOfSections(in tableView: UITableView) -> Int {
+        
+        return 1
+    }
+    
+ func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        return cityArr.count
+    }
+ func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 80
+    }
+  func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 0))
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 12
+    }
+   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cityManngerTableViewCell", for: indexPath) as! cityManngerTableViewCell
+        cell.configView(indexPath.row, cityArr[indexPath.row],false)
+        cell.delegate = self
+        return cell
+    }
+     func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCellEditingStyle {
+        return .none
+    }
+     func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+     func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+        //修改tableview的cell移动时候的透明度
+       
+        let cityModel = cityArr[sourceIndexPath.row]
+        cityArr.remove(at:sourceIndexPath.row)
+        cityArr.insert(cityModel, at: destinationIndexPath.row)
+    }
+    func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
+         self.mainTableView.cellForRow(at: sourceIndexPath)?.alpha = 1
+         return proposedDestinationIndexPath
+    }
+    
+}
+
+extension cityManngerTableViewController:cityManngerDelegate{
+    func delebtnClick(_ section: Int) {
+        self.cityArr.remove(at: section)
+        self.mainTableView.deleteRows(at: [IndexPath.init(row: section, section: 0)], with: .fade)
+        self.mainTableView.reloadData()
+        var dataArr = [City]()
+        for city in cityArr{
+            dataArr.append(city.city)
+        }
+        
+        DataManager.share().addCityList(withCityList: dataArr) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+            
+        }
+    }
+}
+    
+    

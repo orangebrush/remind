@@ -1,0 +1,276 @@
+//
+//  HomeEdtingView.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol homeEdtingViewDegate:class{
+    func edtingBtnClick(_ row:Int)
+}
+class HomeEdtingView: UIView ,UITableViewDelegate,UITableViewDataSource,UIGestureRecognizerDelegate{
+    weak var delegate : homeEdtingViewDegate?
+    var eventImageArr = [UIImage]()
+    var eventText = [String]()
+    var isHome = true
+    var status = false
+    lazy var edtingView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.clear
+        return view
+    }()
+    
+    lazy var tableView : UITableView = {
+        let tableView = UITableView.init(frame:CGRect.zero,style:.plain)
+        tableView.rowHeight = 40
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.isScrollEnabled = false
+        tableView.backgroundColor = UIColor.clear
+        tableView.separatorStyle = .none
+        return tableView
+    }()
+    fileprivate lazy var imageView : UIImageView = {
+       let imageView = UIImageView.init()
+       imageView.image = UIImage(named:"edtingBg")
+        return imageView
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+//        let blur: UIBlurEffect
+//        if #available(iOS 10.0, *) {
+//            blur = UIBlurEffect(style: UIBlurEffectStyle.extraLight)
+//        } else {
+//            blur = UIBlurEffect(style: UIBlurEffectStyle.extraLight)
+//        }
+//
+//
+////        let view = triginView.init(effect: blur)
+////        view.frame = CGRect.init(x: 100, y: 109.5, width: 100, height: 100)
+////       //view.layer.cornerRadius = 4
+////        view.alpha = 0.95
+////        //view.clipsToBounds = true
+////        self.addSubview(view)
+        
+        
+        self.addgesture()
+        
+        
+    }
+    
+    //MARK:- 添加手势
+    func addgesture(){
+        let tap = UITapGestureRecognizer.init(target: self, action: #selector(HomeEdtingView.viewTap))
+        tap.delegate = self
+        self.addGestureRecognizer(tap)
+        
+        let swip = UISwipeGestureRecognizer.init(target: self, action: #selector(HomeEdtingView.viewSwip(_:)))
+        swip.direction = .up
+        swip.delegate = self
+        self.addGestureRecognizer(swip)
+        let swip1 = UISwipeGestureRecognizer.init(target: self, action: #selector(HomeEdtingView.viewSwip(_:)))
+        swip1.delegate = self
+        swip1.direction = .down
+        self.addGestureRecognizer(swip1)
+        let swip2 = UISwipeGestureRecognizer.init(target: self, action: #selector(HomeEdtingView.viewSwip(_:)))
+        swip2.direction = .left
+        swip2.delegate = self
+        self.addGestureRecognizer(swip2)
+        let swip3 = UISwipeGestureRecognizer.init(target: self, action: #selector(HomeEdtingView.viewSwip(_:)))
+        swip3.direction = .right
+        swip3.delegate = self
+        self.addGestureRecognizer(swip3)
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    @objc func viewSwip(_ swip:UISwipeGestureRecognizer){
+        if !self.edtingView.frame.contains(swip.location(in: self)){
+            self.removeFromSuperview()
+        }
+    }
+    
+    @objc func viewTap(_ tap:UITapGestureRecognizer){
+
+        if !self.edtingView.frame.contains(tap.location(in: self)){
+            self.removeFromSuperview()
+        }
+     }
+    
+    func configMessageView(_ isbenjing:Bool,_ top:CGFloat,_ canOpert:Bool){
+        eventImageArr = [#imageLiteral(resourceName: "crads_menu_delete")]
+        eventText = ["删除提醒"]
+        self.reloadData(top)
+    }
+    
+    //修正后的configView
+    func configView(_ card:Card?,_ top:CGFloat,_ ishome:Bool,_ isOpen:Bool){
+        self.isHome = ishome
+        self.status = isOpen
+        if ishome{
+            switch card!.type! {
+            case .weather(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_manage"),#imageLiteral(resourceName: "crads_menu_set")]
+                self.eventText = ["查看全部","城市管理","卡片设置"]
+                break
+            case .birthday(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_add"),#imageLiteral(resourceName: "crads_menu_set")]
+                self.eventText = ["查看全部","添加生日","卡片设置"]
+                break
+            case .event(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_add"),#imageLiteral(resourceName: "crads_menu_set")]
+                self.eventText = ["查看全部","添加重要事件","卡片设置"]
+                break
+            case .stock(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_add"),#imageLiteral(resourceName: "crads_menu_set")]
+                self.eventText = ["查看全部","添加股票","卡片设置"]
+                break
+            case .festival(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_set")]
+                self.eventText = ["查看全部","卡片设置"]
+                break
+            case .step(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall")]
+                self.eventText = ["查看详情"]
+                break
+            case .eventClient(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall"),#imageLiteral(resourceName: "crads_menu_add")]
+                self.eventText = ["查看全部","添加每日提醒"]
+                break
+            case .holiday(_, _):
+                self.eventImageArr = [#imageLiteral(resourceName: "crads_menu_viewall")]
+                self.eventText = ["查看详情"]
+                break
+            }
+        }else{
+             eventImageArr = [#imageLiteral(resourceName: "crads_menu_switch"),#imageLiteral(resourceName: "crads_menu_edit"),#imageLiteral(resourceName: "crads_menu_delete")]
+            eventText = [isOpen ? "关闭提醒" : "打开提醒","编辑提醒","删除提醒"]
+        }
+        self.reloadData(top)
+       
+    }
+
+    
+    func reloadData(_ top:CGFloat){
+        let height = 40*CGFloat(self.eventImageArr.count) + 9 + 9.5
+        var top1 : CGFloat = 0
+        if top > UIScreen.main.bounds.height/5*3{
+            top1 = top - height + 9.5
+            
+            let view1 = triangleView.init(frame: CGRect.init(x: keyDeviceWidth - 10 - 170, y: top1, width: 170, height: height))
+            view1.down = true
+            self.addSubview(view1)
+            view1.addSubview(tableView)
+            tableView.snp.makeConstraints({ (make) in
+                make.top.equalTo(4.5)
+                make.right.left.equalTo(0)
+                make.bottom.equalTo(14)
+            })
+            
+        }else{
+            top1 = top + 36 - 9.5
+            let view1 = triangleView.init(frame: CGRect.init(x: keyDeviceWidth - 10 - 170, y: top1, width: 170, height: height))
+            view1.down = false
+            self.addSubview(view1)
+            view1.addSubview(tableView)
+            tableView.snp.makeConstraints({ (make) in
+                make.top.equalTo(14)
+                make.right.left.equalTo(0)
+                make.bottom.equalTo(4.5)
+            })
+        }
+        self.tableView.reloadData()
+    }
+    
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.removeFromSuperview()
+        delegate?.edtingBtnClick(indexPath.row)
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.eventImageArr.count
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        var cell = tableView.dequeueReusableCell(withIdentifier: "cellID")
+        if cell == nil{
+            cell = UITableViewCell.init(style: .default, reuseIdentifier: "cellID")
+        }
+        while ((cell?.contentView.subviews.last) != nil) {
+            cell?.contentView.subviews.last?.removeFromSuperview()
+        }
+        cell?.selectionStyle = .none
+        cell?.backgroundColor = UIColor.clear
+        self.resetview(eventImageArr[indexPath.row], eventText[indexPath.row], cell!, indexPath)
+        if indexPath.row == tableView.numberOfRows(inSection: 0)-1{
+            cell?.separatorInset = UIEdgeInsetsMake(0, 0, 0, (cell?.frame.width)!)
+        }
+        return cell!
+    }
+   
+    func resetview(_ image:UIImage,_ text:String,_ cell:UITableViewCell,_ indexPath:IndexPath){
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: 170, height: 40))
+        
+        let image1 = UIImageView.init(image: image)
+        view.addSubview(image1)
+        
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        label.text = text
+        view.addSubview(label)
+        
+        let cutLable = UILabel.init()
+        cutLable.backgroundColor = UIColor.separator
+        view.addSubview(cutLable)
+        
+        image1.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(image.size.width)
+            make.height.equalTo(image.size.height)
+        }
+        label.snp.makeConstraints { (make) in
+            make.left.equalTo(45)
+            make.width.equalTo(100)
+            make.height.equalTo(30)
+            make.centerY.equalToSuperview()
+        }
+        cutLable.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.right.equalTo(-15)
+            make.bottom.equalTo(0)
+            make.height.equalTo(kLineHeight)
+            }
+        if indexPath.row == eventText.count-1{
+            cutLable.isHidden = true
+        }else{
+            cutLable.isHidden = false
+        }
+        if !isHome && indexPath.row == 0{
+            let image2 = UIImageView.init()
+            image2.image = status ? #imageLiteral(resourceName: "swicth_on_ff8000") : #imageLiteral(resourceName: "swicth_off_ff8000")
+            view.addSubview(image2)
+            image2.snp.makeConstraints { (make) in
+                make.right.equalTo(-15)
+                make.centerY.equalToSuperview()
+                make.width.equalTo(30)
+                make.height.equalTo(19)
+            }
+        }
+        
+        
+        cell.backgroundView = view
+        
+    }
+    //MARK:- 解决手势响应覆盖掉cell的点击事件
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if (touch.view?.superview?.isKind(of:UITableViewCell.self))!{
+            return false
+        }
+        return true
+    }
+    
+   
+}

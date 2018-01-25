@@ -1,0 +1,319 @@
+//
+//  DM+Festival.swift
+//  RemindData
+//
+//  Created by gg on 07/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+///节日节气类型模型
+public struct FestivalTypeModel{
+    ///节日类型值（如果后台以后动态修改类型，则使用原始值）
+    public var typeRawValue = 0
+    ///节日类型
+    public var type = FestivalType.tradition
+    ///当前类型选择数
+    public var selectedCount = 0
+    ///排序
+    public var sort = 0
+    ///当前类型名称
+    public var name = ""
+}
+
+
+///节日节气卡片设置模型
+public struct FestivalSettingFieldModel{
+    ///提示音
+    public var ring = ""
+    ///事件间隔（分钟）
+    public var intervalMin = 0
+    ///提醒次数
+    public var count = 3
+    ///提醒时间(仅存储时间信息)
+    public var time = Date()
+    ///预提醒时间
+    public var beginningModel = BeginningModel()
+    ///是否启用提醒
+    public var isNotif = false
+    ///是否启用邮箱提醒
+    public var byEmail = false
+    ///是否已绑定邮箱
+    public var isBindingEmail = false
+    ///微信名
+    public var wxNickName = ""
+    ///邮箱名
+    public var email = ""
+    ///是否启用微信提醒
+    public var byWeixin = false
+    ///是否已绑定微信
+    public var isBindingWeixin = false
+    ///设置卡片显示的节日节气数 或 方式 类型值
+    public var showType: (rawValue: String, text: String) = ("","")
+}
+
+///节日节气卡片信息模型
+public struct FestivalSettingModel{
+    ///设置id（自动处理上传）
+    var setId = 0
+    
+    public var field = FestivalSettingFieldModel()
+    ///包含的节日类型与选择个数
+    public var festivalTypeList = [FestivalTypeModel]()
+    ///包含卡片显示方式的枚举选项
+    public var festivalShowTypeList = [(rawValue: String, text: String)]()
+    
+}
+
+extension DataManager{
+    ///获取节日列表
+    public func getAllFestivalList(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ festivalList: [FestivalModel])->()){
+        Session.session(withAction: Actions.getAllFestivalList, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let dicListData = data as? [[String: Any]] else{
+                    closure(.failure, "festival data error", [])
+                    return
+                }
+                
+                //tradition = 0, international solarTerms
+                var list = [FestivalModel]()
+                
+                for dicData in dicListData{
+                    let festival = self.getFestivalModel(fromJSON: dicData)
+                    list.append(festival)
+                }
+                
+                closure(.success, message, list)
+            }
+        }
+    }
+    
+    ///获取节日节气详情
+    public func getFestivalDetail(withFestivalId festivalId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ festival: FestivalModel)->()){
+        let dic = ["id": "\(festivalId)"]
+        Session.session(withAction: Actions.getFestivalDetail, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                var festivalModel = FestivalModel()
+                guard codeResult == .success else{
+                    closure(.failure, message, festivalModel)
+                    return
+                }
+                
+                festivalModel = self.getFestivalModel(fromJSON: data)
+                closure(.success, message, festivalModel)                
+            }
+        }
+    }
+    
+    ///获取节日节气设置详情
+    public func getFestivaSetting(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ festivalSetting: FestivalSettingModel)->()){
+        Session.session(withAction: Actions.getFestivalSetting, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                var festivalSetting = FestivalSettingModel()
+                guard codeResult == .success else {
+                    closure(.failure, message, festivalSetting)
+                    return
+                }
+                
+                guard let dicData = data as? [String: Any] else{
+                    closure(.failure, message, festivalSetting)
+                    return
+                }
+                
+                festivalSetting.setId = dicData["setId"] as? Int ?? 0                       //设置id（用于后台查询，私有）
+                
+                //field
+                guard let fieldDicData = dicData["setFields"] as? [String: Any] else{
+                    closure(codeResult, message, festivalSetting)
+                    return
+                }
+                
+                festivalSetting.field.ring = fieldDicData["ring"] as? String ?? ""              //提醒铃声
+                festivalSetting.field.intervalMin = fieldDicData["interval"] as? Int ?? 0   //提醒间隔
+                festivalSetting.field.count = fieldDicData["count"] as? Int ?? 0            //提醒次数
+                if let timeStr = fieldDicData["times"] as? String{                          //提醒时间
+                    festivalSetting.field.time = Date(withDateStr: "2000-01-01 " + timeStr, withFormatStr: "yyyy-MM-dd HH:mm")
+                }
+                if let beginningStr = fieldDicData["prealertTimes"] as? String{             //预提醒
+                    festivalSetting.field.beginningModel.list = self.decoderBeginningList(withBeginningStr: beginningStr)
+                }
+                festivalSetting.field.isNotif = fieldDicData["enable"] as? Bool ?? false
+                festivalSetting.field.byEmail = fieldDicData["byEmail"] as? Bool ?? false
+                festivalSetting.field.byWeixin = fieldDicData["byWeixin"] as? Bool ?? false
+                festivalSetting.field.isBindingEmail = fieldDicData["isBindingEmail"] as? Bool ?? false
+                festivalSetting.field.isBindingWeixin = fieldDicData["isBindingWeixin"] as? Bool ?? false
+                festivalSetting.field.wxNickName = fieldDicData["wxNickName"] as? String ?? ""
+                festivalSetting.field.email = fieldDicData["email"] as? String ?? ""
+                //存储类型值
+                let tempShowRawValue = fieldDicData["strategy"] as? String ?? ""
+                festivalSetting.field.showType.rawValue = tempShowRawValue
+                
+                //类型列表
+                guard let typesData = dicData["festivalType"] as? [[String: Any]] else{
+                    closure(codeResult, message, festivalSetting)
+                    return
+                }
+                
+                for typeData in typesData{
+                    var festivalTypeModel = FestivalTypeModel()
+                    let id = typeData["id"] as? Int ?? 0
+                    festivalTypeModel.typeRawValue = id
+                    festivalTypeModel.type = FestivalType(rawValue: id) ?? FestivalType.tradition
+                    festivalTypeModel.selectedCount = typeData["selectedCount"] as? Int ?? 0
+                    festivalTypeModel.sort = typeData["sort"] as? Int ?? 0
+                    festivalTypeModel.name = typeData["name"] as? String ?? ""
+                    festivalSetting.festivalTypeList.append(festivalTypeModel)
+                }
+                
+                //显示选项列表
+                guard let showTypesData = dicData["festivalTabStrategyEnum"] as? [[String: Any]] else{
+                    closure(codeResult, message, festivalSetting)
+                    return
+                }
+                
+                for showTypeData in showTypesData{
+                    let rawValue = showTypeData["option"] as? String ?? ""
+                    let text = showTypeData["text"] as? String ?? ""
+                    let tuple = (rawValue: rawValue, text: text)
+                    festivalSetting.festivalShowTypeList.append(tuple)
+                    
+                    //为当前类型赋值
+                    if rawValue == tempShowRawValue{
+                        festivalSetting.field.showType.text = text
+                    }
+                }
+                closure(.success, message, festivalSetting)
+            }
+        }
+    }
+    
+    ///保存节日设置修改
+    public func setFestivalSetting(withFestivalSettingModel festivalSettingModel: FestivalSettingModel, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let jsonDic = [
+            "ring": "\(festivalSettingModel.field.ring)",
+            "interval": "\(festivalSettingModel.field.intervalMin)",
+            "count": "\(festivalSettingModel.field.count)",
+            "times": festivalSettingModel.field.time.formatString(with: "HH:mm"),
+            "prealertTimes": festivalSettingModel.field.beginningModel.encoderList(),
+            "enable": "\(festivalSettingModel.field.isNotif)",
+            "byEmail": "\(festivalSettingModel.field.byEmail)",
+            "byWeixin": "\(festivalSettingModel.field.byWeixin)",
+            "strategy": festivalSettingModel.field.showType.rawValue
+        ]
+        
+        let dic: [String: Any] = [
+            "setId": "\(festivalSettingModel.setId)",
+            "setFields": jsonDic
+        ]
+        
+        Session.session(withAction: Actions.setFestivalSetting, withRequestMethod: .post, withParam: dic) { (codeResult, message, _) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    ///根据类型获取节日列表（传枚举类型）
+    public func getFestivalList(byFestivalType festivalTypeRawValue: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ festivalList: [FestivalModel])->()){
+        let dic = ["type": "\(festivalTypeRawValue)"]
+        Session.session(withAction: Actions.getFestivalListByType, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let dicListData = data as? [[String: Any]] else{
+                    closure(.failure, "json data error", [])
+                    return
+                }
+                
+                var list = [FestivalModel]()
+                for dicData in dicListData{
+                    let festivalModel = self.getFestivalModel(fromJSON: dicData)
+                    list.append(festivalModel)
+                }
+                closure(.success, message, list)
+            }
+        }
+    }
+    
+    ///设置关注节日
+    public func setSelectedFestival(withFestivalType festivalTypeRawValue: Int, withFestivalIdList festivalIdList: [Int], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var idStrList = ""
+        for (index, id) in festivalIdList.enumerated(){
+            if index != 0{
+                idStrList += ","
+            }
+            idStrList += "\(id)"
+        }
+        let dic = [
+            "type": "\(festivalTypeRawValue)",
+            "festivals": idStrList
+        ]
+        Session.session(withAction: Actions.setSelectedFestival, withRequestMethod: .post, withParam: dic) { (codeResult, message, _) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    //********************************************************************************************************************************
+    //MARK:- 解析festival模型
+    func getFestivalModel(fromJSON jsonData: Any?) -> FestivalModel {
+        var festival = FestivalModel()
+        guard let festivalData = jsonData as? [String: Any] else{
+            return festival
+        }
+
+
+        festival.id = festivalData["id"] as? Int ?? 0
+        festival.name = festivalData["name"] as? String ?? ""
+        festival.leftDay = festivalData["leftDay"] as? String ?? ""
+
+        if let interval = festivalData["date"] as? TimeInterval{
+            festival.date = Date(timeIntervalSince1970: interval)
+        }
+        festival.dateText = festivalData["dateText"] as? String ?? ""
+        festival.title = festivalData["title"] as? String ?? ""
+        festival.weekday = festivalData["weekText"] as? String ?? ""
+        festival.lunarText = festivalData["lunarChineseText"] as? String ?? ""
+        festival.selected = festivalData["selected"] as? Bool ?? false
+        festival.isRestDay = festivalData["isRestDay"] as? Bool ?? false
+        
+        //解析用户类型
+        if let typeRawvalue = festivalData["type"] as? Int{
+            festival.typeRawValue = typeRawvalue        //如果后台动态生产类型，则使用该字段
+            
+            let type = FestivalType(rawValue: typeRawvalue) ?? FestivalType.tradition
+            festival.type = type
+        }
+        if let icon = festivalData["icon"] as? String{
+            festival.icon = icon
+        }
+        if let introduction = festivalData["introduction"] as? String{
+            festival.introduction = introduction
+        }
+        if let custom = festivalData["custom"] as? String{
+            festival.custom = custom
+        }
+        if let health = festivalData["health"] as? String{
+            festival.health = health
+        }
+        if let bgImg = festivalData["bgImg"] as? String{
+            festival.bgImg = bgImg
+        }
+
+        return festival
+    }
+}

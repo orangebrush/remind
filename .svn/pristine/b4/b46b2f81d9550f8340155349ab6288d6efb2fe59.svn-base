@@ -1,0 +1,316 @@
+//
+//  StepVC.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+class StepVC: BasedViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    fileprivate var isTargetSetOpen = false
+    
+    ///默认按周统计
+    fileprivate var currentDisplayMode: DisplayMode = .day7
+    
+    ///需绘制的数据模型列表
+    fileprivate var stepsDetailModel = StepsDetailModel(){
+        didSet{
+            
+            let ip = IndexPath(row: 1, section: 1)
+            if let cell = tableView.cellForRow(at: ip) as? StepCell1{
+                cell.currentDisplayMode = currentDisplayMode
+                cell.stepsDetailModel = stepsDetailModel
+            }
+        }
+    }
+
+    var targetStep: Int = 8000
+    
+    var isLocked = false
+    var selector: GANSelector?
+    
+    
+    ///定时器
+    private var timer: Timer?
+    
+    //MARK:- init------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        //获取数据
+        getData(withDisplayMode: currentDisplayMode, initFlag: true)
+        
+        //如果已打开 则关闭
+        if isTargetSetOpen {
+            updateSelectCell()
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+      
+        dismissSelector()
+        
+        timer?.invalidate()
+    }
+
+    
+    private func config(){
+        view.backgroundColor = .separator
+        
+        DataManager.share().getTargetStep { (codeResult, message, targetStep, _, _) in
+            self.targetStep = targetStep
+        }
+    }
+    
+    private func createContents(){
+        if timer == nil {
+            timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(updateRealStepAndDistanceM), userInfo: nil, repeats: true)
+        }
+    }
+}
+
+extension StepVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 3
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0{
+            return 1
+        }else if section == 1{
+            return isTargetSetOpen ? 3 : 2
+        }
+        return 2
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return 16
+        }else if section == 1 {
+            return 36
+        }
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0 {
+            return 100
+        }else if section == 1{
+            if isTargetSetOpen{
+                if row == 0{
+                    return 34
+                }else if row == 1{
+                    return 44
+                }
+                return 193
+            }
+            
+            return row == 0 ? 44 : 193
+        }else{
+            return 44
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        guard section == 1 else{
+            return nil
+        }
+        
+        let headerFrame = CGRect(x: 0, y: 0, width: view_size.width - .edge8 * 2, height: 36)
+        let header = UIView(frame: headerFrame)
+        header.backgroundColor = .header
+        let labelFrame = CGRect(x: .edge16, y: 0, width: view_size.width / 2, height: 36)
+        let label = UILabel(frame: labelFrame)
+        label.text = "数据统计"
+        label.textColor = .subWord
+        label.font = .content
+        header.addSubview(label)
+        let btnWidth: CGFloat = 36 - 4 * 2
+        let btnFrame = CGRect(x: view_size.width - .edge16 - btnWidth, y: 4, width: btnWidth, height: btnWidth)
+        let btn = UIButton(frame: btnFrame)
+        btn.setBackgroundImage(#imageLiteral(resourceName: "sectionHeadButton"), for: .normal)
+        btn.addTarget(self, action: #selector(showTargetSetting(_:)), for: .touchUpInside)
+        header.addSubview(btn)
+        header.customDraw(withTopCornerRadius: true, withBottomCornerRadius: false)
+        return header
+    }
+    
+    //MARK:- 点击查看详情按钮
+    @objc func showTargetSetting(_ sender: UIButton){
+        updateSelectCell()
+    }
+    
+    //MARK:- 更新 插入或删除 统计选项
+    func updateSelectCell(){
+        isTargetSetOpen = !isTargetSetOpen
+        
+        let idxPath = IndexPath(row: 0, section: 1)
+        if isTargetSetOpen {
+            tableView.insertRows(at: [idxPath], with: .none)
+        }else{
+            tableView.deleteRows(at: [idxPath], with: .bottom)
+        }
+    }
+    
+    //MARK:- 获取数据
+    func getData(withDisplayMode displayMode: DisplayMode, initFlag: Bool = false){
+        //设置日期范围
+        var beginDate = Date()
+        let endDate = Date()
+        switch displayMode{
+        case .day90:
+            beginDate = endDate.offset(with: -90 + 1)
+        case .day30:
+            beginDate = endDate.offset(with: -30 + 1)
+        case .day7:
+            beginDate = endDate.offset(with: -7 + 1)
+        }
+        
+        //获取对应数据
+        DataManager.share().getStepsDetailLogList(withBeginDate: beginDate, withEndDate: endDate, closure: { (codeResult, message, stepsDetailModel) in
+            guard codeResult == .success else{
+                //返回显示模式
+                if !initFlag{
+                    self.updateSelectCell()
+                }
+                return
+            }
+            //返回显示模式
+            if !initFlag{
+                self.updateSelectCell()
+            }
+            
+            self.currentDisplayMode = displayMode
+            self.stepsDetailModel = stepsDetailModel
+            
+            if initFlag{
+                self.tableView.reloadData()
+            }
+            
+        })
+    }
+    
+    //MARK:- 更新实时步数
+    @objc func updateRealStepAndDistanceM(){
+        StepManager.share().getStepsAndDistanceM { (codeResult, step, distanceM) in
+            DispatchQueue.main.async {
+                self.stepsDetailModel.todayStep.step = step
+                self.stepsDetailModel.todayStep.distanceM = distanceM
+                
+                let indexPath = IndexPath(row: 0, section: 0)
+                let cell = self.tableView.cellForRow(at: indexPath) as? StepCell0
+                cell?.step = step
+                cell?.distanceM = distanceM
+                cell?.setNeedsDisplay()
+            }
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        var cell: UITableViewCell
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        
+        if section == 0{
+            cell = tableView.dequeueReusableCell(withIdentifier: "cell0")!
+            let cell0 = cell as! StepCell0
+            cell0.step = stepsDetailModel.todayStep.step
+            cell0.distanceM = stepsDetailModel.todayStep.distanceM
+            
+            isTopFlag = true
+            isBottomFlag = true
+        }else if section == 1{
+            if isTargetSetOpen{         //编辑目标选项开启
+                
+                if row == 0{
+                    cell = tableView.dequeueReusableCell(withIdentifier: "cell_sel")!
+                    let cellSel = cell as! StepCellSel
+                    cellSel.closure = {
+                        //编辑最高步数
+                        self.edit(withSelectorType: .targetStep, withDefultValue: self.targetStep)
+                    }
+                }else if row == 1{
+                    cell = tableView.dequeueReusableCell(withIdentifier: "cell_seg")!
+                    let cellSeg = cell as! StepCellSeg
+                    cellSeg.closure = {
+                        selectedMode in
+                        self.getData(withDisplayMode: selectedMode, initFlag: true)
+                    }
+                }else{
+                    cell = tableView.dequeueReusableCell(withIdentifier: "cell1")!
+                    let cell1 = cell as! StepCell1
+                    cell1.currentDisplayMode = self.currentDisplayMode
+                    cell1.stepsDetailModel = self.stepsDetailModel
+                    
+                    cell1.addTopSeparator()
+                    
+                    isBottomFlag = true
+                }
+                
+            }else {                     //编辑目标选项关闭
+                if row == 0{
+                    cell = tableView.dequeueReusableCell(withIdentifier: "cell_seg")!
+                    let cellSeg = cell as! StepCellSeg
+                    cellSeg.closure = {
+                        selectedMode in
+                        self.getData(withDisplayMode: selectedMode, initFlag: true)
+                    }
+                }else{
+                    cell = tableView.dequeueReusableCell(withIdentifier: "cell1")!
+                    let cell1 = cell as! StepCell1
+                    cell1.currentDisplayMode = self.currentDisplayMode
+                    cell1.stepsDetailModel = self.stepsDetailModel
+                    
+                    cell1.addTopSeparator()
+                    
+                    isBottomFlag = true
+                }
+            }
+        }else{
+            cell = tableView.dequeueReusableCell(withIdentifier: "cell2")!
+            let cell2 = cell as! StepCell2
+            if row == 0{
+                cell2.keyLabel.text = "最高记录"
+                cell2.valueLabel.text = "\(stepsDetailModel.highestStep.step)"
+                
+                isTopFlag = true
+            }else{
+                cell2.keyLabel.text = "发生时间"
+                cell2.valueLabel.text = stepsDetailModel.highestStep.date.formatString(with: "yyy年MM月dd日")
+                cell2.addTopSeparator()
+                
+                isBottomFlag = true
+            }
+            
+        }
+        
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath)
+        cell?.setSelected(false, animated: true)
+    }
+}

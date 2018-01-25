@@ -1,0 +1,46 @@
+//
+//  FrequencyCell.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class FrequencyCell: UITableViewCell {
+    
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    weak var frequency: FrequencyModel?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.textColor = .word
+        keyLabel.font = .normal
+        
+        valueLabel.textColor = .subWord
+        valueLabel.font = .normal
+    }
+}
+
+
+class FrequencyImageCell: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    
+    @IBOutlet weak var rightImageView: UIImageView!
+    
+    weak var frequency: FrequencyModel?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.textColor = .word
+        keyLabel.font = .normal
+    }
+    
+}
+
+
+

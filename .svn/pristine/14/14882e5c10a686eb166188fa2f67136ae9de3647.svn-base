@@ -1,0 +1,57 @@
+//
+//  styleBottomView.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/7.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol styleCellClickDelegate:class {
+    func changgeBackGround(_ modle:Any,_ row : Int)
+}
+class styleBottomView: UIView,UICollectionViewDelegate,UICollectionViewDataSource{
+    weak var delegate : styleCellClickDelegate?
+    
+    var collectionView : UICollectionView!
+    var selectIndex : Int = 0
+     var colorArr = [#imageLiteral(resourceName: "bgImage0"),#imageLiteral(resourceName: "bgImage1"),#imageLiteral(resourceName: "bgImage2"),#imageLiteral(resourceName: "bgImage3"),1,backgroundColorList[0],backgroundColorList[1],backgroundColorList[2],backgroundColorList[3],#imageLiteral(resourceName: "skin_colors_btn")] as [Any]
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.backgroundColor = UIColor.white
+        let layout = UICollectionViewFlowLayout()
+        layout.itemSize = CGSize.init(width: 48, height:  48)
+        layout.minimumInteritemSpacing = ((keyDeviceWidth - 35)-48*5)/4
+        layout.minimumLineSpacing = 15.0
+        collectionView = UICollectionView.init(frame: CGRect.init(x: 17, y: 15, width: keyDeviceWidth-35, height: self.frame.size.height-30), collectionViewLayout: layout)
+        collectionView.backgroundColor = UIColor.white
+        collectionView.register(styleCollectionViewCell.self, forCellWithReuseIdentifier: "styleCollectionViewCell")
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        self.addSubview(collectionView)
+        
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    //MARK:- collection datasource
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return colorArr.count
+    }
+   func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "styleCollectionViewCell", for: indexPath) as! styleCollectionViewCell
+        cell.configCell(indexPath,  colorArr[indexPath.row], selectIndex: selectIndex)
+       return cell
+    }
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let model = colorArr[indexPath.row]     
+        self.collectionView.reloadData()
+        self.selectIndex = indexPath.row
+        delegate?.changgeBackGround(model,indexPath.row)
+    }
+    
+   
+    
+    
+   
+}

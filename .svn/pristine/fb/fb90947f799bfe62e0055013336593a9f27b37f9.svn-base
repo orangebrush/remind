@@ -1,0 +1,279 @@
+//
+//  ViewController+Extension.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+
+//保存警告列表
+typealias Closure = ()->()
+var notifList = [(title: String, duration: TimeInterval, closure: Closure?)]()
+
+
+
+
+//模糊视图
+private var blurView = { () -> UIVisualEffectView in
+    let blur: UIBlurEffect
+    if #available(iOS 10.0, *) {
+        blur = UIBlurEffect(style: UIBlurEffectStyle.regular)
+    } else {
+        blur = UIBlurEffect(style: UIBlurEffectStyle.light)
+    }
+    let effectView: UIVisualEffectView = UIVisualEffectView(effect: blur)
+    effectView.tag = 111
+    effectView.alpha = 1
+    effectView.frame = CGRect(x: 0, y: 0, width: view_size.width, height: view_size.height)
+    return effectView
+}()
+
+///输入器背景
+private var backSelectorView = { ()->UIView in
+    let v = UIView(frame: CGRect(origin: .zero, size: view_size))
+    v.backgroundColor = UIColor(colorHex: 0x000000).withAlphaComponent(0.5)
+    v.tag = 222
+    return v
+}()
+
+
+
+//存储微信和邮箱视图
+var wxVC: WXVC?
+var emailVC: EmailVC?
+
+
+
+//delegate
+extension UIViewController{
+    
+    open override func awakeFromNib() {
+        //修改默认返回按钮
+        if !self.isKind(of: ProfileVC.self){
+//            let leftBarBtn = UIBarButtonItem(image: #imageLiteral(resourceName: "nav_back"), style: .plain, target: self, action: #selector(backToPrevious))
+//            let spacer = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)
+//            spacer.width = -10
+//            leftBarBtn.imageInsets = UIEdgeInsetsMake(0, -7, 0, 7)
+//
+//            navigationItem.leftBarButtonItem = leftBarBtn
+            
+            if isShowBackItem() {
+                let item = BarButtonItem(imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+                self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+            }
+        }
+        
+        
+        super.awakeFromNib()
+        
+        if !isKind(of: WXVC.self) &&
+            !isKind(of: EmailVC.self) &&
+            !isKind(of: BindingWXVC.self) &&
+            !isKind(of: BindingEmailVC.self) &&
+            !isKind(of: ShareVC.self) {
+            //设置模糊效果
+            setBlur(flag: true)
+            
+            //更新自定义背景图
+            updateBackground()
+        }
+        
+    }
+    func isShowBackItem() -> Bool {
+        var isShowBack = true
+        let hiddenBackVCArray = [EventEditorVC.self]
+        for vc in hiddenBackVCArray {
+            if isKind(of: vc) {
+                isShowBack = false
+            }
+        }
+        return isShowBack
+    }
+    
+    func setNavigationBarStyle() {
+        //设置title
+        
+        let visualEffectView   = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+        visualEffectView.alpha = 1
+        visualEffectView.frame = CGRect(x: 0, y: -44, width: view_size.width, height: 78)
+        
+    
+        if self.isKind(of: UINavigationController.self) {
+            visualEffectView.frame =  ((self as! UINavigationController).navigationBar.bounds.insetBy(dx: 0, dy: -10).offsetBy(dx: 0, dy: -10))
+            
+            (self as! UINavigationController).navigationBar.titleTextAttributes = [NSAttributedStringKey.font: UIFont.navTitle, NSAttributedStringKey.foregroundColor:  UIColor.navititleTextColor]
+           (self as! UINavigationController).navigationBar.tintColor = UIColor.subWord
+            (self as! UINavigationController).navigationBar.barTintColor = UIColor.navibarTintColor
+            
+//            (self as! UINavigationController).navigationBar.isTranslucent = true
+//
+//            let navbgImage =  UIImage.image(color: UIColor(colorHex: 0x111111, alpha: 0.6))?.resizableImage(withCapInsets: UIEdgeInsets(top: 0, left: 0, bottom: 0 ,right: 0), resizingMode: .stretch)
+//            (self as! UINavigationController).navigationBar.setBackgroundImage(navbgImage, for: .default)
+//            (self as! UINavigationController).navigationBar.addSubview(visualEffectView)
+//            (self as! UINavigationController).navigationBar.sendSubview(toBack: visualEffectView)
+            
+        }else {
+            self.navigationController?.navigationBar.titleTextAttributes = [NSAttributedStringKey.font: UIFont.navTitle, NSAttributedStringKey.foregroundColor: UIColor.navititleTextColor]
+            self.navigationController?.navigationBar.tintColor = UIColor.subWord
+            self.navigationController?.navigationBar.barTintColor = UIColor.navibarTintColor
+        }
+        UIApplication.shared.statusBarStyle = .lightContent
+        
+   
+    }
+    
+    //MARK: 点击返回方法
+    @objc func backToPrevious(){
+        guard navigationController?.popViewController(animated: true) == nil else{
+            return
+        }
+        
+        dismiss(animated: true, completion: nil)
+    }
+    
+    //MARK:- 顶部提示
+    func notif(withTitle title: String, duration: TimeInterval = 3, closure: Closure? = nil){
+//        guard var navHeight = navigation_height else {
+//            return
+//        }
+        //navHeight += UIApplication.shared.statusBarFrame.size.height
+
+       
+       
+       self.noticeOnlyText(title)
+        closure?()
+
+
+  
+            
+
+        
+    }
+    
+   
+    
+    
+    //MARK:- 更新颜色或者图片
+    func updateBackground(){
+        DataHandler.share().getCustomColorOrImage { (isImage, isCustom, index, color, image) in
+            DispatchQueue.main.async {
+
+                if isImage{
+                    if isCustom{
+                        self.view.layer.contents = image?.cgImage
+                    }else{
+                        self.view.backgroundColor = UIColor.clear
+                        self.view.layer.contents = UIImage(named: "bgImage\(index)")?.cgImage
+                    }
+                    self.view.layer.contentsGravity = kCAGravityResizeAspectFill
+                }else{
+                    self.view.layer.contents = nil
+                    if isCustom{
+                        self.view.backgroundColor = color
+                    }else{
+                        self.view.backgroundColor = backgroundColorList[index]
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    //MARK:- 模糊
+    func setBlur(flag: Bool){
+        let tempBlurView: UIVisualEffectView? = view.viewWithTag(111) as? UIVisualEffectView
+        
+        if flag{
+            if tempBlurView == nil{
+                view.insertSubview(blurView, at: 0)
+            }
+        }else{
+            tempBlurView?.removeFromSuperview()
+        }
+    }
+    
+    ///添加遮罩
+    func setSelectorBackground(flag: Bool){
+        let tempBackSelectorView = view.window?.viewWithTag(222)
+        if flag{
+            if tempBackSelectorView == nil {
+                self.view.window?.addSubview(backSelectorView)
+            }
+        }else{
+            tempBackSelectorView?.removeFromSuperview()
+        }
+    }
+    
+    
+    
+    
+    ///弹出关联微信页面
+    
+    func showWXBinding(closure: ((Bool)->())? = nil){
+        guard wxVC == nil else{
+            return
+        }
+        wxVC = UIStoryboard(name: "Binding", bundle: Bundle.main).instantiateViewController(withIdentifier: "wx") as? WXVC
+        if let vc = wxVC {
+            navigationController?.addChildViewController(vc)
+            navigationController?.view.addSubview(vc.view)
+            
+            vc.view.alpha = 0
+            vc.closure = closure
+            UIView.animate(withDuration: 0.3, animations: {
+                vc.view.alpha = 1
+            })
+        }
+    }
+    
+    ///弹出关联邮箱页面
+    func showEmailBinding(closure: ((Bool)->())? = nil){
+        guard emailVC == nil else {
+            return
+        }
+        emailVC = UIStoryboard(name: "Binding", bundle: Bundle.main).instantiateViewController(withIdentifier: "email") as? EmailVC
+        if let vc = emailVC{
+            navigationController?.addChildViewController(vc)
+            navigationController?.view.addSubview(vc.view)
+            
+            vc.view.alpha = 0
+            vc.closure = closure
+            UIView.animate(withDuration: 0.3, animations: {
+                vc.view.alpha = 1
+            })
+        }
+    }
+    
+    ///分享
+    func share(withText text: String, withImage image: UIImage?, withURL url: URL?){
+        if let shareVC = UIStoryboard(name: "Share", bundle: Bundle.main).instantiateInitialViewController() as? ShareVC{
+            shareVC.text = text
+            shareVC.image = image
+            shareVC.url = url
+            
+            if let tabbarVC = self.tabBarController{
+                tabbarVC.addChildViewController(shareVC)
+                tabbarVC.view.addSubview(shareVC.view)
+            }else{
+                navigationController?.addChildViewController(shareVC)
+                navigationController?.view.addSubview(shareVC.view)
+            }
+            
+            let oldFrameOrigin = shareVC.contentView.frame.origin
+            
+            shareVC.view.alpha = 0
+            shareVC.contentView.frame.origin = CGPoint(x: oldFrameOrigin.x, y: view_size.height)
+            UIView.animate(withDuration: 0.3, animations: {
+                shareVC.view.alpha = 1
+                shareVC.contentView.frame.origin = oldFrameOrigin
+            })
+        }
+    }
+}
+

@@ -1,0 +1,69 @@
+//
+//  festivalDetailViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+import Kingfisher
+class festivalDetailViewController: BasedViewController {
+    var festival:FestivalModel!
+    fileprivate lazy var imageView : UIImageView = {
+       let img = UIImageView.init()
+        return img
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.updateBackground()
+        self.navigationController?.navigationBar.isHidden = true
+        //UIApplication.shared.isStatusBarHidden = true
+        var str = "http://120.79.52.214/appwall_remind/restfull/img/festival/ios/"
+        if keyDeviceHeight/keyDeviceWidth < 2.0{
+            str.append("16x9/")
+        }else{
+            str.append("19.5x9/")
+        }
+        
+          str.append(festival.bgImg)
+//        if self.festival.name.isIncludeChinese(){
+//            str.append(self.festival.name.transformToPinyinWithoutBlank())
+//        }
+        imageView.frame = CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight)
+        imageView.kf.setImage(with: URL.init(string: str))
+        self.view.addSubview(imageView)
+        
+        let btn = UIButton.init()
+        btn.setImage(#imageLiteral(resourceName: "festival_share"), for: .normal)
+        btn.frame = CGRect.init(x: keyDeviceWidth-50, y: 20, width: 40, height: 40)
+        btn.addTarget(self, action: #selector(festivalDetailViewController.shareBtnClick), for: .touchUpInside)
+        self.view.addSubview(btn)
+        
+        let btn1 = UIButton.init()
+        btn1.setImage(#imageLiteral(resourceName: "festival_back"), for: .normal)
+        btn1.frame = CGRect.init(x: 10, y: 20, width: 40, height: 40)
+        btn1.addTarget(self, action: #selector(festivalDetailViewController.backBtnClick), for: .touchUpInside)
+        self.view.addSubview(btn1)
+    }
+    
+    ///返回按钮点击
+    @objc func backBtnClick(){
+        //UIApplication.shared.isStatusBarHidden = false
+        self.navigationController?.popViewController(animated: true)
+    }
+    ///分享按钮点击
+    @objc func shareBtnClick(){
+        self.share(withText: "米橙分享", withImage: self.imageView.image, withURL: nil)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        self.navigationController?.navigationBar.isHidden = false
+        super.viewWillDisappear(animated)
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}

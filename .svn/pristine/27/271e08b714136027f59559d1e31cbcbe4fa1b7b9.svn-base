@@ -1,0 +1,300 @@
+//
+//  CardMangerViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/11.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CardMangerViewController: BasedViewController {
+    var mainTableView : UITableView!
+    var useCardData = [CardSetting]()
+    var notUseCardData = [CardSetting]()
+    var newCardData = [CardSetting]()
+    fileprivate lazy var nameLabel : UILabel = {
+        let label = UILabel.init()
+        label.text = "米橙智能卡片"
+        label.textColor = UIColor.word
+        label.font = UIFont.boldSystemFont(ofSize: 18)
+        label.textAlignment = .center
+        return label
+    }()
+    fileprivate lazy var contentLabel : UILabel = {
+        let label = UILabel.init()
+        label.text = "集合优质信息和功能，每时每刻贴心呵护"
+        label.textColor = UIColor.subSubWord
+        label.font = UIFont.font13
+        label.textAlignment = .center
+        return label
+    }()
+    fileprivate lazy var cutLabel : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.nodata.withAlphaComponent(0.15)
+        return label
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "米橙智能卡片"
+        //self.backButtonTitle = "首页"
+        self.automaticallyAdjustsScrollViewInsets = false
+        let navHeight = UIApplication.shared.statusBarFrame.size.height+(navigation_height ?? 44)
+        self.view.backgroundColor = UIColor.separator
+        self.navigationController?.navigationBar.backgroundColor = UIColor.white
+        mainTableView = UITableView.init(frame: CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight),style:.grouped)
+        mainTableView.delegate = self
+        
+        mainTableView.dataSource = self
+        mainTableView.separatorStyle = .none
+        mainTableView.showsVerticalScrollIndicator = false
+        mainTableView.isEditing = true
+        mainTableView.backgroundColor = UIColor.separator 
+        mainTableView.register(cardManngerTableViewCell.self, forCellReuseIdentifier: "cardManngerTableViewCell")
+        self.view.addSubview(mainTableView)
+        self.getData()
+        mainTableView.rowHeight = 80
+        mainTableView.estimatedRowHeight = 80
+        
+        
+        
+        let footeView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 60))
+        footeView.backgroundColor = UIColor.separator
+        mainTableView.tableFooterView = footeView
+        
+    }
+   
+    override func backToPrevious() {
+        self.navigationController?.popViewController(animated: true)
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        
+       
+    }
+    
+    
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+    func getData(){
+        DataManager.share().getCardSettingList { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.notUseCardData = list.notUse
+            self.useCardData = list.use
+            self.newCardData = list.new
+            self.mainTableView.reloadData()
+            
+        }
+    }
+}
+extension CardMangerViewController :UITableViewDataSource,UITableViewDelegate,UIScrollViewDelegate{
+   
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.contentOffset.y>0{
+            cutLabel.isHidden = false
+        }else{
+            cutLabel.isHidden = true
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        
+        return 80
+    }
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        
+        return 3
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        if section == 0{
+            return newCardData.count
+        }else if section == 1{
+            return useCardData.count
+        }else{
+            return notUseCardData.count
+        }
+    }
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        if indexPath.section == 1{
+            return true
+        }else{
+            return false
+        }
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cardManngerTableViewCell") as? cardManngerTableViewCell
+        var cardSeting : CardSetting!
+        if indexPath.section == 0{
+            cardSeting = newCardData[indexPath.row]
+        }else if indexPath.section == 1{
+            cardSeting = useCardData[indexPath.row]
+        }else{
+            cardSeting = notUseCardData[indexPath.row]
+        }
+        cell?.configCell(indexPath, cardSeting)
+        cell?.delegete = self
+        return cell!
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let emptyview = UIView.init(frame: CGRect.init(x: 0, y: 0, width: 0, height: 0))
+        
+        if section == 0{
+            if newCardData.count == 0{
+                return emptyview
+            }
+        }else if section == 1{
+            if useCardData.count == 0{
+                return emptyview
+            }
+        }else{
+            if notUseCardData.count == 0{
+                return emptyview
+            }
+        }
+        let view = cardSectionHeaderView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 40))
+        view.configView(section == 0 ? useCardData.count : notUseCardData.count, section)
+        view.backgroundColor = UIColor.separator
+        return view
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0{
+            if newCardData.count == 0{
+                return CGFloat.leastNormalMagnitude
+            }else{
+                return 40
+            }
+        }else if section == 1{
+            if useCardData.count == 0{
+                return CGFloat.leastNormalMagnitude
+            }else{
+                return 40
+            }
+        }else{
+            if notUseCardData.count == 0{
+                return CGFloat.leastNormalMagnitude
+            }else{
+                return 40
+            }
+        }
+
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    
+    func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    
+    func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
+
+        self.mainTableView.cellForRow(at: sourceIndexPath)?.alpha = 1
+        if proposedDestinationIndexPath.section == 0 || proposedDestinationIndexPath.section == 2{
+            return sourceIndexPath
+        }
+        return proposedDestinationIndexPath
+    }
+    
+    //MARK:- 移动了cell 更改数据  同时需要发送通知 去刷新首页
+    func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+        
+        if destinationIndexPath == sourceIndexPath{
+            return
+        }
+        if sourceIndexPath.section == 1{
+            if destinationIndexPath.section == 1{
+                var dataArr = self.useCardData
+                
+                let card = dataArr[sourceIndexPath.row]
+                dataArr.remove(at:sourceIndexPath.row)
+                dataArr.insert(card, at: destinationIndexPath.row)
+                self.useCardData = dataArr
+                self.mainTableView.reloadData()
+                DataManager.share().setCardSort(withSortedUseCardSettingList: dataArr, closure: { (result, message) in
+                    if result == .failure{
+                        self.notif(withTitle: message)
+                        self.mainTableView.reloadData()
+                        return
+                    }
+                })
+                
+            }
+        }
+        
+    }
+    
+    
+    func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCellEditingStyle {
+        return .none
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 0))
+        return view
+    }
+    
+}
+
+//MARK:- 卡片左侧按钮点击 同时需要发送通知去刷新首页
+extension CardMangerViewController : cardManngerBtnDelegate {
+    func addOrDeleteBtnClick(_ indexPath: IndexPath) {
+        if indexPath.section == 1{
+            let car = useCardData[indexPath.row]
+            if car.isDisplay {
+                self.notif(withTitle: "默认卡片不可以关闭", duration: 1.5, closure: nil)
+                return
+            }
+        }
+        
+        
+        if indexPath.section == 1{
+            self.alert(withTitle: "删除卡片后，我们将无法向您推送相关信息啦", closure: { (confrim) in
+                if confrim{
+                    DataManager.share().setCardSetting(withCardId: self.useCardData[indexPath.row].id, withCardSort: self.notUseCardData.count, displayFlag: false, closure: { (result, message) in
+                        if result == .failure{
+                            self.notif(withTitle: message)
+                            self.mainTableView.reloadData()
+                            return
+                        }
+                        let card = self.useCardData[indexPath.row]
+                        self.useCardData.remove(at:indexPath.row)
+                        self.notUseCardData.insert(card, at: self.notUseCardData.count)
+                        self.mainTableView.reloadData()
+                    })
+                }
+            })
+            
+            
+        }else{
+            let car = indexPath.section == 0 ? newCardData[indexPath.row] : notUseCardData[indexPath.row]
+
+//            if car.type == .steps{
+//                StepManager.share()
+//            }
+            DataManager.share().setCardSetting(withCardId: car.id, withCardSort: indexPath.section == 0 ? newCardData.count : self.useCardData.count, displayFlag: true, closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    self.mainTableView.reloadData()
+                    return
+                }
+                if indexPath.section == 0{
+                    self.newCardData.remove(at: indexPath.row)
+                }else{
+                    self.notUseCardData.remove(at:indexPath.row)
+                }
+                self.useCardData.insert(car, at: self.useCardData.count)
+                self.mainTableView.reloadData()
+            })
+        }
+    }
+}

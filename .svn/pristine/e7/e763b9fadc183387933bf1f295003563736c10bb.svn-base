@@ -1,0 +1,13 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'roots': [{
+    'type': 'directory',
+    'name': '/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/SnapKit/SnapKit.framework/Modules'
+    'contents': [{
+      'type': 'file',
+      'name': 'module.modulemap',
+      'external-contents': '/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Pods.build/Debug-iphoneos/SnapKit.build/unextended-module.modulemap',
+    }]
+  }]
+}

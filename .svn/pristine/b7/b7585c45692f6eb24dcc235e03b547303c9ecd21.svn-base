@@ -1,0 +1,740 @@
+//
+//  HomeAllTableViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/8.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class HomeAllTableViewController: BasedTableViewController {
+    var type : CardType!
+    var cardId:Int!
+    var weatherList = [WeatherModel]()
+    var eventList = [EventDB]()
+    var brithDayList = [EventDB]()
+    var eventClientList = [EventClient]()
+    var festivalList = [FestivalModel]()
+    var page = 1
+    var selectSection = 0
+    var isEventClient = false
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.updateBackground()
+        tableView.separatorStyle = .none
+        tableView.register(WeatherTableViewCell.self, forCellReuseIdentifier: "WeatherTableViewCell")
+        tableView.register(EventTableViewCell.self, forCellReuseIdentifier: "EventTableViewCell")
+        tableView.register(festivalNewTableViewCell.self, forCellReuseIdentifier: "festivalNewTableViewCell")
+        tableView.register(EventedtingTableViewCell.self, forCellReuseIdentifier: "EventedtingTableViewCell")
+        tableView.register(LocalTableViewCell.self, forCellReuseIdentifier: "LocalTableViewCell")
+        
+        //设置不同的表头高度
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 15))
+        view.backgroundColor = UIColor.clear
+        switch type! {
+        case .weather(_, _):
+            self.title = "天气"
+            view.frame.size.height = CGFloat.leastNormalMagnitude
+            break
+        case .birthday(_, _):
+            self.title = "生日"
+            self.addHeaderFooter()
+            break
+        case .festival(_, _):
+            self.title = "节日节气"
+            break
+        case .event(_, _):
+            self.title = "重要事件"
+            self.addHeaderFooter()
+            break
+        case .eventClient(_, _):
+            self.title = "每日提醒"
+            self.isEventClient = true
+            let header : CKCylinderReversibleHeader = CKCylinderReversibleHeader.init(pad: 0) {
+                self.clientData()
+            }
+            header.cylinderColor = UIColor.subSubWord
+            tableView.mj_header = header
+            break
+        default:
+            break
+        }
+        tableView.tableHeaderView = view
+        //判断是否在本地获取数据
+        switch type! {
+        case .eventClient(_, _):
+             self.clientData()
+        default:
+            self.getMainData(1)
+        }
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(HomeAllTableViewController.NotificationRefershTable), name: NSNotification.Name(rawValue: String.refreshEventAll), object: nil)
+    }
+     //MARK:- 接收到通知   进行刷新列表
+    @objc func NotificationRefershTable(){
+        switch type! {
+        case .eventClient(_, _):
+            self.clientData()
+        default:
+            self.getMainData(1)
+        }
+    }
+    @objc func navSettingClick(){
+        switch type!{
+        case .weather(_, _):
+            let vc = weathCardSettingViewController()
+            self.navigationController?.pushViewController(vc, animated: true)
+        case .festival(_, _):
+            self.goSetting(false)
+        default:
+            self.goSetting(true)
+            break
+        }
+    }
+    @objc func navAddButtonclick(){
+        switch type! {
+        case .birthday(_, _):
+            if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                    //获取类型
+                    let tip = DataHandler.share().getTip(byTipType: 1, withTipName: "", withIsClient: false, withSort: 0)
+                    eventEditorVC.tip = tip
+                    navigationController?.show(eventEditorVC, sender: nil)
+                }
+            }
+           break
+        case .event(_, _):
+            let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+            self.navigationController?.pushViewController(vc!, animated: true)
+            break
+        case .eventClient(_, _):
+            let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+            self.navigationController?.pushViewController(vc!, animated: true)
+            break
+        case .weather(_ , _):
+            let vc = addCityViewController()
+            self.navigationController?.pushViewController(vc, animated: true)
+            break
+        default:
+            break
+        }
+    }
+    //MARK:- 跳转至设置界面
+    func goSetting(_ iselese:Bool){
+        if iselese{
+            let vc = CardSettingElseViewController()
+            vc.cardid = cardId
+            self.navigationController?.show(vc, sender: nil)
+        }else{
+            let vc = CardSettingViewController()
+            vc.cardid = cardId
+            self.navigationController?.show(vc, sender: nil)
+        }
+    }
+    override func backToPrevious() {
+        self.navigationController?.popViewController(animated: true)
+     }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refershEvent), object: nil)
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshClient), object: nil)
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    
+        let  settingBtn = BarButtonItem.init(imageName: "navbar_icon_set", isShowRedPoint: false,  tSelector: #selector(HomeAllTableViewController.navSettingClick))
+        let  addButton =  BarButtonItem.init(imageName: "navbar_icon_add", isShowRedPoint: false,  tSelector:  #selector(HomeAllTableViewController.navAddButtonclick))
+        switch type! {
+        case .birthday(_, _),.event(_, _),.eventClient(_, _),.weather(_, _):
+             self.navigationItem.rightBarButtonItems = customItemsPosition(items: [addButton,settingBtn], position: .right)
+            break
+        default:
+             self.navigationItem.rightBarButtonItems = customItemsPosition(items: [settingBtn], position: .right)
+            break
+        }
+        
+       
+    }
+    //MARK:- 获取本地事件
+    func clientData(){
+        //从服务器获取每日提醒并插入数据库（并从数据库返回所有每日提醒）
+        DataManager.share().getAllEventClientList { (codeResult, message, eventClientList) in
+            
+            //显示非删除状态的每日提醒 2:已删除
+            self.eventClientList = eventClientList.filter{$0.status != 2}
+            self.tableView.reloadData()
+            
+            if self.tableView.mj_header.isRefreshing{
+                self.tableView.mj_header.endRefreshing()
+            }
+            
+            //获取未同步到服务器的 每日提醒
+            let unSyncEventClientList = eventClientList.filter{!$0.isSynced}
+            for eventClient in unSyncEventClientList{
+                //同步删除的提交到服务器
+                if eventClient.status == 2{
+                    DataManager.share().deleteEventClient(withEventClientType: Int(eventClient.type), withEventClientId: Int(eventClient.id), closure: { (codeResult, message, eventClientId) in
+                       
+                    })
+                }else{
+                    //同步未提交的新添加的每日提醒到服务器
+                    DataManager.share().addEventClient(withEventClientParam: eventClient, closure: { (codeResult, message, eventClientId) in
+                        
+                    })
+                }
+            }
+        }
+    }
+    //MARK:添加头部尾部刷新
+    func addHeaderFooter(){
+        let header : CKCylinderReversibleHeader = CKCylinderReversibleHeader.init(pad: 0) {
+            self.page = 1
+            self.tableView.mj_footer.resetNoMoreData()
+            self.getMainData(self.page)
+        }
+        header.cylinderColor = UIColor.subSubWord
+        tableView.mj_header = header
+        
+        let footer : CKCylinderReversibleFooter = CKCylinderReversibleFooter.init(pad: 0) {
+            self.page+=1
+            self.getMainData(self.page)
+        }
+        footer.cylinderColor = UIColor.subSubWord
+        tableView.mj_footer = footer
+    }
+    //MARK:- 根据类型不同来获取数据
+    func getMainData(_ page:Int){
+        switch type! {
+        case .weather(_, _):
+            DataManager.share().getMarkedWeatherList { (result, message, list) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+               
+                self.weatherList = list
+                self.tableView.reloadData()
+               }
+            break
+        case .festival(_, _):
+            DataManager.share().getAllFestivalList { (result, message, festivalList) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                if page == 1{
+                    self.festivalList.removeAll()
+                } 
+                self.festivalList = festivalList
+                self.tableView.reloadData()
+               
+                
+            }
+            break
+        case .birthday(_, _):
+            
+            DataManager.share().getAllEventList(withPage: self.page,withInHome: false, withEventTypes: [1,2], closure: { (result, message, list) in
+                if result == .failure{
+                    self.endReflesh(-1, true)
+                    self.notif(withTitle: message)
+                    return
+                }
+                if page == 1{
+                    self.brithDayList.removeAll()
+                }
+                for brith in list{
+                    self.brithDayList.append(brith)
+                }
+                
+                self.tableView.reloadData()
+                self.endReflesh(list.count, false)
+               
+            })
+            break
+        case .event(_, _):
+            
+            DataManager.share().getAllEventList(withPage: self.page,withInHome: true, closure: { (result, message, list) in
+                if result == .failure{
+                    self.endReflesh(-1, true)
+                    self.notif(withTitle: message)
+                    return
+                }
+                if page == 1{
+                    self.eventList.removeAll()
+                }
+                for evnet1 in list{
+                    self.eventList.append(evnet1)
+                }
+                self.tableView.reloadData()
+                
+                self.endReflesh(list.count, false)
+                
+            })
+          
+            break
+        case .eventClient(_, _):
+            
+            break
+        default:
+            break
+        }
+        
+    }
+    //MARK:- 结束刷新状态
+    func endReflesh(_ count:Int,_ isFailure:Bool){
+        if tableView.mj_header.isRefreshing{
+            tableView.mj_header.endRefreshing()
+        }
+        
+        if tableView.mj_footer.isRefreshing{
+            self.tableView.mj_footer.endRefreshing()
+            if count < 20{
+                notif(withTitle: "没有更多数据了")
+            }
+        }
+                if count == 0{
+                   
+                    self.tableView.mj_footer.isHidden = true
+                }else if count < 20{
+                    
+                    self.tableView.mj_footer.isHidden = true
+                }else{
+                    self.tableView.mj_footer.isHidden = false
+            }
+        
+    }
+   
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+       
+    }
+
+    override func numberOfSections(in tableView: UITableView) -> Int {
+    
+        switch type! {
+        case .weather(_, _):
+            return  weatherList.count
+        case .birthday(_, _):
+            return brithDayList.count
+        case .festival(_, _):
+            return festivalList.count
+        case .event(_, _):
+            return eventList.count
+        case .eventClient(_, _):
+            return eventClientList.count
+        default:
+            return 0
+        }
+        
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 1
+    }
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        
+        switch type! {
+        case .weather(_, _):
+            return 88
+        case .birthday(_, _):
+            return 64
+        case .festival(_, _):
+            return 64
+        case .event(_, _):
+            return 64
+        case .eventClient(_, _):
+            return 64
+        default:
+            return 64
+          
+        }
+    }
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        switch type! {
+        case .weather(_, _):
+            return 10
+        case .birthday(_, _),.festival(_, _),.event(_, _),.eventClient(_, _):
+            return 36
+        default:
+             return 0
+        }
+    }
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        switch type! {
+        case .weather(_, _):
+            let view = UIView.init()
+            view.backgroundColor = UIColor.clear
+            return view
+        case .birthday(_, _):
+            
+            let hf = UITableViewHeaderFooterView.init()
+            let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+            view.backgroundColor = UIColor.clear
+            hf.backgroundView  = view
+            let view1 = eventHeader.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+            view1.delegate = self
+            view1.configView(section, false, brithDayList[section], nil)
+            hf.addSubview(view1)
+            return hf
+        case .event(_, _):
+            
+            let hf = UITableViewHeaderFooterView.init()
+            let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+            view.backgroundColor = UIColor.clear
+            hf.backgroundView  = view
+            let view1 = eventHeader.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+            view1.delegate = self
+            view1.configView(section, false, eventList[section], nil)
+            hf.addSubview(view1)
+            return hf
+        case .festival(_, _):
+            let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+            view.backgroundColor = UIColor.clear
+            let view1 = EventSectionHeaderView.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+            view1.configView(section,false, self.festivalList[section].title)
+            view1.delegate = self
+            view.addSubview(view1)
+            return view
+        case .eventClient(_, _):
+            let hf = UITableViewHeaderFooterView.init()
+            let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+            view.backgroundColor = UIColor.clear
+            hf.backgroundView  = view
+            let view1 = eventHeader.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+            view1.delegate = self
+            view1.configView(section, true, nil, eventClientList[section])
+            hf.addSubview(view1)
+            return hf
+        default:
+            let view = UIView.init()
+            view.backgroundColor = UIColor.clear
+            return view
+        }
+      }
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        switch type! {
+        case .weather(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "WeatherTableViewCell", for: indexPath) as! WeatherTableViewCell
+            cell.congigCell(true, false, [weatherList[indexPath.section]])
+            cell.delegate = self
+            return cell
+        case .birthday(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "EventTableViewCell", for: indexPath) as! EventTableViewCell
+            cell.configCell(nil, nil, brithDayList[indexPath.section], true, true)
+            return cell
+        case .event(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "EventTableViewCell", for: indexPath) as! EventTableViewCell
+            cell.configCell(nil, nil, eventList[indexPath.section], true, true)
+            return cell
+        case .festival(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "festivalNewTableViewCell") as? festivalNewTableViewCell
+            cell?.configCell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)),self.festivalList[indexPath.section], isfrist: true)
+            return cell!
+        case .eventClient(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "LocalTableViewCell") as! LocalTableViewCell
+            cell.configCell(eventClientList[indexPath.section])
+            return cell
+        default:
+            return UITableViewCell()
+        }
+        
+    }
+    override func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        switch type! {
+        case .weather(_, _):
+            return CGFloat.leastNormalMagnitude
+        default:
+            return 10
+        }
+    }
+    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        switch type! {
+          case .festival(_, _):
+            let vc = festivalDetailViewController()
+            vc.festival = self.festivalList[indexPath.section]
+            self.navigationController?.pushViewController(vc, animated: true)
+            break
+        case .birthday(_, _):
+            
+            let vc = DetailViewController()
+            vc.id = Int32(self.brithDayList[indexPath.section].id)
+            self.navigationController?.pushViewController(vc, animated: true)
+        case .event(_, _):
+            
+            let vc = DetailViewController()
+            vc.id = Int32(self.eventList[indexPath.section].id)
+            self.navigationController?.pushViewController(vc, animated: true)
+        case .eventClient(_, _):
+           
+            if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                //根视图
+                if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                    
+                    eventEditorVC.eventClient = self.eventClientList[indexPath.section]
+                    navigationController?.show(eventEditorVC, sender: nil)
+                }
+            }
+        default :
+            break
+        }
+    }
+}
+extension HomeAllTableViewController:eventHeaderEdtingBtnClickDelegate,eventsectionHeaderDelegate,WeatherTableViewCellDelegate,homeEdtingViewDegate{
+    func edtingBtnClick(_ row: Int) {
+        if !isEventClient{
+            
+            var event : EventDB!
+            
+            switch type!{
+            case .birthday(_, _):
+                event = brithDayList[selectSection]
+                break
+            case .event(_, _):
+                event = eventList[selectSection]
+                break
+            default:
+                break
+            }
+            
+            if row == 1 {
+                self.goEdting(false, selectSection)
+            }
+            if row == 0{
+                self.openOrCloseremind(event:event, selectSection)
+            }
+            if row == 2{
+                self.alert(withTitle: "确定要删除这条重要事件", closure: { (confrim) in
+                    if confrim {
+                        DataManager.share().deleteEvent(withEventId: Int(event.id), closure: { (result, message) in
+                            if result == .failure{
+                                self.notif(withTitle: message)
+                                return
+                            }
+                            switch self.type!{
+                            case .birthday(_, _):
+                                guard  self.selectSection < self.brithDayList.count && self.selectSection >= 0 else {
+                                    return
+                                }
+                                self.brithDayList.remove(at: self.selectSection)
+                                //防止把列表删除完了   还出现表尾
+                                if self.brithDayList.count == 0{
+                                    self.tableView.mj_footer.isHidden = true
+                                }
+                                self.tableView.reloadData()
+                                break
+                            case .event(_, _):
+                                guard  self.selectSection < self.eventList.count && self.selectSection >= 0 else {
+                                    return
+                                }
+                                self.eventList.remove(at: self.selectSection)
+                                //防止把列表删除完了   还出现表尾
+                                if self.eventList.count == 0{
+                                    self.tableView.mj_footer.isHidden = true
+                                }
+                                self.tableView.reloadData()
+                                break
+                            default:
+                                break
+                            }
+                            
+                            
+                            
+                        })
+                    }
+                })
+            }
+        }
+        else{
+            
+            if row == 1  {
+                self.goEdting(true, selectSection)
+            }
+            if row == 0{
+                self.openOrClosClienteremind(eventClientList[self.selectSection], selectSection)
+            }
+            if row == 2{
+                
+                self.alert(withTitle: "确定要删除这条每日提醒", closure: { (confrim) in
+                    if confrim{
+                        let eventClient = self.eventClientList[self.selectSection]
+                        DataManager.share().deleteEventClient(withEventClientType: Int(eventClient.type), withEventClientId: Int(eventClient.id), closure: { (result, message, id) in
+                            if result == .failure{
+                                self.notif(withTitle: message)
+                                return
+                            }
+                            guard  self.selectSection < self.eventClientList.count && self.selectSection >= 0 else {
+                                return
+                            }
+                            
+                            
+                            self.eventClientList.remove(at: self.selectSection)
+                            self.tableView.reloadData()
+                        })
+                    }
+                })
+                
+            }
+            
+        }
+    }
+    
+    func weatherCellclick(_ model: WeatherModel) {
+       
+        let webVC = WebViewController.init(URL.init(string: "http://120.79.52.214/appwall_remind/restfull/weather/info?cityid=\(model.city.id)&uid=\(MemberManager.share().member?.uuid ?? "")")!)
+        webVC.city = model.city
+        self.navigationController?.show(webVC, sender: nil)
+    }
+   
+       
+       
+    
+    //MARK:- 跳编辑界面
+    func goEdting(_ isLocal:Bool,_ section:Int){
+        if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+            //根视图
+            if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                switch self.type!{
+                case .birthday(_, _):
+                    eventEditorVC.event = self.brithDayList[section]
+                case .event(_, _):
+                    eventEditorVC.event = self.eventList[section]
+                case .eventClient(_, _):
+                    eventEditorVC.eventClient = self.eventClientList[section]
+                default:
+                    break
+                }
+                navigationController?.show(eventEditorVC, sender: nil)
+             }
+        }
+    }
+    //MARK:- 打开关闭提醒
+    func openOrClosClienteremind(_ client:EventClient,_ section:Int){
+        
+        if client.status == 0{
+            DataManager.share().pauseEvent(withEventId: Int(client.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                client.status = 1
+                self.tableView.reloadSections(IndexSet.init(integer: section), with: .none)
+                
+                //暂停提醒（删除）
+                NotifManager.share().deleteNotification(withEventClientType: Int(client.type), withEventClientId: Int(client.id))
+            })
+        }else{
+            DataManager.share().startEvent(withEventId: Int(client.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                client.status = 0
+                self.tableView.reloadSections(IndexSet.init(integer: section), with: .none)
+                
+                //开始提醒
+                NotifManager.share().addLocalNotification(withEventClient: client)
+            })
+        }
+        
+    }
+    
+    
+    func openOrCloseremind(event : EventDB,_ section:Int){
+        
+        var event = event
+        if event.status == 2{
+            self.notif(withTitle: "事件已结束", duration: 0.8, closure: nil)
+            return
+        }
+        if event.status == 0{
+            DataManager.share().pauseEvent(withEventId:Int(event.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                
+                event.status = 1
+                switch self.type!{
+                case .birthday(_, _):
+                    self.brithDayList.remove(at: section)
+                    self.brithDayList.insert(event, at: section)
+                    break
+                case .event(_, _):
+                    self.eventList.remove(at: section)
+                    self.eventList.insert(event, at: section)
+                    break
+                default :
+                    break
+                }
+                
+                self.tableView.reloadSections(IndexSet.init(integer: section), with: .none)
+            })
+        }else{
+            DataManager.share().startEvent(withEventId: Int(event.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                event.status = 0
+                switch self.type!{
+                case .birthday(_, _):
+                    self.brithDayList.remove(at: section)
+                    self.brithDayList.insert(event, at: section)
+                    break
+                case .event(_, _):
+                    self.eventList.remove(at: section)
+                    self.eventList.insert(event, at: section)
+                    break
+                default :
+                    break
+                }
+                self.tableView.reloadSections(IndexSet.init(integer: section), with: .none)
+            })
+        }
+    }
+    
+    func eventHeaderClick(_ section: Int, _ islocal: Bool) {
+        
+        
+        let view = HomeEdtingView.init(frame:CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: UIScreen.main.bounds.height))
+        view.delegate = self
+        selectSection = section
+        let view1 = self.tableView.headerView(forSection: section)
+        var status : Bool!
+        switch type! {
+        case .event(_, _):
+            status = self.eventList[section].status == 0
+            break
+        case .birthday(_, _):
+            status = self.brithDayList[section].status == 0
+            break
+        case .eventClient(_, _):
+            status = self.eventClientList[section].status == 0
+            break
+        default:
+            break
+        }
+        view.configView(nil, (view1?.frame.origin.y)!-self.tableView.contentOffset.y, false, status)
+        UIApplication.shared.keyWindow?.addSubview(view)
+       
+
+
+    }
+    
+    func headerBtnClick(_ section: Int) {
+        
+    }
+    
+    
+}

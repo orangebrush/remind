@@ -1,0 +1,167 @@
+//
+//  weatherSettingTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol  weatherSettingTableViewCellDelegate:class {
+    func switchValueChange(_ ison:Bool)
+}
+class weatherSettingTableViewCell: UITableViewCell {
+
+    fileprivate lazy var leftLabel : UILabel = {
+       let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var rightLable : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.subSubWord
+        label.textAlignment = .right
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var rightImageView : UIImageView = {
+        let img = UIImageView.init(image: #imageLiteral(resourceName: "go_detail"))
+        return img
+    }()
+    fileprivate lazy var swith : UISwitch = {
+        let swith = UISwitch.init()
+        swith.backgroundColor = UIColor.subSubWord
+        swith.tintColor = UIColor.subSubWord
+        swith.transform = CGAffineTransform.init(scaleX: 0.6, y: 0.6)
+        return swith
+    }()
+    fileprivate lazy var cutLabel : UILabel = {
+        let label = UILabel.init()
+       label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var backView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    var activity = UIActivityIndicatorView.init(activityIndicatorStyle: .gray)
+    weak var delegate : weatherSettingTableViewCellDelegate?
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.selectionStyle = .none
+        self.backgroundColor = UIColor.clear
+        backView.frame = CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 50)
+        self.addSubview(backView)
+        backView.addSubview(leftLabel)
+        backView.addSubview(rightLable)
+        backView.addSubview(swith)
+        backView.addSubview(rightImageView)
+        backView.addSubview(cutLabel)
+        backView.addSubview(activity)
+        leftLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.top.bottom.equalTo(0)
+            make.width.equalTo(120)
+        }
+        rightLable.snp.makeConstraints { (make) in
+            make.left.equalTo(leftLabel.snp.right).offset(5)
+            make.bottom.top.equalTo(0)
+            make.right.equalTo(rightImageView.snp.left).offset(-10)
+        
+        }
+        rightImageView.snp.makeConstraints { (make) in
+            make.right.equalTo(-15)
+            make.width.equalTo(6)
+            make.height.equalTo(12)
+            make.centerY.equalToSuperview()
+        }
+        swith.snp.makeConstraints { (make) in
+            make.right.equalTo(-13)
+            make.centerY.equalToSuperview()
+        }
+        cutLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.bottom.right.equalTo(0)
+            make.height.equalTo(kLineHeight)
+        }
+        activity.snp.makeConstraints { (make) in
+            make.center.equalTo(swith.snp.center)
+            make.width.height.equalTo(20)
+        }
+        activity.isHidden = true
+        swith.clipsToBounds = true
+        swith.layer.cornerRadius = swith.bounds.height/2.0
+        swith.addTarget(self, action: #selector(weatherSettingTableViewCell.swithValueChange(_:)), for: .valueChanged)
+        
+        
+    }
+  
+    @objc func swithValueChange(_ swith:UISwitch){
+        swith.isHidden = true
+        activity.isHidden = false
+        activity.startAnimating()
+        delegate?.switchValueChange(swith.isOn)
+    }
+   
+    func configView(_ indexPath:IndexPath, _ clip:Bool,_ weathSetting:WeatherSetting? , _ date:Date,_ ring:String){
+        activity.stopAnimating()
+        activity.isHidden = true
+        swith.isHidden = true
+        cutLabel.isHidden = false
+        backView.resetNomalView()
+        if indexPath.section == 0{
+            backView.drawFourRectView()
+            cutLabel.isHidden = true
+        }else{
+            if indexPath.row == 0{
+                backView.drawTopRectView()
+            }
+            if clip {
+                backView.drawRectView()
+                cutLabel.isHidden = true
+            }
+        }
+        if indexPath.section == 0{
+            leftLabel.text = "城市管理"
+        }else{
+            if indexPath.row == 0{
+              leftLabel.text = "提醒"
+              swith.isHidden = false
+                if weathSetting != nil{
+                    swith.isOn = (weathSetting?.isPause)!
+                }
+               
+                rightImageView.isHidden = true
+            }else if indexPath.row == 1{
+                leftLabel.text = "提醒时间"
+            }else{
+                leftLabel.text = "提示音"
+            }
+        }
+        if weathSetting != nil{
+            if indexPath.section == 1{
+                if indexPath.row == 0{
+                   swith.isOn = weathSetting!.isPause
+                }else if indexPath.row == 1{
+                   
+                    rightLable.text = "\(date.formatString(with: "hh:mm"))"
+                }else{
+                    rightLable.text = ring
+                }
+           }
+        
+        }
+        
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+
+}

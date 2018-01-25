@@ -1,0 +1,235 @@
+//
+//  SettingsViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/11.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+import Kingfisher
+import UserNotifications
+
+private let defaultCache = "0 KB"
+
+final class SettingsViewController: BasedViewController {
+    
+    private lazy var tableView: UITableView = {
+        let tableView = UITableView(frame: CGRect.zero, style: .grouped)
+        tableView.rowHeight = 48
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.tableFooterView = UIView()
+        tableView.backgroundColor = UIColor.separator
+        tableView.separatorStyle = .none
+        tableView.estimatedSectionFooterHeight = 40
+        tableView.register(MeDefaultTableViewCell.self, forCellReuseIdentifier: "meDefaultTableViewCell")
+        return tableView
+    }()
+    
+    fileprivate var cacheSize = "正在计算..."
+    
+    fileprivate var isRegisteredForRemoteNotifications = false
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Do any additional setup after loading the view.
+        title = "设置"
+        
+        backButtonTitle = "我"
+        
+        self.view.backgroundColor = UIColor.separator
+        
+        tableView.frame = self.view.bounds
+        view.addSubview(tableView)
+        tableView.snp.makeConstraints { (make) in
+            make.top.bottom.right.left.equalToSuperview()
+        }
+        
+        getCacheSize()
+        registeredForRemoteNotifications()
+    }
+}
+
+extension SettingsViewController {
+    
+    fileprivate func clearCache() {
+        func clearCache() {
+            notif(withTitle: "清理中")
+            DispatchQueue.global().async {
+                KingfisherManager.shared.cache.clearDiskCache()
+                self.cacheSize = defaultCache
+                self.reloadCacheRow()
+                DispatchQueue.main.async {
+                   self.notif(withTitle: "清理成功")
+                }
+            }
+        }
+        alert(withTitle: "你确定要清理米橙生活缓存吗?") { (isClear) in
+            if isClear {
+                clearCache()
+            }
+        }
+    }
+    
+    private func getCacheSize() {
+        KingfisherManager.shared.cache.calculateDiskCacheSize(completion: { (size) in
+            DispatchQueue.global().async {
+                let mbSize = Double(size) / 1024 / 1024
+                if mbSize >= 1 {
+                    if mbSize >= 1024 {
+                        self.cacheSize = String(format: "%.2f GB", mbSize / 1024)
+                    } else {
+                        self.cacheSize = String(format: "%.2f MB", mbSize)
+                    }
+                } else {
+                    self.cacheSize = String(format: "%d KB", Int(mbSize * 1024))
+                }
+                self.reloadCacheRow()
+            }
+        })
+    }
+    
+    private func reloadCacheRow() {
+        DispatchQueue.main.async {
+            let indexPath = IndexPath(row: Row.clear.rawValue, section: Section.other.rawValue)
+            self.tableView.reloadRows(at: [indexPath], with: .none)
+        }
+    }
+    
+    fileprivate func registeredForRemoteNotifications() {
+        
+        func reloadRow() {
+            let indexPath = IndexPath(row: 0, section: Section.notification.rawValue)
+            self.tableView.reloadRows(at: [indexPath], with: .none)
+        }
+        
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().getNotificationSettings { (settings) in
+                self.isRegisteredForRemoteNotifications = settings.authorizationStatus == .authorized
+                DispatchQueue.main.async {
+                    reloadRow()
+                }
+            }
+        } else {
+            isRegisteredForRemoteNotifications = UIApplication.shared.isRegisteredForRemoteNotifications || !(UIApplication.shared.currentUserNotificationSettings?.types.isEmpty ?? false)
+            reloadRow()
+        }
+    }
+    
+}
+
+extension SettingsViewController: UITableViewDataSource {
+    
+    fileprivate enum Section: Int {
+        case notification
+        case other
+    }
+    
+    fileprivate enum Row: Int {
+        case clear
+    }
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        guard let section = Section(rawValue: section) else {
+            fatalError()
+        }
+        switch section {
+        case .notification:
+            return 1
+        case .other:
+            return 1
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: MeDefaultTableViewCell = tableView.dequeueReusableCell(withIdentifier: "meDefaultTableViewCell", for: indexPath) as! MeDefaultTableViewCell
+        
+        guard let section = Section(rawValue: indexPath.section) else {
+            fatalError()
+        }
+        switch section {
+        case .notification:
+            let notificationItem = MineItem.init(name: "提醒", info: isRegisteredForRemoteNotifications ? "已开启" : "已关闭", icon: "", vc: "", radiusType: .all)
+            cell.setItem(notificationItem)
+            return cell
+        case .other:
+            guard let row = Row(rawValue: indexPath.row) else {
+                fatalError()
+            }
+            switch row {
+            case .clear:
+                let clearItem = MineItem.init(name: "清理缓存", info: cacheSize, icon: "", vc: "", radiusType: .all)
+                cell.setItem(clearItem)
+                return cell
+            }
+        }
+    }
+    
+}
+
+extension SettingsViewController: UITableViewDelegate {
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        guard let section = Section(rawValue: section) else {
+            fatalError()
+        }
+        return section == .notification ? CGFloat(10) : CGFloat.leastNormalMagnitude
+    }
+    
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return UITableViewAutomaticDimension
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48.0
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        return nil
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        guard let section = Section(rawValue: section) else {
+            fatalError()
+        }
+        
+        guard section == .notification else {
+            return nil
+        }
+        
+        let view = UIView()
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.font = UIFont.systemFont(ofSize: 12)
+        label.textColor = UIColor.subSubWord
+        label.text = "如要开启或停用消息提醒，请在手机“设置 -> 通知 -> 米橙生活”中手动设置。"
+        view.addSubview(label)
+        label.snp.makeConstraints { (make) in
+            make.edges.equalTo(UIEdgeInsets(top: 9, left: 25, bottom: 26, right: 25))
+        }
+        return view
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        guard let section = Section(rawValue: indexPath.section) else {
+            fatalError()
+        }
+        if section == .other {
+            guard let row = Row(rawValue: indexPath.row) else {
+                fatalError()
+            }
+            switch row {
+            case .clear:
+                clearCache()
+            }
+        }
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+    
+}

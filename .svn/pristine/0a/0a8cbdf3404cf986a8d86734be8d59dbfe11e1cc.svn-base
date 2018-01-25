@@ -1,0 +1,181 @@
+//
+//  WXVC.swift
+//  Remind
+//
+//  Created by gg on 18/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class WXVC: UIViewController {
+    
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var subContentView: UIView!
+    @IBOutlet weak var closeButton: UIButton!
+    @IBOutlet weak var titleLabel: UILabel!
+    @IBOutlet weak var label0: UILabel!
+    @IBOutlet weak var label1: UILabel!
+    @IBOutlet weak var verificationTextField: UITextField!
+    @IBOutlet weak var bindingButton: UIButton!
+    
+    //MARK:- 存储初始contentview bottom距离
+    fileprivate var contentViewBottom: CGFloat = 0
+    
+    //判断是否绑定回调
+    var closure: ((Bool, String)->())?
+    
+    //MARK:- init------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+        contentView.layer.cornerRadius = .cornerRadius
+        contentView.clipsToBounds = true
+        contentView.backgroundColor = UIColor(colorHex: 0xffffff).withAlphaComponent(0.9)
+        
+        subContentView.layer.cornerRadius = .cornerRadius
+        
+        contentViewBottom = view_size.height - contentView.frame.origin.y - contentView.frame.height
+        
+        bindingButton.backgroundColor = .clear
+        bindingButton.setTitleColor(UIColor(colorHex: 0xff8000), for: .normal)
+        bindingButton.titleLabel?.font = UIFont(withSemiboldFontSize: 15)
+        
+        titleLabel.textColor = UIColor(colorHex: 0x333333)
+        titleLabel.font = UIFont(withSemiboldFontSize: 17)
+        
+        label0.text = "在微信内搜索并关注\"米橙提醒\"公众号。"
+        label0.textColor = UIColor(colorHex: 0x454545)
+        label0.font = UIFont(withNormalFontSize: 14)
+        
+        label1.text = "在公众号内点\"获取验证码\"，再返回此界面输入验证码以完成关联。"
+        label1.textColor = UIColor(colorHex: 0x454545)
+        label1.font = UIFont(withNormalFontSize: 14)
+        
+        //键盘事件
+//        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notif:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notif:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    @IBAction func close(_ sender: UIButton) {
+        dismissThis()
+    }
+    
+    func dismissThis(){
+        wxVC = nil
+        willMove(toParentViewController: nil)
+        view.removeFromSuperview()
+        removeFromParentViewController()
+    }
+    
+    //MARK:- 点击绑定
+    @IBAction func bind(_ sender: UIButton) {
+        
+        //判断验证码是否已输入
+        guard let verificationCode = verificationTextField.text else {
+            self.notif(withTitle: "未输入验证码")
+            return
+        }
+        
+        let dataManager = DataManager.share()
+        //判断是否已绑定
+        dataManager.isWXBinded(withCode: verificationCode) { (codeResult, message, isBinded) in
+            guard codeResult == .success else{
+                self.notif(withTitle: message)
+                return
+            }
+            
+            guard !isBinded else{
+                self.notif(withTitle: message)
+                return
+            }
+            
+            //绑定请求
+            dataManager.bindWX(withCode: verificationCode, withSync: true) { (codeResult, message) in
+                self.notif(withTitle: message)
+                self.closure?(codeResult == .success, message)
+            }
+        }
+        
+    }
+}
+
+//MARK:- textview delegate
+extension WXVC: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
+        return true
+    }
+    
+    //键盘弹出
+    @objc func keyboardWillShow(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let keyboardBounds = (userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+        let duration = (userInfo![UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue
+        
+        let offset = keyboardBounds.size.height        
+        
+        let animations = {
+            let keyboardTransform = CGAffineTransform(translationX: 0, y: -offset + self.contentViewBottom)
+            self.contentView.transform = keyboardTransform
+        }
+        
+        if duration > 0 {
+            let options = UIViewAnimationOptions(rawValue: UInt((userInfo![UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue << 16))
+            UIView.animate(withDuration: duration, delay: 0, options: options, animations: animations, completion: nil)
+        }else{
+            animations()
+        }
+    }
+    
+    //键盘回收
+    @objc func keyboardWillHide(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let duration = (userInfo![UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue
+        
+        let animations = {
+            let keyboardTransform = CGAffineTransform.identity
+            self.contentView.transform = keyboardTransform
+        }
+        
+        if duration > 0 {
+            let options = UIViewAnimationOptions(rawValue: UInt((userInfo![UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue << 16))
+            UIView.animate(withDuration: duration, delay: 0, options: options, animations: animations, completion: nil)
+        }else{
+            animations()
+        }
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        
+        if string == "\n" || string == " "{
+            return false
+        }
+        
+        
+        var existedLength = 0
+        if let text = textField.text{
+            existedLength = Int(text.count)         //textView.text?.lengthOfBytes(using: .utf8)
+        }
+        let selectedLength = range.length           //range.length
+        let replaceLength = Int(string.count)       //text.lengthOfBytes(using: .utf8)
+        
+        if existedLength - selectedLength + replaceLength > 6 {
+            return false
+        }
+        
+        return true
+    }
+}

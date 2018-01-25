@@ -1,0 +1,231 @@
+//
+//  StyleViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/7.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class StyleViewController: BasedViewController {
+    var selectIndex : Int = 0
+    var isImage : Bool = false
+    fileprivate var backImageView : UIImageView = {
+        let imageView = UIImageView()
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius  = CGFloat.cornerRadius
+        return imageView
+    }()
+    fileprivate var imageView : UIImageView = {
+        let imageView = UIImageView()
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = CGFloat.cornerRadius
+        return imageView
+    }()
+    fileprivate var bottomView : UIView = {
+        let view = UIView.init()
+        return view
+    }()
+    fileprivate lazy var customColor = customColorView.init(frame: CGRect.init(x: UIScreen.main.bounds.width, y: keyDeviceHeight-144 - (isIphoneX ? 34 : 0), width: UIScreen.main.bounds.width, height: 144))
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "卡片背景"
+        self.view.backgroundColor = UIColor.styleColor
+        self.view.addSubview(backImageView)
+        self.view.addSubview(imageView)
+        let image = #imageLiteral(resourceName: "skin_preview_img")
+        self.getBackImage()
+        imageView.image = image
+//        self.navigationController?.navigationBar.backgroundColor = UIColor.white
+        let height = UIScreen.main.bounds.size.height - 144 - 20 - 21 - ((navigation_height ?? 64)+UIApplication.shared.statusBarFrame.size.height)
+        backImageView.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.top.equalTo((navigation_height ?? 64)+UIApplication.shared.statusBarFrame.size.height+20)
+            make.height.equalTo(height)
+            make.width.equalTo(height*image.size.width/image.size.height)
+            
+        }
+        imageView.snp.makeConstraints { (make) in
+            make.center.equalTo(backImageView)
+            make.height.width.equalTo(backImageView)
+        }
+
+       
+       self.resetNav()
+    }
+    
+    func resetNav(){
+//        let  navbutton = UIBarButtonItem.init(title: "取消", style: .plain, target: self, action: #selector(StyleViewController.cancelBtnClick))
+//        navbutton.setTitlePositionAdjustment(UIOffsetMake(-5, 0), for: .default)
+//    navbutton.setTitleTextAttributes([NSAttributedStringKey.foregroundColor:UIColor.subSubWord], for: .normal)
+//        self.navigationItem.leftBarButtonItem = navbutton
+//
+//        let  navbutton1 = UIBarButtonItem.init(title: "保存", style: .plain, target: self, action: #selector(StyleViewController.confrimBtnClick))
+//        navbutton1.setTitlePositionAdjustment(UIOffsetMake(5, 0), for: .default)
+//    navbutton1.setTitleTextAttributes([NSAttributedStringKey.foregroundColor:UIColor.confirm], for: .normal)
+//        self.navigationItem.rightBarButtonItem = navbutton1
+        self.setNavigationBarStyle()
+        let item1 = BarButtonItem(textStr: "取消", tSelector: #selector(StyleViewController.cancelBtnClick))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(textStr: "保存",  tSelector: #selector(StyleViewController.confrimBtnClick))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    @objc func cancelBtnClick(){
+        self.navigationController?.dismiss(animated: true, completion: nil)
+    }
+    @objc func confrimBtnClick(){
+        var type : CustomType!
+        if isImage {
+            type = .img(backImageView.image)
+            
+        }else{
+            type = .color(backImageView.backgroundColor)
+            if selectIndex != 4 && selectIndex != 9{
+                selectIndex = selectIndex-5
+            }
+        }
+        
+        if selectIndex == 4||selectIndex == 9{
+            if DataHandler.share().setCustom(withCustomType: type, withIndex: nil){
+               
+                self.notif(withTitle: "保存成功", duration: 1, closure: nil)
+                self.navigationController?.dismiss(animated: true, completion: nil)
+            }else{
+               self.notif(withTitle: "保存失败", duration: 1, closure: nil)
+            }
+        }else{
+            if  DataHandler.share().setCustom(withCustomType: type, withIndex: selectIndex){
+                self.notif(withTitle: "保存成功", duration: 1, closure: nil)
+                self.navigationController?.dismiss(animated: true, completion: nil)
+                
+            }else{
+                self.notif(withTitle: "保存失败", duration: 1, closure: nil)
+             
+            }
+        }
+    }
+    //MARK:- 更新颜色或者图片
+    func getBackImage(){
+        DataHandler.share().getCustomColorOrImage { (isImage, isCustom, index, color, image) in
+            DispatchQueue.main.async {
+                
+                if isImage{
+                    self.isImage = true
+                    if isCustom{
+                        self.backImageView.image = image
+                        self.selectIndex = 4
+                        
+                    }else{
+                        self.backImageView.image = UIImage(named: "bgImage\(index)")
+                        self.selectIndex = index
+                    }
+                }else{
+                    self.isImage = false
+                    self.view.layer.contents = nil
+                    if isCustom{
+                        self.backImageView.backgroundColor = color
+                        self.selectIndex = 9
+                    }else{
+                        self.selectIndex = index + 5
+                        self.backImageView.backgroundColor = backgroundColorList[index]
+                    }
+                }
+                let bootomView = styleBottomView.init(frame: CGRect.init(x: 0, y: UIScreen.main.bounds.height-144, width: UIScreen.main.bounds.width, height: 144))
+                bootomView.delegate = self
+                bootomView.selectIndex = self.selectIndex
+                self.view.addSubview(bootomView)
+                self.customColor.delegate = self
+                if let color = self.backImageView.backgroundColor{
+                    self.customColor.myColor = color
+                }
+                self.view.addSubview(self.customColor)
+            }
+            
+        }
+    }
+    
+}
+
+extension StyleViewController : styleCellClickDelegate,customValueChangeDelegate{
+    func colorValueChange(_ color: UIColor) {
+        backImageView.image = UIImage()
+        backImageView.backgroundColor = color
+    }
+    func changgeBackGround(_ modle: Any, _ row: Int) {
+        self.selectIndex = row
+        switch modle {
+        case  is UIColor:
+            backImageView.image = UIImage()
+            backImageView.backgroundColor = modle as? UIColor
+            self.isImage = false
+            break
+        case  is Int:
+            self.takePhoto()
+            break
+        case  is UIImage:
+            if row == 9{
+                UIView.animate(withDuration: 0.3, animations: {
+                    self.customColor.frame.origin.x = 0
+                })
+                self.isImage = false
+            }else{
+                backImageView.image = modle as? UIImage
+                self.isImage = true
+            }
+            break
+        default:
+            break
+        }
+    }
+    
+}
+extension StyleViewController : UIImagePickerControllerDelegate,UINavigationControllerDelegate{
+    //MARK:选取照片进行识别
+    func takePhotoWithCamera() {
+        let imagePicker = UIImagePickerController()
+        imagePicker.sourceType = .camera
+        imagePicker.delegate = self
+        imagePicker.view.tintColor = view.tintColor
+        self.present(imagePicker, animated: true, completion: nil)
+    }
+    func choosePhotoFromLibrary() {
+        let imagePicker = UIImagePickerController()
+        imagePicker.sourceType = .photoLibrary
+        imagePicker.delegate = self
+        imagePicker.view.tintColor = view.tintColor
+        self.present(imagePicker, animated: true, completion: nil)
+        
+    }
+    func takePhoto(){
+        let alert = UIAlertController.init(title: "选取照片", message: nil, preferredStyle: .actionSheet)
+        let action1 = UIAlertAction.init(title: "拍照", style: .default) { (action) in
+            self.takePhotoWithCamera()
+        }
+        let action2 = UIAlertAction.init(title: "相册", style: .default) { (action) in
+            self.choosePhotoFromLibrary()
+        }
+        let action3 = UIAlertAction.init(title: "取消", style: .cancel) { (action) in
+            
+        }
+        alert.addAction(action1)
+        alert.addAction(action2)
+        alert.addAction(action3)
+        self.present(alert, animated: true, completion: nil)
+    }
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
+        self.backImageView.image = UIImage.init(data: UIImageJPEGRepresentation((info[UIImagePickerControllerOriginalImage] as! UIImage), 0.2)!)
+        self.isImage = true
+        picker.dismiss(animated: true) {
+            
+        }
+    }
+    
+}

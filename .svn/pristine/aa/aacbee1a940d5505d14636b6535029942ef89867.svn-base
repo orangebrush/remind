@@ -1,0 +1,439 @@
+//
+//  BirthdayVC.swift
+//  Remind
+//
+//  Created by gg on 25/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class BirthdayVC: BasedViewController {
+    
+    var shareView: UIView = UIView()
+    var contentView: UIView = UIView()
+    
+    var label0: UILabel = UILabel()
+    
+    
+    var scrollView: UIScrollView = UIScrollView()
+    
+    var imageView: UIImageView = UIImageView()
+    var nameLabel: UILabel  =  UILabel()
+    
+    var lineLabel: UILabel  =  UILabel()
+    
+    
+    var dateLabel: UILabel  =  UILabel()
+    var dayLabel:  UILabel  =  UILabel()
+    var lunarLabel: UILabel  =  UILabel()
+    
+    
+    let btnBack = UIButton()
+    let btnDownload = UIButton()
+    let btnShare = UIButton()
+    let lblURL = UILabel()
+    var bottomHeight : CGFloat = -24
+    
+    
+    var birthdayEvent: EventDB?
+    
+    var isBirthday: Bool = true
+    
+    
+    //MARK:- init------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.navigationController?.navigationBar.isHidden = true
+        if keyDeviceHeight/keyDeviceWidth < 2.0{
+            bottomHeight = -24
+        }else{
+            bottomHeight = -44
+        }
+        createContents()
+        config()
+        
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        self.navigationController?.navigationBar.isHidden = false
+        super.viewWillDisappear(animated)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        self.navigationController?.navigationBar.isHidden = true
+        super.viewWillAppear(animated)
+    }
+    
+    //MARK:- 获取下次生日时长
+    private func getNextBirthdayIntervalDay(withBrithday birthday: Date) -> Int32?{
+        let year = calendar.component(.year, from: Date())
+        var birthdayComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: birthday)
+        birthdayComponents.year = year
+        if let thisBirthday = calendar.date(from: birthdayComponents){
+            let compareResult = thisBirthday.compare(Date())
+            if compareResult == ComparisonResult.orderedAscending{      //小于当前，下次生日移到明年
+                birthdayComponents.year = year + 1
+                if let lastYearBirthday = calendar.date(from: birthdayComponents){
+                    let interval = lastYearBirthday.timeIntervalSinceNow
+                    let dayInterval = lastYearBirthday.timeIntervalSince(lastYearBirthday.offset(with: 0, withTime: false))
+                    return Int32((interval - dayInterval) / 60 / 60 / 24)
+                }
+            }else{
+                let interval = thisBirthday.timeIntervalSinceNow
+                let dayInterval = thisBirthday.timeIntervalSince(thisBirthday.offset(with: 0, withTime: false))
+                return Int32((interval - dayInterval) / 60 / 60 / 24)
+            }
+        }
+        return nil
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+   
+        
+        
+    }
+    
+    private func config(){
+        if let evt = birthdayEvent {
+            var imageNameStr = ""
+            if evt.type == 1 {
+                imageNameStr = "birthday"
+                isBirthday = true
+                label0.isHidden = false
+                dayLabel.snp.updateConstraints { (make) in
+                    make.top.equalTo(label0.snp.bottom).offset(51)
+                }
+            }else {
+                imageNameStr = "anniversary"
+                isBirthday = false
+                
+                label0.isHidden = true
+                dayLabel.snp.updateConstraints { (make) in
+                    make.top.equalTo(label0.snp.bottom).offset(5)
+                }
+                
+            }
+            if keyDeviceHeight/keyDeviceWidth > 2.0 {
+                imageNameStr += "1125x2436"
+            }else {
+                imageNameStr += "1080x1920"
+            }
+            imageView.image = UIImage.init(named: imageNameStr)
+            
+            //从传入的数据填充页面
+            nameLabel.text = evt.introduce ?? ""
+            if let fromDateText = evt.fromDateText {
+                if fromDateText.components(separatedBy: " ").count == 3 {
+                    dateLabel.text = fromDateText.components(separatedBy: " ")[0] + " " + fromDateText.components(separatedBy: " ")[2] + " " + fromDateText.components(separatedBy: " ")[1]
+                }else {
+                    dateLabel.text = fromDateText
+                }
+            }
+            
+            label0.text = evt.constellation ?? ""
+   
+            
+            if isBirthday {
+                dayLabel.text = evt.intervalDay.birthdayDayText()
+            }else {
+                dayLabel.text = "距离\(evt.age)周年还有\(evt.intervalDay)天"
+            }
+            
+            //返回下次提醒公历
+            let nextSolarDate = Date(timeIntervalSinceNow: TimeInterval(evt.intervalDay) * 60 * 60 * 24)
+            
+            //返回下次提醒农历
+            let nextLunarDate = transformGregorianToLunar(byDate: nextSolarDate)
+            
+            let nextGregorianDate = transformLunarToGregorian(byLunarDate: nextLunarDate)
+            
+            lunarLabel.text = (nextGregorianDate.formatString(with: "yyyy年M月d日")) + " " + lunarMonthList[nextLunarDate.lunarMonth - 1] + lunarDayList[Int(nextLunarDate.lunarDay) - 1] + " " + nextGregorianDate.formatString(with: "E").replacingOccurrences(of: "周", with: "星期")
+        }else{
+            //从后台获取个人生日详情
+            DataManager.share().getInfo { (codeResult, message, infoModel) in
+                self.nameLabel.text = infoModel.nickName + "的生日"
+                
+                //农历与星座字符
+                var lunarAndConstellationStr = ""
+                
+                //计算生日
+                if let birthday = infoModel.birthday{
+                    self.dateLabel.text = birthday.formatString(with: "yyyy年MM月dd日 E")
+                    
+                    //获取间隔时间
+                    if let interval = self.getNextBirthdayIntervalDay(withBrithday: birthday){
+                        let intervalDay = Int32(interval)
+                        if intervalDay < 2{
+                            let attributedString = NSAttributedString(string: intervalDay.intervalDayText(), attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 80)])
+                            self.dayLabel.attributedText = attributedString
+                            self.label0.text = ""
+                        }else{
+                            let text = "\(intervalDay)" + "天"
+                            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 80)])
+                            attributedString.addAttribute(NSAttributedStringKey.font, value: UIFont.init(withNormalFontSize: 26), range: NSMakeRange(text.count - 1, 1))
+                            self.dayLabel.attributedText = attributedString
+                        }
+                    }else{
+                        self.dayLabel.text = ""
+                    }
+                    
+                    //计算农历
+                    let lunarDate = transformGregorianToLunar(byDate: birthday)
+                    let lunarMonthStr = lunarMonthList[lunarDate.lunarMonth - 1]
+                    let lunarDayStr = lunarDayList[Int(lunarDate.lunarDay) - 1]
+                    
+                    lunarAndConstellationStr += lunarMonthStr + lunarDayStr + " · "
+                    
+                }else{
+                    self.dateLabel.text = ""
+                    self.dayLabel.text = ""
+                }
+                
+                //星座
+                let constellation = infoModel.constellation
+                if constellation != ""{
+                    lunarAndConstellationStr += " · " + constellation
+                }
+                
+                //显示农历生日与星座
+                self.lunarLabel.text = lunarAndConstellationStr
+            }
+        }
+    }
+    
+    private func createContents(){
+        
+        
+        if let evt = birthdayEvent {
+            if evt.type == 1 {
+                isBirthday = true
+            }else {
+                isBirthday = false
+            }
+        }
+        
+        
+        view.addSubview(imageView)
+        imageView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        
+//        if keyDeviceHeight/keyDeviceWidth > 2.0 {
+//            bgIndex = bgIndex == 0 ? 1 : 0
+//            imageView.image = bgXList[0]
+//            imageView2.image = bgXList[1]
+//        }else {
+//            bgIndex = bgIndex == 0 ? 1 : 0
+//            imageView.image = bgList[0]
+//            imageView2.image = bgList[1]
+//        }
+        
+        var textColor = UIColor.init(colorHex: 0xe27a66, alpha: 1)
+        if isBirthday {
+            textColor = UIColor.init(colorHex: 0xff6e6e, alpha: 1)
+        }
+        
+        var nameLabelTop: CGFloat = isBirthday ? 140 : 110
+        let space1: CGFloat = 14
+        let space2: CGFloat = 9
+        let space3: CGFloat = 51
+        
+        let space4: CGFloat = 14
+        if keyDeviceHeight == 568 {
+            nameLabelTop = 70
+        }
+        
+        imageView.addSubview(nameLabel)
+        nameLabel.textColor = textColor
+        nameLabel.textAlignment = .center
+        nameLabel.font = UIFont.systemFont(ofSize: 42)
+        nameLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(nameLabelTop)
+            make.centerX.equalToSuperview()
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+        }
+        
+        imageView.addSubview(dateLabel)
+        dateLabel.textColor = textColor
+        dateLabel.textAlignment = .center
+        dateLabel.font = UIFont.systemFont(ofSize: 14)
+        dateLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(nameLabel.snp.bottom).offset(space1)
+            make.centerX.equalToSuperview()
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+        }
+        
+        
+        imageView.addSubview(label0)
+        label0.textColor = textColor
+        label0.textAlignment = .center
+        label0.font = UIFont.systemFont(ofSize: 14)
+        label0.snp.makeConstraints { (make) in
+            make.top.equalTo(dateLabel.snp.bottom).offset(space2)
+            make.centerX.equalToSuperview()
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+        }
+        
+        
+        imageView.addSubview(dayLabel)
+        dayLabel.textColor = textColor
+        dayLabel.textAlignment = .center
+        dayLabel.font = UIFont.systemFont(ofSize: 21)
+        dayLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(label0.snp.bottom).offset(space3)
+            make.centerX.equalToSuperview()
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+        }
+        
+        
+        
+        imageView.addSubview(lunarLabel)
+        lunarLabel.textColor = textColor
+        lunarLabel.textAlignment = .center
+        lunarLabel.font = UIFont.systemFont(ofSize: 14)
+        lunarLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(dayLabel.snp.bottom).offset(space4)
+            make.centerX.equalToSuperview()
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+        }
+        
+        //buttons
+        
+        btnBack.setImage(UIImage(named: "birthday_back"), for: .normal)
+        btnBack.addTarget(self, action: #selector(backBtnClick), for: .touchUpInside)
+        view.addSubview(btnBack)
+        btnDownload.setImage(UIImage(named: "birthday_down"), for: .normal)
+        btnDownload.addTarget(self, action: #selector(downloadBtnClick), for: .touchUpInside)
+        view.addSubview(btnDownload)
+        btnShare.setImage(UIImage(named: "birthday_share"), for: .normal)
+        btnShare.addTarget(self, action: #selector(shareBtnClick), for: .touchUpInside)
+        view.addSubview(btnShare)
+        btnBack.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.left.equalTo(25)
+            make.bottom.equalToSuperview().offset(bottomHeight)
+        }
+        
+        lblURL.font = UIFont.systemFont(ofSize: 12)
+        lblURL.text = "www.mc.cn"
+        lblURL.textColor = UIColor.white
+        lblURL.textAlignment = .center
+        lblURL.layer.shadowOpacity = 0.5
+        lblURL.layer.shadowOffset = CGSize.init(width: 0.1, height: 0.1)
+        lblURL.layer.shadowColor = UIColor.black.cgColor
+        view.addSubview(lblURL)
+        lblURL.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.bottom.equalToSuperview().offset(bottomHeight)
+        }
+        btnDownload.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.right.equalTo(btnShare.snp.left).offset(-15)
+            make.bottom.equalToSuperview().offset(bottomHeight)
+        }
+        btnShare.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.right.equalTo(-25)
+            make.bottom.equalToSuperview().offset(bottomHeight)
+        }
+        
+        
+    }
+    
+    ///返回按钮点击
+    @objc func backBtnClick(){
+        //UIApplication.shared.isStatusBarHidden = false
+        self.navigationController?.popViewController(animated: true)
+    }
+    ///分享按钮点击
+    @objc func shareBtnClick(){
+        
+        let rect = imageView.frame
+        UIGraphicsBeginImageContextWithOptions(rect.size, true, 2.0)
+        guard let ctx = UIGraphicsGetCurrentContext() else{
+            return
+        }
+        imageView.layer.render(in: ctx)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        if image != nil{
+            self.share(withText: "米橙分享", withImage: image, withURL: nil)
+        }
+        
+    }
+    //下载
+    @objc func downloadBtnClick(){
+        let rect = imageView.frame
+        UIGraphicsBeginImageContextWithOptions(rect.size, true, 2.0)
+        guard let ctx = UIGraphicsGetCurrentContext() else{
+            return
+        }
+        imageView.layer.render(in: ctx)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        if image != nil{
+            UIImageWriteToSavedPhotosAlbum(image!, self, #selector(festivalDetailViewController.saveImage(_:_:_:)), nil)
+        }else{
+            self.notif(withTitle: "保存失败")
+        }
+        
+        
+    }
+    
+    @objc func saveImage(_ image:UIImage,_ error:Error?,_ contextInfo:Any){
+        if error == nil{
+            self.notif(withTitle: "保存成功")
+        }else{
+            self.alert(withTitle: "米橙生活需要访问你的相册", closure: { (confrim) in
+                if confrim{
+                    let settingUrl = URL.init(string: UIApplicationOpenSettingsURLString)
+                    if UIApplication.shared.canOpenURL(settingUrl!){
+                        UIApplication.shared.openURL(settingUrl!)
+                    }
+                    
+                }
+            })
+        }
+    }
+    
+    //MARK:- 点击切换背景
+   
+    private var bgIndex = 0
+
+    func changeBackground(_ sender: UIButton) {
+//        if UIScreen.main.bounds.height == 812 {
+//            bgIndex = bgIndex == 0 ? 1 : 0
+//            imageView.image = bgXList[bgIndex]
+//        }else {
+//            bgIndex = bgIndex == 0 ? 1 : 0
+//            imageView.image = bgList[bgIndex]
+//        }
+    }
+    
+    //MARK:- 分享
+    @objc func share(_ sender: UIBarButtonItem) {
+        
+        //获取分享图片
+        let rect = view.frame
+        UIGraphicsBeginImageContext(rect.size)
+        guard let ctx = UIGraphicsGetCurrentContext() else{
+            return
+        }
+        view.layer.render(in: ctx)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        share(withText: "分享图片", withImage: image, withURL: nil)
+    }
+}
+
+//MARK:- scrollview delegate
+extension BirthdayVC: UIScrollViewDelegate {
+    
+}

@@ -1,0 +1,242 @@
+//
+//  GANSolarLunarPicker.swift
+//  Remind
+//
+//  Created by gg on 18/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+typealias GANSolarLunarClosure = (solarDate: Date, lunarDate: LunarDate, isIgnoreYear: Bool, switchLunar: Bool)
+class GANSolarLunarPicker: UIView {
+    private var solarPicker: GANSolarPicker?
+    private var lunarPicker: GANLunarPicker?
+    
+    ///记录是否含有年份隐藏开关
+    private var hasIgnoreYear = false
+    
+    ///根据是否隐藏年份，返回相应选择器视窗
+    private let ignoreHeight: CGFloat = 48
+    private var pickerViewFrame: CGRect{
+        get{
+            if hasIgnoreYear{
+                return CGRect(x: 0, y: ignoreHeight, width: bounds.width, height: bounds.height - ignoreHeight)
+            }
+            return bounds
+        }
+    }
+    
+    //MARK:- public------------------------------------------------------------------------
+    
+    ///最小日期（必须）
+    var minDate = Date(withDateStr: "1900-1-31", withFormatStr: "yyyy-M-d")
+    ///最大日期（必须）
+    var maxDate = Date(withDateStr: "2049-12-31", withFormatStr: "yyyy-M-d")
+    
+    
+    ///事件周期
+    var isClient = false
+    ///事件类型
+    var eventType = 11
+    ///当前选择公历
+    var selectedSolar = Date()
+    var selectedLunar: LunarDate = (2000, 1, 30, false, false, 0)
+    
+    
+    ///判断初始是否为农历
+    var isLunar = false
+    
+    ///判断初始是否忽略年份
+    var isIgnoreYear = false{
+        didSet{
+            //有隐藏年份的前提下做处理
+            guard hasIgnoreYear else{
+                return
+            }
+            
+            solarPicker?.isIgnoreYear = isIgnoreYear
+            lunarPicker?.isIgnoreYear = isIgnoreYear
+            
+            hLeftSep?.isHidden = isIgnoreYear
+            if isIgnoreYear {
+                hRightSep?.frame.origin.x = componentWidth
+            }else{
+                hRightSep?.frame.origin.x = componentWidth * 2
+            }
+        }
+    }
+    
+    ///切换公历农历
+    var switchLunar = false{
+        didSet{
+            solarPicker?.isShow = !switchLunar
+            lunarPicker?.isShow = switchLunar
+            
+            if switchLunar {
+                solarPicker?.lunarDate = lunarPicker?.lunarDate
+                
+                let lDate = transformGregorianToLunar(byDate: selectedSolar)
+                //lunarPicker?.lunarDate = lDate
+                self.closure?((self.selectedSolar, lDate, self.isIgnoreYear, self.switchLunar))
+            }else{
+                lunarPicker?.solarDate = solarPicker?.solarDate
+                
+                let sDate = transformLunarToGregorian(byLunarDate: selectedLunar)
+                //solarPicker?.solarDate = sDate
+                self.closure?((sDate, self.selectedLunar, self.isIgnoreYear, self.switchLunar))
+            }
+        }
+    }
+    
+    //回调
+    var closure: ((GANSolarLunarClosure)->())?
+    
+    //MARK:- private--------------------------------------------------------------------------------------------
+    private var componentWidth: CGFloat!{
+        get{
+            if self.isIgnoreYear{
+                return self.frame.width / 2
+            }
+            return self.frame.width / 3
+        }
+    }
+    private let componentHeight: CGFloat = 52
+    
+    private var hLeftSep: UIView?
+    private var hRightSep: UIView?
+    
+    //MARK:- init--------------------------------------------------------------------------------------
+    init(frame: CGRect, withHasIgnoreYear hasIgnoreYear: Bool) {
+        super.init(frame: frame)
+        self.hasIgnoreYear = hasIgnoreYear
+        
+        config()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        createContents()
+    }
+    
+    
+    private func config(){
+        
+        //初始化开始结束日期
+        
+    }
+    
+    private func createContents(){
+        updateRangeOfDate()
+        
+        //判断是否带隐藏年份选项
+        if hasIgnoreYear {
+            //覆盖顶层视图的分割线，+2
+            let ignoreHeaderFrame = CGRect(x: 0, y: -2, width: bounds.width, height: ignoreHeight + 2)
+            let ignoreHeader = GANIgnoreHeader(frame: ignoreHeaderFrame)
+            ignoreHeader.customSwitch?.setOn(!isIgnoreYear, animated: true)
+            addSubview(ignoreHeader)
+            
+            ignoreHeader.closure = {
+                isOn in
+                self.isIgnoreYear = !isOn
+                self.closure?((self.selectedSolar, self.selectedLunar, self.isIgnoreYear, self.switchLunar))
+            }
+        }
+        
+        //添加公历选择器
+        solarPicker = GANSolarPicker(frame: pickerViewFrame)
+        solarPicker?.maxDate = maxDate
+        solarPicker?.minDate = minDate
+        solarPicker?.solarDate = selectedSolar
+        solarPicker?.selectedClosure = {
+            selectedSolar in
+            self.lunarPicker?.solarDate = selectedSolar
+            self.selectedSolar = selectedSolar
+            
+            self.closure?((self.selectedSolar, self.selectedLunar, self.isIgnoreYear, self.switchLunar))
+        }
+        addSubview(solarPicker!)
+        
+        //添加农历选择器
+        lunarPicker = GANLunarPicker(frame: pickerViewFrame)
+        lunarPicker?.maxDate = maxDate
+        lunarPicker?.minDate = minDate
+        lunarPicker?.lunarDate = selectedLunar
+        lunarPicker?.selectedClosure = {
+            selectedLunar in
+            self.solarPicker?.lunarDate = selectedLunar
+            self.selectedLunar = selectedLunar
+            
+            self.closure?((self.selectedSolar, self.selectedLunar, self.isIgnoreYear, self.switchLunar))
+        }
+        addSubview(lunarPicker!)
+        
+        //初始化显示农历选择器
+        let tempSwitchLunar = switchLunar
+        switchLunar = tempSwitchLunar
+        
+        //初始化隐藏年份
+        let tempIsIgnoreYear = isIgnoreYear
+        isIgnoreYear = tempIsIgnoreYear
+        
+        updateSep()
+    }
+    
+    //MARK:- 更新日期范围
+    private func updateRangeOfDate(){
+        if !isClient{
+            switch eventType{
+            case 1, 2:
+                hasIgnoreYear = true
+                maxDate = Date()
+                if eventType == 1{  //生日
+                }else{              //纪念日
+                    
+                }
+            default:
+                hasIgnoreYear = false
+                minDate = Date()
+            }
+        }
+    }
+    
+    //MARK:- 更新统一ui
+    private func updateSep(){
+        
+        let offsetHeight = hasIgnoreYear ? ignoreHeight : 0
+        
+        //添加垂直分割线
+        for i in 0..<2{
+            let vy = CGFloat(i) * componentHeight + (bounds.height - offsetHeight - componentHeight) / 2 + offsetHeight
+            let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+            let vSep = UIView(frame: vframe)
+            vSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+            addSubview(vSep)
+        }
+        
+        //添加水平分割线
+        hLeftSep = UIView(frame: CGRect(x: frame.width / 3, y: offsetHeight, width: kLineHeight, height: bounds.height - offsetHeight))
+        hLeftSep?.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        hLeftSep?.isHidden = isIgnoreYear
+        addSubview(hLeftSep!)
+        
+        if isIgnoreYear {
+            hRightSep = UIView(frame: CGRect(x: componentWidth, y: offsetHeight, width: kLineHeight, height: bounds.height - offsetHeight))
+        }else{
+            hRightSep = UIView(frame: CGRect(x: componentWidth * 2, y: offsetHeight, width: kLineHeight, height: bounds.height - offsetHeight))
+        }
+        hRightSep?.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(hRightSep!)
+        
+        //添加背景白色
+        let backViewFrame = CGRect(x: 0, y: (bounds.height - offsetHeight - componentHeight) / 2 + offsetHeight, width: bounds.width, height: componentHeight)
+        let backView = UIView(frame: backViewFrame)
+        backView.backgroundColor = .white
+        insertSubview(backView, at: 0)
+    }
+}

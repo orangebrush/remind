@@ -1,0 +1,235 @@
+//
+//  ShareVC.swift
+//  Remind
+//
+//  Created by gg on 25/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class ShareVC: BasedViewController {
+    
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var cancelButton: UIButton!
+    
+    @IBOutlet weak var button0: UIButton!
+    @IBOutlet weak var label0: UILabel!
+    @IBOutlet weak var button1: UIButton!
+    @IBOutlet weak var label1: UILabel!
+    @IBOutlet weak var button2: UIButton!
+    @IBOutlet weak var label2: UILabel!
+    @IBOutlet weak var button3: UIButton!
+    @IBOutlet weak var label3: UILabel!
+    @IBOutlet weak var button4: UIButton!
+    @IBOutlet weak var label4: UILabel!
+    
+    var text = ""
+    var image: UIImage?
+    var url: URL?
+    
+    //MARK:- init----------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+        contentView.layer.cornerRadius = .cornerRadius
+        contentView.clipsToBounds = true
+        
+        label0.font = .normal
+        label0.textColor = .word
+        label1.font = .normal
+        label1.textColor = .word
+        label2.font = .normal
+        label2.textColor = .word
+        label3.font = .normal
+        label3.textColor = .word
+        label4.font = .normal
+        label4.textColor = .word
+        
+        cancelButton.setTitleColor(.subWord, for: .normal)        
+        cancelButton.titleLabel?.font = .normal
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    //MARK:- 点击分享
+    @IBAction func share(_ sender: UIButton) {
+        let tag = sender.tag
+        
+        guard image != nil || url != nil else{
+            print("需传入分享内容 image or url")
+            return
+        }
+        
+        switch tag {
+        case 0:     //微信分享
+            let message = WXMediaMessage()
+            
+            if let img = image{
+                message.title = text
+                
+                let imgObj = WXImageObject()
+                imgObj.imageData = UIImagePNGRepresentation(img)
+                
+                message.mediaObject = imgObj
+            }else if let u = self.url{
+                message.title = text
+                message.description = "我是爱思提醒小伙伴哟0-0"
+                message.setThumbImage(UIImage(named: "180.png"))
+                
+                let ext = WXWebpageObject()
+                ext.webpageUrl = u.absoluteString
+                message.mediaObject = ext
+            }
+            
+            let req = SendMessageToWXReq()
+            req.bText = false
+            req.message = message
+            req.scene = Int32(WXSceneSession.rawValue)
+            
+            WXApi.send(req)
+        case 1:     //朋友圈分享
+            let message = WXMediaMessage()
+            
+            if let img = image{
+                message.title = text
+                
+                let imgObj = WXImageObject()
+                imgObj.imageData = UIImagePNGRepresentation(img)
+                
+                message.mediaObject = imgObj
+            }else if let u = self.url{
+                message.title = text
+                message.description = "我是爱思提醒小伙伴哟0-0"
+                message.setThumbImage(UIImage(named: "180.png"))
+                
+                let ext = WXWebpageObject()
+                ext.webpageUrl = u.absoluteString
+                message.mediaObject = ext
+            }
+            
+            let req = SendMessageToWXReq()
+            req.bText = false
+            req.message = message
+            req.scene = Int32(WXSceneTimeline.rawValue)
+            WXApi.send(req)
+        case 2:     //微博分享
+            
+            if let img = image{
+                let authReq = WBAuthorizeRequest()
+                authReq.redirectURI = "https://www.sina.com"
+                authReq.scope = "all"
+                
+                let message = WBMessageObject()
+                message.text = "这是分享到新浪微博的一张图片"
+                
+                let imgObj = WBImageObject()
+                
+                // 不能超过10M
+                let imgData = UIImageJPEGRepresentation(img, 0.8)
+                imgObj.imageData = imgData!
+                message.imageObject = imgObj
+                
+                
+                let req: WBSendMessageToWeiboRequest = WBSendMessageToWeiboRequest.request(withMessage: message, authInfo: authReq, access_token: nil) as! WBSendMessageToWeiboRequest
+                req.userInfo = ["info": "分享的图片"] // 自定义的请求信息字典， 会在响应中原样返回
+                req.shouldOpenWeiboAppInstallPageIfNotInstalled = false // 当未安装客户端时是否显示下载页
+                
+                WeiboSDK.send(req)
+            }else{
+                let messageObj = WBMessageObject.message() as! WBMessageObject
+                let object = WBWebpageObject.object() as! WBWebpageObject
+                object.objectID = self.url?.absoluteString
+                object.title = text
+                object.description = "我是爱思提醒小伙伴哟0-0"
+                object.thumbnailData = UIImageJPEGRepresentation(UIImage.init(named: "card_step")!, 0.8)
+//                object.thumbnailData = UIImageJPEGRepresentation(UIImage(named: "180.png")!, 0.8)
+                object.webpageUrl = self.url?.absoluteString
+                messageObj.mediaObject = object
+                
+                let req = WBSendMessageToWeiboRequest.request(withMessage: messageObj) as! WBBaseRequest
+                WeiboSDK.send(req)
+                
+            }
+        case 3, 4:     //qq分享
+            let title = "米橙提醒"
+            let description = "你的生活小助手哟0-0"
+            var req: SendMessageToQQReq!
+            if let img = image{
+                let imgData = UIImagePNGRepresentation(img)
+                let imgObj = QQApiImageObject(data: imgData, previewImageData: imgData as Data!,
+                                              title: title, description: description)
+                req = SendMessageToQQReq(content: imgObj)
+            }else if let u = url{
+                let newsObj = QQApiNewsObject(url: u, title: title, description: description, previewImageURL: u, targetContentType: QQApiURLTargetTypeNews)
+                req = SendMessageToQQReq(content: newsObj)
+            }
+            
+            //分享到qq好友或者qq空间
+            let resultCode = tag == 3 ? QQApiInterface.send(req) : QQApiInterface.sendReq(toQZone: req)
+            
+            let message: String
+            switch resultCode{
+            case EQQAPIAPPNOTREGISTED:
+                message = "App未注册"
+            case EQQAPIMESSAGECONTENTINVALID, EQQAPIMESSAGECONTENTNULL,
+                 EQQAPIMESSAGETYPEINVALID:
+                message = "发送参数错误"
+            case EQQAPIQQNOTINSTALLED:
+                message = "QQ未安装"
+            case EQQAPIQQNOTSUPPORTAPI:
+                message = "API接口不支持"
+            case EQQAPISENDFAILD:
+                message = "发送失败"
+            case EQQAPIQZONENOTSUPPORTTEXT:
+                message = "空间分享不支持纯文本分享，请使用图文分享"
+            case EQQAPIQZONENOTSUPPORTIMAGE:
+                message = "空间分享不支持纯图片分享，请使用图文分享"
+            default:
+                message = ""
+            }
+            
+            if message != ""{
+                notif(withTitle: message)
+            }
+//        case 4:     //空间分享
+//            break
+        default:
+            break
+        }
+    }
+    
+    //MARK:- 取消分享
+    @IBAction func cancel(_ sender: UIButton) {
+        willMove(toParentViewController: nil)
+        view.removeFromSuperview()
+        removeFromParentViewController()
+    }
+}
+class QQRespObject: NSObject, QQApiInterfaceDelegate {
+    static let shareInstance = QQRespObject()
+    func onReq(_ req: QQBaseReq!) {
+        
+    }
+    
+    func isOnlineResponse(_ response: [AnyHashable : Any]!) {
+        
+    }
+    
+    func onResp(_ resp: QQBaseResp!) {
+        if resp.result == "0" {
+            UIApplication.shared.delegate?.window??.rootViewController?.notif(withTitle: "分享成功")
+        
+        }else {
+            UIApplication.shared.delegate?.window??.rootViewController?.notif(withTitle: "分享失败")
+        }
+    }
+}
+

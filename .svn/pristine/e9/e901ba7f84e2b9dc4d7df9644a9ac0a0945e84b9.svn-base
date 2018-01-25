@@ -1,0 +1,156 @@
+//
+//  Me_RootViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/11.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+class MineItem {
+    var iconName :String
+    var name :String
+    var info :String
+    var vc :String
+    var radiusType: cornerRadiusType
+    var isShowsSeparatorLine: Bool
+    
+    init(name:String , info :String, icon :String, vc: String, radiusType: cornerRadiusType = .none, isShowsSeparatorLine: Bool = true) {
+        self.name = name
+        self.info = info
+        self.iconName = icon
+        self.vc = vc
+        self.radiusType = radiusType
+        self.isShowsSeparatorLine = isShowsSeparatorLine
+    }
+}
+class Me_RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    var tableView = UITableView.init(frame: CGRect.zero, style: .grouped)
+    var dataSource  = [[MineItem]]()
+    var header: MineHeaderView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.setNavigationBarStyle()
+        self.navigationItem.title = "我"
+        let item = BarButtonItem(imageName: "navbar_icon_set", tSelector: #selector(Me_RootViewController.settingClick))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+        
+        let bindWXItem    = MineItem.init(name: "关联微信", info: "", icon: "melist_related_wechat", vc: "ContactWXViewController", radiusType: .top)
+        let bindEmailItem = MineItem.init(name: "关联邮箱", info: "", icon: "melist_related_mail", vc: "", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        
+        let feedItem = MineItem.init(name: "帮助于反馈", info: "", icon: "melist_related_help", vc: "", radiusType: .top)
+        let shareItem = MineItem.init(name: "分享给我们", info: "", icon: "melist_related_share", vc: "")
+        let aboutItem = MineItem.init(name: "关于我们", info: "", icon: "melist_related_about", vc: "")
+        let praiseItem = MineItem.init(name: "给个好评", info: "", icon: "melist_related_star", vc: "", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        dataSource = [[bindWXItem, bindEmailItem], [feedItem, shareItem, aboutItem, praiseItem]]
+        
+        self.creatContent()
+
+        // Do any additional setup after loading the view.
+    }
+    func creatContent() {
+        automaticallyAdjustsScrollViewInsets = false
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = .clear
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.tableHeaderView = header
+        tableView.register(MeDefaultTableViewCell.self, forCellReuseIdentifier: "meDefaultTableViewCell")
+        view.addSubview(tableView)
+        
+        tableView.snp.makeConstraints { (make) in
+            make.top.right.bottom.left.equalToSuperview()
+        }
+        
+        header = MineHeaderView(frame: CGRect(x: 0, y: 0, width: keyDeviceWidth, height: 128))
+        refreshHeader()
+        tableView.tableHeaderView = header
+        header.clickBlock = {
+            print("点击登录")
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.updateBackground()
+    }
+    // MARK 设置
+    @objc func settingClick() {
+        
+    }
+    func refreshHeader() {
+        header.textLabel.text = "我的资料"
+        header.imageView.image = UIImage.init(named: "melist_related_avatar_default")
+        header.nameLabel.text = "点击登录"
+        header.infoLabel.text = "登录后可备份数据到云端"
+        
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return nil
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return 48
+        }else {
+            return 48
+        }
+        
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+        let headeView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+        headeView.backgroundColor = .clear
+        var viewFrame = CGRect.init(x: 10, y: 12, width: keyDeviceWidth - 20, height: 36)
+        if section == 0 {
+            viewFrame = CGRect.init(x: 10, y: 12, width: keyDeviceWidth - 20, height: 36)
+        }
+        let bgView = UIView.init(frame: viewFrame)
+        bgView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        bgView.drawTopRectView()
+        headeView.addSubview(bgView)
+        
+        let textLabel = UILabel.init(frame: CGRect.init(x: 15, y: 0, width: bgView.width - 30, height: 36))
+        bgView.addSubview(textLabel)
+        textLabel.textColor = UIColor.subWord
+        textLabel.font = UIFont.content
+        if section == 0 {
+            let str = "关联账号（可选择将事件同时提醒到微信和邮箱）"
+            let attributedString = NSMutableAttributedString.init(string: str)
+            attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.subSubWord, range: NSMakeRange(4, str.count - 4))
+            textLabel.attributedText = attributedString
+        }else {
+            textLabel.text = "更多"
+        }
+        return headeView
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return dataSource.count
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48 + kLineHeight
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return dataSource[section].count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: MeDefaultTableViewCell = tableView.dequeueReusableCell(withIdentifier: "meDefaultTableViewCell", for: indexPath) as! MeDefaultTableViewCell
+        let item = dataSource[indexPath.section][indexPath.row]
+        cell.setItem(item)
+        return cell
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let item = dataSource[indexPath.section][indexPath.row]
+        if item.vc == "ContactWXViewController" {
+            let contactWX = ContactWXViewController()
+            contactWX.title = item.name
+            navigationController?.show(contactWX, sender: nil)
+        }
+    }
+}

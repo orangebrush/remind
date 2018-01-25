@@ -1,0 +1,97 @@
+//
+//  string+extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/6.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import Foundation
+//MARK:- 正则表达式
+struct Regex {
+    let regex: NSRegularExpression?
+    init(_ pattern: String) {
+        regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+    }    
+    func match(input: String) -> Bool {
+        if let matches = regex?.matches(in: input, options: [], range: NSMakeRange(0, (input as NSString).length)) {
+            return matches.count > 0
+        }
+        return false
+    }
+}
+
+extension String{
+    ///事件详情打开和关闭的通知
+    static let switchValueChange = "event_Detail_SwithChange"
+    ///天气设置打开和关闭通知
+    static let switchValueChange_weather = "weather_SwithChange"
+    ///刷新重要事件列表的通知
+    static let refershEvent = "eventList_valueChange"
+    ///刷新本地事件的通知
+    static let refelshClient = "clientList_ValueChange"
+    ///刷新本地事件的通知
+    static let refelshHome = "homeDataValueChange"
+    ///根据id来刷新重要事件
+    static let refrshEventWithID = "eventValueChange"
+    ///获取到新通知刷新消息列表
+    static let refrshMessage = "messageValueChange"
+    ///刷新查看全部的列表
+    static let refreshEventAll = "tableAllChange"
+    
+    
+    
+    ///计算单行字符串的宽度和高度
+    func computationStringWidth(_ font:UIFont,_ widthMargin : CGFloat,_ heightMargin:CGFloat)->(CGFloat,CGFloat){
+         let height = self.size(withAttributes: [NSAttributedStringKey.font:font]).height + heightMargin
+         let width = self.size(withAttributes: [NSAttributedStringKey.font:font]).width + widthMargin
+        return (width,height)
+    }
+    ///计算多行数据的高度
+    func computationString(_ width:CGFloat,_ font:UIFont , _ string : String)->CGFloat{
+        let str = NSString.init(string: string)
+        let rect = str.boundingRect(with: CGSize.init(width: width, height: 1000), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: [NSAttributedStringKey.font:font], context: nil)
+      return rect.size.height
+    }
+    
+    
+    
+    
+    ///判断字符串是否为电子邮箱
+    func isEmail() -> Bool{
+        //判断账号是否合法
+        let mailPattern = "^([a-z0-9_\\.-]+)@([\\da-z\\.-]+)\\.([a-z\\.]{2,6})$"
+        let matcher = Regex(mailPattern)
+        return matcher.match(input: self)
+    }
+    
+    ///将汉字转化为拼音
+    func isIncludeChinese() -> Bool {
+        for ch in self.unicodeScalars {
+            // 中文字符范围：0x4e00 ~ 0x9fff
+            if (0x4e00 < ch.value  && ch.value < 0x9fff) {
+                return true
+            }
+        }
+        return false
+    }
+    
+    func transformToPinyin() -> String {
+        let stringRef = NSMutableString(string: self) as CFMutableString
+        // 转换为带音标的拼音
+        CFStringTransform(stringRef,nil, kCFStringTransformToLatin, false);
+        // 去掉音标
+        CFStringTransform(stringRef, nil, kCFStringTransformStripCombiningMarks, false);
+        let pinyin = stringRef as String;
+        
+        return pinyin
+    }
+    func transformToPinyinWithoutBlank() -> String {
+        var pinyin = self.transformToPinyin()
+        // 去掉空格
+        pinyin = NSString.init(string: pinyin).replacingOccurrences(of: " ", with: "")
+        return pinyin
+    }
+    
+    
+}

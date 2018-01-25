@@ -1,0 +1,66 @@
+//
+//  PushTransitioning.swift
+//  Remind
+//
+//  Created by gg on 28/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class PushTransitioning: NSObject, UIViewControllerAnimatedTransitioning {
+    
+    fileprivate weak var transitionContext: UIViewControllerContextTransitioning?
+    fileprivate weak var fromViewController: UIViewController?
+    fileprivate weak var toViewController: UIViewController?
+    
+    private var startRect: CGRect?
+    
+    convenience init(startRect: CGRect) {
+        self.init()
+        
+        self.startRect = startRect
+    }
+    
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        
+        return 0.3
+    }
+    
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        
+        self.transitionContext = transitionContext
+        
+        toViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.to)
+        fromViewController = transitionContext.viewController(forKey: .from)
+        
+        let finalFrame = transitionContext.finalFrame(for: toViewController!)
+        
+        let containerView = transitionContext.containerView
+        
+        let screenBounds = UIScreen.main.bounds
+        toViewController?.view.frame = finalFrame.offsetBy(dx: 0, dy: 0)
+        
+        let toViewView = toViewController!.view
+        containerView.addSubview(toViewView!)
+        
+        
+        let maskAnim = CAKeyframeAnimation(keyPath: "position.y")
+        maskAnim.values = [screenBounds.height / 2 * 3, screenBounds.height / 2 * 2, screenBounds.height / 2]
+        maskAnim.keyTimes = [0, 0.4, 1]
+        maskAnim.duration = 0.4
+        maskAnim.isRemovedOnCompletion = true
+        maskAnim.fillMode = kCAFillModeBoth
+        maskAnim.delegate = self
+        maskAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn)
+        toViewController?.view.layer.add(maskAnim, forKey: nil)
+    }
+}
+
+//MARK:- 路径动画代理
+extension PushTransitioning: CAAnimationDelegate{
+    
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        
+        transitionContext?.completeTransition(true)
+    }
+}

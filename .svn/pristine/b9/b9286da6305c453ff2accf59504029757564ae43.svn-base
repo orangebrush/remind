@@ -1,0 +1,52 @@
+//
+//  tableHeader.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/13.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol tableHeadrClickDelegate :class {
+    func tableHeadClick()
+}
+class tableHeader: UIView {
+    weak var delegate : tableHeadrClickDelegate?
+    fileprivate lazy var btn : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setTitleColor(UIColor.white, for: .normal)
+        btn.backgroundColor = UIColor(colorHex:0x000000,alpha:0.3)
+        btn.layer.cornerRadius = 17
+        btn.titleLabel?.font = UIFont.init(withNormalFontSize: 13)
+        return btn
+    }()
+    fileprivate lazy var backView : UIView = {
+        let view = UIView.init()
+        return view
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.backgroundColor = UIColor.clear
+        backView.frame = self.bounds
+        self.addSubview(backView)
+        backView.addSubview(btn)
+        btn.isHidden = true
+        btn.snp.makeConstraints { (make) in
+            make.width.equalTo(120)
+            make.top.equalTo(12)
+            make.height.equalTo(34)
+            make.centerX.equalToSuperview()
+        }
+        btn.addTarget(self, action: #selector(tableHeader.btnClick), for: .touchUpInside)
+    }
+    @objc func btnClick(){
+        self.delegate?.tableHeadClick()
+    }
+    func configView( _ hasNew:Bool,_ num :Int){
+        btn.isHidden = hasNew ? false : true
+        btn.setTitle("发现\(num)个新卡片", for: .normal)
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}

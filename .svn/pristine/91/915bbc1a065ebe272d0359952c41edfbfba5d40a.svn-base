@@ -1,0 +1,372 @@
+//
+//  LoginViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/4.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+struct WechatUserInfo {
+    let openid: String
+    let nickname: String
+    let headImageUrl: String
+}
+enum LoginSuccessType {
+    case normal, wechatBind(WechatUserInfo), phoneBind
+}
+
+protocol LoginViewControllerDelegate: class {
+    
+    func loginSuccess(loginInfo: LoginInfo, type: LoginSuccessType)
+    
+}
+extension LoginViewControllerDelegate where Self: UIViewController {
+    
+    func loginSuccess(loginInfo: LoginInfo, type: LoginSuccessType) {
+        switch type {
+        case .wechatBind(let userInfo):
+            LoginUser.user.nickname = userInfo.nickname
+            LoginUser.user.headface = userInfo.headImageUrl
+        default:
+            break
+        }
+        
+        LoginUser.loginSuccess(loginInfo: loginInfo)
+//        MemberService.getMemberInfo(successHandler: { (memberInfo) in
+//            LoginUser.saveMemberInfo(memberInfo: memberInfo)
+//            NotificationCenter.default.post(name: .MemberLogin, object: nil)
+//            successHandler()
+//        }) { (error) in
+//            MSGToast.show(error.errorMessage, inView: self.view)
+//            LoginUser.logout()
+//        }
+        
+        func successHandler() {
+            if let loginViewController = self.navigationController?.viewControllers.first as? LoginViewController {
+                loginViewController.successHandler?(true)
+            }
+            dismiss(animated: true) {
+                self.navigationController?.setViewControllers([], animated: false)
+                
+                var alertTitle: String?
+                switch type {
+                case .normal:
+                    break
+                case .phoneBind:
+                    alertTitle = "绑定手机号成功"
+                case .wechatBind:
+                    alertTitle = "绑定微信号成功"
+                }
+                guard let alertTitle2 = alertTitle else {
+                    return
+                }
+                
+                let alertView = MemberAlertView(message: alertTitle2)
+                alertView.addAction(title: "好的")
+                alertView.show(window: self.view.window!)
+            }
+        }
+        
+        
+    }
+    
+    
+    
+}
+
+class LoginViewController: BaseLoginViewController, LoginViewControllerDelegate {
+    
+    
+    fileprivate var successHandler: ((Bool) -> Void)?
+
+    fileprivate lazy var loginRegisterView: LoginRegisterView = {
+        let loginRegisterView = LoginRegisterView(title: "欢迎登录米橙", type: .big, { (view) in
+            view.addTextField { (textField) in
+                textField.placeholder = "手机号"
+                textField.setRightViewType(type: .phone)
+            }
+            view.addTextField { (textField) in
+                textField.placeholder = "短信验证码"
+                textField.setRightViewType(type: .code)
+                textField.loginGetCodeView?.codeButton.addTarget(self, action: #selector(getCode), for: .touchUpInside)
+            }
+        })
+        
+        loginRegisterView.button.setTitle("登录", for: .normal)
+        loginRegisterView.button.addTarget(self, action: #selector(login), for: .touchUpInside)
+        return loginRegisterView
+    }()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    navigationController?.navigationBar.backItem?.backBarButtonItem?.setTitlePositionAdjustment(UIOffset(horizontal: -5, vertical: 0), for: .default)
+        navigationController?.navigationBar.backIndicatorImage = UIImage(named: "login_navi_back")
+        navigationController?.navigationBar.backIndicatorTransitionMaskImage = UIImage(named: "login_navi_back")
+        navigationController?.navigationBar.barStyle = .default
+        navigationController?.navigationBar.isTranslucent = true
+        navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        navigationController?.navigationBar.shadowImage = UIImage()
+        navigationController?.navigationBar.tintColor = UIColor.word
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(named: "login_close"), style: .plain, target: self, action: #selector(cancel))
+        
+        // Do any additional setup after loading the view.
+        
+        view.addSubview(loginRegisterView)
+        loginRegisterView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        
+        let registerButton = UIButton()
+        registerButton.setTitle("注册", for: .normal)
+        registerButton.titleLabel?.font = UIFont.systemFont(ofSize: LoginLayoutConstant.buttonFontSize)
+        registerButton.setTitleColor(UIColor.orangeFont, for: .normal)
+        registerButton.setBackgroundImage(UIImage.image(color: UIColor.headerBg), for: .normal)
+        registerButton.setBackgroundImage(UIImage.image(color: UIColor.headerBg), for: .highlighted)
+        registerButton.layer.cornerRadius = 3
+        registerButton.layer.borderWidth = 1
+        registerButton.layer.borderColor = UIColor.headerBg.cgColor
+        registerButton.clipsToBounds = true
+        registerButton.addTarget(self, action: #selector(register), for: .touchUpInside)
+        loginRegisterView.addSubview(registerButton)
+        registerButton.snp.makeConstraints { (make) in
+            make.leading.trailing.equalToSuperview().inset(LoginLayoutConstant.padding)
+            make.height.equalTo(LoginLayoutConstant.buttonHeight)
+            make.top.equalTo(loginRegisterView.button.snp.bottom).offset(LoginLayoutConstant.buttonMargin)
+        }
+        
+        let moreLoginButton = UIButton()
+        moreLoginButton.setTitle("手机号密码登录", for: .normal)
+        moreLoginButton.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        moreLoginButton.setTitleColor(UIColor.subSubWord, for: .normal)
+        moreLoginButton.addTarget(self, action: #selector(moreLogin), for: .touchUpInside)
+        loginRegisterView.addSubview(moreLoginButton)
+        moreLoginButton.snp.makeConstraints { (make) in
+            make.leading.equalTo(registerButton)
+            make.top.equalTo(registerButton.snp.bottom).offset(13)
+        }
+        
+//        let forgetPasswordButton = UIButton()
+//        forgetPasswordButton.setTitle("忘记密码", for: .normal)
+//        forgetPasswordButton.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+//        forgetPasswordButton.setTitleColor(kLightGrayTextColor, for: .normal)
+//        forgetPasswordButton.addTarget(self, action: #selector(forgetPassword), for: .touchUpInside)
+//        loginRegisterView.addSubview(forgetPasswordButton)
+//        forgetPasswordButton.snp.makeConstraints { (make) in
+//            make.trailing.equalTo(registerButton)
+//            make.top.equalTo(registerButton.snp.bottom).offset(13)
+//        }
+        
+        let wechatLoginButton = UIButton()
+        wechatLoginButton.addTarget(self, action: #selector(wechatLogin), for: .touchUpInside)
+        loginRegisterView.addSubview(wechatLoginButton)
+        wechatLoginButton.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.bottom.equalToSuperview().inset(35)
+        }
+        
+        let wechatImageView = UIImageView()
+        wechatImageView.image = UIImage(named: "login_wechat")
+        wechatLoginButton.addSubview(wechatImageView)
+        wechatImageView.snp.makeConstraints { (make) in
+            make.width.height.equalTo(48)
+            make.top.leading.trailing.equalToSuperview()
+        }
+        
+        let wechatLabel = UILabel()
+        wechatLabel.text = "微信登录"
+        wechatLabel.font = UIFont.systemFont(ofSize: 15)
+        wechatLabel.textColor = UIColor.subSubWord
+        wechatLoginButton.addSubview(wechatLabel)
+        wechatLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(wechatImageView.snp.bottom).offset(9)
+            make.centerX.equalToSuperview()
+            make.bottom.equalToSuperview()
+        }
+        
+    }
+
+    
+    static func show(_ viewController: UIViewController, successHandler: ((Bool) -> Void)? = nil) {
+        let loginViewController = LoginViewController()
+        loginViewController.successHandler = successHandler
+        let navigationController = UINavigationController(rootViewController: loginViewController)
+        navigationController.navigationBar.backIndicatorImage = UIImage(named: "login_navi_back")
+        navigationController.navigationBar.backIndicatorTransitionMaskImage = UIImage(named: "login_navi_back")
+        navigationController.navigationBar.barStyle = .default
+        navigationController.navigationBar.isTranslucent = true
+        navigationController.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        navigationController.navigationBar.shadowImage = UIImage()
+        navigationController.navigationBar.tintColor = UIColor.word
+        viewController.present(navigationController, animated: true, completion: nil)
+    }
+
+}
+extension LoginViewController {
+    
+    @objc fileprivate func cancel() {
+        view.endEditing(true)
+        successHandler?(false)
+        dismiss(animated: true) {
+            self.navigationController?.setViewControllers([], animated: false)
+        }
+    }
+    
+    @objc fileprivate func login() {
+        let phoneNumber = loginRegisterView.text
+        let password = loginRegisterView.text2
+        
+        let successHandler: (LoginInfo) -> Void = { loginInfo in
+            self.loginSuccess(loginInfo: loginInfo, type: .normal)
+        }
+        
+        view.endEditing(true)
+//        MSGToast.show("登录中", isloading: true, inView: view)
+//        LoginService.phoneNumberLogin(phoneNumber: phoneNumber, password: password, successHandler: successHandler) { (_, isVerify, error) in
+//            if isVerify {
+//                MSGToast.cancel()
+//                LoginCodeView.show(username: phoneNumber, source: .phone, { (loginCodeView, code) in
+//                    MSGToast.show("登录中", isloading: true, inView: loginCodeView.superview!)
+//                    LoginService.phoneNumberLogin(phoneNumber: phoneNumber, password: password, code: code, successHandler: { (loginInfo) in
+//                        loginCodeView.dismiss()
+//                        successHandler(loginInfo)
+//                    }, errorHandler: { (code, _, error) in
+//                        if code == MemberServiceErrorCode.codeError.rawValue {
+//                            loginCodeView.refreshLoginCode()
+//                            MSGToast.show(error.errorMessage, inView: loginCodeView.superview!)
+//                        } else {
+//                            loginCodeView.dismiss()
+//                            MSGToast.show(error.errorMessage, inView: self.view)
+//                        }
+//                    })
+//                })
+//            } else {
+//                MSGToast.show(error.errorMessage, inView: self.view)
+//            }
+//        }
+    }
+    
+    @objc fileprivate func register() {
+        let viewController = RegisterViewController()
+        navigationController?.pushViewController(viewController, animated: true)
+    }
+    
+    @objc fileprivate func moreLogin() {
+        view.endEditing(true)
+        self.phonePassWoldLogin()
+//        MemberActionSheetView.show(titles: ["短信验证码登录", "用户名密码登录", "微信登录"]) { (index) in
+//            switch index {
+//            case 0:
+//                self.codeLogin()
+//            case 1:
+//                self.usernameLogin()
+//            case 2:
+//                self.wechatLogin()
+//            default:
+//                break
+//            }
+//        }
+    }
+    
+    @objc fileprivate func getCode(button: MemberTimerButton) {
+        let phoneNumber = loginRegisterView.text
+        
+        let (isValid, validateError) = LoginValidate.validatePhoneNumber(text: phoneNumber)
+        guard isValid else {
+//            MSGToast.show(validateError, inView: self.view)
+            return
+        }
+        
+//        MSGToast.show("获取中", isloading: true, inView: view)
+//        LoginService.sendPhoneMessage(phoneNumber: phoneNumber, source: source, successHandler: { (_) in
+//            MSGToast.cancel()
+//            button.scheduleTimer()
+//        }) { (interval, error) in
+//            MSGToast.show(error.errorMessage, inView: self.view)
+//            if let interval = interval {
+//                button.scheduleTimer(leftTime: interval)
+//            }
+//        }
+    }
+    
+    fileprivate func phonePassWoldLogin() {
+        let viewController = PhonePasswordLoginViewController()
+        navigationController?.pushViewController(viewController, animated: true) 
+    }
+    
+//    fileprivate func codeLogin() {
+//        let viewController = MessageCodeLoginViewController(type: .normal)
+//        navigationController?.pushViewController(viewController, animated: true)
+//    }
+//
+//    fileprivate func usernameLogin() {
+//        let viewController = UsernameLoginViewController(type: .normal)
+//        navigationController?.pushViewController(viewController, animated: true)
+//    }
+    
+    @objc fileprivate func wechatLogin() {
+        let viewController = WechatLoginBindViewController()
+         self.navigationController?.pushViewController(viewController, animated: true)
+//        YZWeChatShareObject.login(successHandler: { (openid) in
+//            guard let openid = openid else {
+//                MSGToast.show("登录中", isloading: true, inView: self.view)
+//                return
+//            }
+//            LoginService.wechatLogin(wechatId: openid, successHandler: { (loginInfo) in
+//                self.loginSuccess(loginInfo: loginInfo, type: .normal)
+//            }, errorHandler: { (needBindPhone, error) in
+//                if needBindPhone {
+//                    YZWeChatShareObject.getUserInfo(openid: openid, successHandler: { (userInfo) in
+//                        MSGToast.cancel()
+//                        let viewController = WechatLoginBindViewController(userInfo: userInfo)
+//                        self.navigationController?.pushViewController(viewController, animated: true)
+//                    }, errorHandler: { (error) in
+//                        MSGToast.show(error, inView: self.view)
+//                    })
+//                } else {
+//                    MSGToast.show(error.errorMessage, inView: self.view)
+//                }
+//            })
+//        }) { [weak self] (error) in
+//            if let view = self?.view {
+//                MSGToast.show(error, inView: view)
+//            }
+//        }
+    }
+    
+}
+
+
+struct LoginValidate {
+    
+    static func validateUsername(text: String) -> (Bool, String?) {
+        guard text.characters.count >= 3 && text.characters.count <= 30 else {
+            return (false, "用户名必须是3-30个字符")
+        }
+        
+        return (true, nil)
+    }
+    
+    static func validatePhoneNumber(text: String) -> (Bool, String?) {
+        guard text.characters.count == 11 else {
+            return (false, "手机号必须是11位数字")
+        }
+        
+        return (true, nil)
+    }
+    
+    static func validatePassword(text: String) -> (Bool, String?) {
+        guard text.characters.count >= 6 && text.characters.count <= 32 else {
+            return (false, "密码必须是6-32个字符")
+        }
+        
+        let range = text.rangeOfCharacter(from: CharacterSet.letters)
+        let range2 = text.rangeOfCharacter(from: CharacterSet.decimalDigits)
+        guard range != nil && range2 != nil  else {
+            return (false, "密码必须是字母和数字的组合")
+        }
+        
+        return (true, nil)
+    }
+    
+}

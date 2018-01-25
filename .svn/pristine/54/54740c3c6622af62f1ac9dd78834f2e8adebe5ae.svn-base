@@ -1,0 +1,53 @@
+//
+//  UserItem.swift
+//  Remind
+//
+//  Created by dong on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class UserItem: NSObject {
+    var title: String?
+    var pHoldString: String?
+    var index: Int?
+    
+    //用来临时保存修改和内容
+    var tempContent: String?
+    fileprivate var _content: String?
+    
+    var content: String?{
+        get{
+            switch index! {
+            case 0:
+                return _content ?? LoginUser.user.headface
+            case 1:
+                return _content ?? LoginUser.user.nickname
+            case 2:
+                return _content ?? LoginUser.user.sex
+            case 3:
+                return _content ?? LoginUser.user.birthday
+            case 4:
+                return _content ?? LoginUser.user.mobile
+            case 5:
+                return _content ?? LoginUser.user.wxname
+            case 6:
+                return ""
+            default: break
+            }
+            return ""
+        }
+        set{
+            _content = newValue
+        }
+    }
+    
+    init(_ title: String, pHoldString: String, index: Int) {
+        super.init()
+        
+        self.title = title
+        self.pHoldString = pHoldString
+        self.index = index
+    }
+}

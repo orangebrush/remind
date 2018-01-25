@@ -1,0 +1,57 @@
+//
+//  UserCenterViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class UserCenterViewController: BaseLoginViewController, UITableViewDelegate, UITableViewDataSource {
+    var tableView: UITableView?
+    var dataArr:[[UserItem]] = []
+    
+    
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "我的";
+        
+        tableView = UITableView.init(frame: CGRect.zero, style: .grouped)
+        tableView?.backgroundColor = UIColor.separator
+        tableView?.register(UserCenterHeaderTableViewCell.self, forCellReuseIdentifier: "header_cell_id")
+        tableView?.separatorStyle = .none
+        tableView?.dataSource = self
+        tableView?.delegate = self
+        tableView?.tableFooterView = UIView.init()
+        self.view.addSubview(tableView!)
+        
+        if #available(iOS 11.0, *) {
+            tableView?.contentInsetAdjustmentBehavior = .never
+        }
+        
+        tableView!.snp.makeConstraints({ (make) in
+            make.top.bottom.right.left.equalTo(0)
+        })
+        
+
+        // Do any additional setup after loading the view.
+    }
+    
+    //MARK: UITableViewDelegate
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return dataArr.count
+    }
+    
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return dataArr[section].count
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: UserCenterHeaderTableViewCell = tableView.dequeueReusableCell(withIdentifier: "header_cell_id", for: indexPath) as! UserCenterHeaderTableViewCell
+        
+        return cell
+    }
+    
+}

@@ -1,0 +1,461 @@
+//
+//  DM+Card.swift
+//  RemindData
+//
+//  Created by gg on 08/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+///新卡片模型
+public struct TabInfo{
+    ///是否有新卡片
+    public var newTabFlag = false
+    ///新卡片数量
+    public var num = 0
+}
+
+import Foundation
+extension DataManager{
+    //MARK:- 获取首页数据
+    public func getCards(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ cards: [Card], _ tabInfo: TabInfo)->()){
+        Session.session(withAction: Actions.getCards, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            var tabInfo = TabInfo()
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [], tabInfo)
+                    return
+                }
+                
+                
+                guard let dicData = data as? [String: Any] else{
+                    closure(.failure, "json error", [], tabInfo)
+                    return
+                }
+                
+                if let tabInfoData = dicData["tabInfo"] as? [String: Any]{
+                    if let newTabFlagInt = tabInfoData["newTabFlag"] as? Int{
+                        tabInfo.newTabFlag = newTabFlagInt == 1
+                    }
+                    if let num = tabInfoData["num"] as? Int{
+                        tabInfo.num = num
+                    }
+                }
+                
+                var cardList = [Card]()
+                
+                //天气
+                if let weatherDicData = dicData["weather"] as? [String: Any]{
+                    var name = ""
+                    if let weatherName = weatherDicData["name"] as? String{
+                        name = weatherName
+                    }
+                    
+                    //卡片排序
+                    let sort = weatherDicData["sort"] as? Int ?? 0
+                    
+                    var weatherList = [WeatherModel]()
+                    if let weatherListData = weatherDicData["data"] as? [[String: Any]]{
+                        for weatherData in weatherListData{
+                            let weather = self.getWeather(fromJSON: weatherData)
+                            weatherList.append(weather)
+                        }
+                    }
+                    
+                    var weatherCard = Card()
+                    weatherCard.type = CardType.weather(name, weatherList)
+                    weatherCard.sort = sort
+                    weatherCard.cardId = weatherDicData["tabId"] as? Int ?? 0
+                    cardList.append(weatherCard)
+                }
+                
+                //节日
+                if let festivalDicData = dicData["festival"] as? [String: Any] {
+                    var name = ""
+                    if let festivalName = festivalDicData["name"] as? String{
+                        name = festivalName
+                    }
+                    
+                    //卡片排序
+                    let sort = festivalDicData["sort"] as? Int ?? 0
+                    
+                    var festivalList = [FestivalModel]()
+                    if let festivalListData = festivalDicData["data"] as? [[String: Any]]{
+                        for festivalData in festivalListData{
+                            let festival = self.getFestivalModel(fromJSON: festivalData)
+                            festivalList.append(festival)
+                        }
+                    }
+                    
+                    var festivalCard = Card()
+                    festivalCard.type = CardType.festival(name, festivalList)
+                    festivalCard.sort = sort
+                    festivalCard.cardId = festivalDicData["tabId"] as? Int ?? 0
+                    cardList.append(festivalCard)
+                }
+                
+                //生日
+                if let birthdayDicData = dicData["birthday"] as? [String: Any] {
+                    var name = ""
+                    if let birthdayName = birthdayDicData["name"] as? String{
+                        name = birthdayName
+                    }
+                    
+                    //卡片排序
+                    let sort = birthdayDicData["sort"] as? Int ?? 0
+                    
+                    var birthdayList = [BirthdayModel]()
+                    if let birthdayListData = birthdayDicData["data"] as? [[String: Any]]{
+                        for birthdayData in birthdayListData{
+                            var birthday = BirthdayModel()
+                            
+                            birthday.id = birthdayData["id"] as? Int ?? 0               //id
+                            birthday.age = birthdayData["age"] as? Int ?? 0
+                            birthday.type = birthdayData["type"] as? Int ?? 0
+                            birthday.introduce = birthdayData["introduce"] as? String ?? ""       //人名
+                            birthday.formalText = birthdayData["formalText"] as? String ?? ""       //日期字符串
+                            birthday.intervalDay = birthdayData["intervalDay"] as? Int32 ?? 0     //xx天后xx周岁
+                            birthday.intervalText = birthdayData["intervalText"] as? String ?? ""     //距离下次提醒时间
+                            birthday.content = birthdayData["content"] as? String ?? ""                 //内容
+                            birthday.text3 = birthdayData["text3"] as? String ?? ""
+                            birthday.text4 = birthdayData["text4"] as? String ?? ""
+                            if let bindWeixin = birthdayData["bindWeixin"] as? Int{
+                                birthday.isBindedWeixin = bindWeixin == 1
+                            }
+                            if let bindEmail = birthdayData["bindEmail"] as? Int{
+                                birthday.isBindedEmail = bindEmail == 1
+                            }
+                            if let interval = birthdayData["interval"] as? Int{
+                                birthday.interval = TimeInterval(interval)
+                            }
+                            birthday.typeName = birthdayData["typeName"] as? String ?? ""
+                            birthday.zodiacIcon = birthdayData["zodiacIcon"] as? String ?? ""              //生肖图片
+                            birthdayList.append(birthday)
+                        }
+                    }
+                    
+                    var birthdayCard = Card()
+                    birthdayCard.type = CardType.birthday(name, birthdayList)
+                    birthdayCard.sort = sort
+                    birthdayCard.cardId = birthdayDicData["tabId"] as? Int ?? 0
+                    cardList.append(birthdayCard)
+                }
+                
+                //事件
+                if let eventDicData = dicData["event"] as? [String: Any]{
+                    var name = ""
+                    if let eventName = eventDicData["name"] as? String{
+                        name = eventName
+                    }
+                    
+                    //卡片排序
+                    let sort = eventDicData["sort"] as? Int ?? 0
+                    
+                    var eventList = [EventModel]()
+                    if let eventListData = eventDicData["data"] as? [[String: Any]]{
+                        for eventData in eventListData{
+                            var event = EventModel()
+                            event.id = eventData["id"] as? Int ?? 0                     //id
+                            event.type = eventData["type"] as? Int ?? 0
+                            if let dateStr = eventData["date"] as? String{              //日期字符串
+                                event.date = Date(withDateStr: dateStr)
+                            }
+                            event.introduce = eventData["introduce"] as? String ?? ""             //事件名称
+                            event.formalTimeText = eventData["formalTime"] as? String ?? ""           //剩余天数
+                            event.intervalDayText = eventData["intervalDay"] as? String ?? ""           //距离下次提醒
+                            event.intervalText = eventData["intervalText"] as? String ?? ""
+                            event.intervalDay = eventData["intervalDay"] as? Int32 ?? 0
+                            event.lunarYear = eventData["lunarYear"] as? String ?? ""             //农历年份 暂无用
+                           
+                            eventList.append(event)
+                        }
+                    }
+                    
+                    var eventCard = Card()
+                    eventCard.type = CardType.event(name, eventList)
+                    eventCard.sort = sort
+                    eventCard.cardId = eventDicData["tabId"] as? Int ?? 0
+                    cardList.append(eventCard)
+                }
+                
+                //股票
+                if let stockDicData = dicData["stock"] as? [String: Any]{
+                    var name = ""
+                    if let stockName = stockDicData["name"] as? String{
+                        name = stockName
+                    }
+                    
+                    //卡片排序
+                    let sort = stockDicData["sort"] as? Int ?? 0
+                    let stockList = self.getStockModel(fromJSON: stockDicData["data"])
+
+                    var stockCard = Card()
+                    stockCard.type = CardType.stock(name, stockList)
+                    stockCard.sort = sort
+                    stockCard.cardId = stockDicData["tabId"] as? Int ?? 0
+                    cardList.append(stockCard)
+                }
+                
+                //记步
+                if let stepDicData = dicData["step"] as? [String: Any]{
+                    var name = ""
+                    if let stepName = stepDicData["name"] as? String{
+                        name = stepName
+                    }
+                    
+                    //卡片排序
+                    let sort = stepDicData["sort"] as? Int ?? 0
+                    
+                    var step = StepModel()
+                    if let stepData = stepDicData["data"] as? [String: Any]{
+                        step.step = stepData["step"] as? Int ?? 0
+                        step.distanceM = stepData["distance"] as? Int ?? 0
+                        step.targetStep = stepData["targetStep"] as? Int ?? 0
+                        step.caloria = stepData["cal"] as? Int ?? 0
+                    }
+                    
+                    var stepCard = Card()
+                    stepCard.type = CardType.step(name, step)
+                    stepCard.sort = sort
+                    stepCard.cardId = stepDicData["tabId"] as? Int ?? 0
+                    cardList.append(stepCard)
+                }
+                
+                
+                //节假日
+                if let holidayDicData = dicData["holiday"] as? [String: Any]{
+                    var name = ""
+                    if let holidayName = holidayDicData["name"] as? String{
+                        name = holidayName
+                    }
+                    
+                    //卡片排序
+                    let sort = holidayDicData["sort"] as? Int ?? 0
+                    
+                    var holidayList = [HolidayModel]()
+                    if let holidaysData = holidayDicData["data"] as? [[String: Any]]{
+                        for holidayData in holidaysData{
+                            var holiday = HolidayModel()
+                            holiday.dateText = holidayData["dateText"] as? String ?? ""
+                            holiday.day = holidayData["day"] as? Int ?? 0
+                            holiday.intervalDay = holidayData["intervalDay"] as? Int ?? 0
+                            holiday.name = holidayData["name"] as? String ?? ""
+                            let icon = holidayData["icon"] as? String ?? ""
+                            holiday.iconUrl = URL(string: icon)
+                            
+                            holidayList.append(holiday)
+                        }
+                    }
+                    
+                    var holidayCard = Card()
+                    holidayCard.type = CardType.holiday(name, holidayList)
+                    holidayCard.sort = sort
+                    holidayCard.cardId = holidayDicData["tabId"] as? Int ?? 0
+                    cardList.append(holidayCard)
+                }
+                
+                //每日提醒
+                if let eventClientDicData = dicData["eventClient"] as? [String: Any]{
+                    var name = ""
+                    if let eventClientName = eventClientDicData["name"] as? String{
+                        name = eventClientName
+                    }
+                    
+                    //卡片排序
+                    let sort = eventClientDicData["sort"] as? Int ?? 0
+                    var eventClientModelList = [EventClientModel]()
+                    if let eventClientListData = eventClientDicData["data"] as? [[String: Any]]{
+                        for eventClientData in eventClientListData{
+                            if let eventClient = self.getEventClientModel(fromJsonData: eventClientData){
+                                eventClientModelList.append(eventClient)
+                            }
+                        }
+                    }
+                    
+                    DataHandler.share().commit()
+                    
+                    var eventClientCard = Card()
+                    eventClientCard.type = CardType.eventClient(name, eventClientModelList)
+                    eventClientCard.sort = sort
+                    eventClientCard.cardId = eventClientDicData["tabId"] as? Int ?? 0
+                    cardList.append(eventClientCard)
+                }
+                closure(.success, message, cardList, tabInfo)
+            }
+        }
+    }
+    
+    //MARK:- 获取卡片设置列表
+    public func getCardSettingList(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ cardSettings: CardSettings)->()){
+        Session.session(withAction: Actions.getCardSettings, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                var cardSettings = CardSettings()
+                
+                guard codeResult == .success else{
+                    closure(.failure, message, cardSettings)
+                    return
+                }
+                guard let dataDic = data as? [String: [[String: Any]]] else{
+                    closure(.failure, "json error", cardSettings)
+                    return
+                }
+                
+                if let usesData = dataDic["use"]{
+                    cardSettings.use += self.getCardSettingList(fromJSON: usesData)
+                }
+                if let notUsesData = dataDic["notUse"] {
+                    cardSettings.notUse += self.getCardSettingList(fromJSON: notUsesData)
+                }
+                if let newTab = dataDic["newTab"]{
+                    cardSettings.new += self.getCardSettingList(fromJSON: newTab)
+                }
+                closure(.success, message, cardSettings)
+            }
+        }
+    }
+    
+    //MARK:- 显示或隐藏卡片
+    public func setCardSetting(withCardId cardId: Int, withCardSort cardSort: Int, displayFlag flag: Bool, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "tabId": "\(cardId)",
+            "sort": "\(cardSort)"
+        ]
+        if flag {
+            Session.session(withAction: Actions.displayCard, withRequestMethod: .post, withParam: dic, closure: { (codeResult, message, data) in
+                DispatchQueue.main.async {
+                    closure(codeResult, message)
+                }
+            })
+        }else{
+            Session.session(withAction: Actions.hideCard, withRequestMethod: .post, withParam: dic, closure: { (codeResult, message, data) in
+                DispatchQueue.main.async {
+                    closure(codeResult, message)
+                }
+            })
+        }
+    }
+    
+    //MARK:- 获取卡片显示方式列表
+    public func getCardDisplayModeList(withCardId cardId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ cardSetList: [CardSet])->()){
+        let dic = ["tabId": "\(cardId)"]
+        Session.session(withAction: Actions.getCardDisplayModeList, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                var result = [CardSet]()
+                guard codeResult == .success else{
+                    closure(.failure, message, result)
+                    return
+                }
+                
+                guard let datasDic = data as? [[String: Any]] else{
+                    closure(.failure, message, result)
+                    return
+                }
+                
+                for dataDic in datasDic{
+                    var cardSet = CardSet()
+                    cardSet.id = dataDic["id"] as? Int ?? 0
+                    if let defaultFlag = dataDic["choiceFlag"] as? Int{
+                        cardSet.isDefault = defaultFlag == 1
+                    }
+                    cardSet.remark = dataDic["remark"] as? String ?? ""
+                    result.append(cardSet)
+                }
+                closure(.success, message, result)
+            }
+        }
+    }
+    
+    //MARK:- 设置卡片显示方式
+    public func setCardDisPlayMode(withCardId cardId: Int, withSetId setId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "tabId": "\(cardId)",
+            "setId": "\(setId)"
+        ]
+        Session.session(withAction: Actions.setCardDisplayMode, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 设置卡片排序
+    public func setCardSort(withSortedUseCardSettingList useCardSettingList: [CardSetting], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var listStr = "["
+        for (index, useCardSetting) in useCardSettingList.enumerated(){
+            if index != 0{
+                listStr += ","
+            }
+            listStr.append("{\"tabId\": \(useCardSetting.id), \"sort\": \(index)}")
+        }
+        listStr += "]"
+        
+        let dic = ["data": listStr]
+        Session.session(withAction: Actions.setCardSort, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    //*********************************************************************************************************************
+    //MARK:- 解析stockModel数据
+    func getStockModel(fromJSON jsonData: Any?) -> [StockModel]{
+        guard let stockListData = jsonData as? [[String: Any]] else{
+            return []
+        }
+        var stockList = [StockModel]()
+        
+        for stockData in stockListData{
+            var stock = StockModel()
+            stock.prodName = stockData["prodName"] as? String ?? ""     //股票名称
+            if let proName = stockData["prodCode"] as? String{
+                let stringList = proName.components(separatedBy: ".")
+                if stringList.count == 2{
+                    stock.prefix = stringList[0]                        //地区前缀
+                    stock.prodCode = stringList[1]                      //股票代码
+                }
+            }
+            if let lastPx = stockData["lastPx"] as? String{
+                stock.lastPx = Double(lastPx) ?? 0
+            }
+            if let pxChange = stockData["pxChange"] as? String{
+                stock.pxChange = Double(pxChange) ?? 0
+            }
+            if let pxChangeRate = stockData["pxChangeRate"] as? String{
+                stock.pxChangeRate = Double(pxChangeRate) ?? 0
+            }
+            stockList.append(stock)
+        }
+        return stockList
+    }
+    
+    
+    //MARK:- 解析cardSetting数据
+    func getCardSettingList(fromJSON jsonData: Any?) -> [CardSetting]{
+        guard let listData = jsonData as? [[String: Any]] else{
+            return []
+        }
+        
+        var result = [CardSetting]()
+        for subData in listData{
+            var cardSetting = CardSetting()
+            cardSetting.id = subData["id"] as? Int ?? 0
+            cardSetting.name = subData["name"] as? String ?? ""
+            if let type = subData["type"] as? Int{
+                cardSetting.type = CardSettingType(rawValue: type) ?? CardSettingType.weather
+            }
+            if let mustFlag = subData["mustFlag"] as? Int{
+                cardSetting.isDisplay = mustFlag == 1
+            }
+            cardSetting.introduce = subData["introduce"] as? String ?? ""
+            cardSetting.icon = subData["icon"] as? String ?? ""
+            result.append(cardSetting)
+        }
+        return result
+    }
+}

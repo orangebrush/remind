@@ -1,0 +1,287 @@
+//
+//  GANSubLunarPicker.swift
+//  Remind
+//
+//  Created by gg on 17/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANLunarPicker: UIPickerView {
+    
+    var isShow = false{
+        didSet{
+            isHidden = !isShow
+        }
+    }
+    
+    ///是否隐藏年份
+    var isIgnoreYear = false{
+        didSet{
+            yearLabel.isHidden = isIgnoreYear
+        }
+    }
+    
+    ///农历日期
+    var lunarDate: LunarDate?
+    
+    ///选择回调
+    var selectedClosure: ((LunarDate)->())?
+    
+    //private---------------------------------------------------------------------------
+    private lazy var componentWidth: CGFloat! = {
+        return self.frame.width / 3
+    }()
+    private let componentHeight: CGFloat = 52
+    private lazy var yearLabel: UILabel! = {
+        let frame = CGRect(x: componentWidth * 0.6, y: (self.frame.height - componentHeight) / 2 + (17 - 9) / 4, width: 21, height: componentHeight)
+        let label = UILabel(frame: frame)
+        label.backgroundColor = .clear
+        label.font = UIFont(withNormalFontSize: 9)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.text = ""
+        return label
+    }()
+    
+    //MARK:- init------------------------------------------------------------------------------------------------------------
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        config()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        createContents()
+    }
+    
+    private func config(){
+        backgroundColor = UIColor(colorHex: 0xf4f4f4)
+        delegate = self
+        dataSource = self
+    }
+    
+    private func createContents(){
+
+        //添加分割线
+        for i in 0..<2{
+            let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+            let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+            let vsep = UIView(frame: vframe)
+            vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+            addSubview(vsep)
+            
+            let hx = CGFloat(i) * componentWidth + componentWidth
+            let hFrame = CGRect(x: hx, y: 0, width: kLineHeight, height: bounds.height)
+            let hSep = UIView(frame: hFrame)
+            hSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+            addSubview(hSep)
+        }
+    }
+    
+    
+    //MARK:- 获取当前选择的农历日期
+    func getCurLunarDate() -> LunarDate? {
+        
+        let offset = isIgnoreYear ? 1 : 0
+        let lunarYearIndex = selectedRow(inComponent: 0)
+        let lunarMonthIndex = selectedRow(inComponent: 1 - offset)
+        let lunarDayIndex = selectedRow(inComponent: 2 - offset)
+        
+        let lunarDateData = lunarDateDataList[lunarYearIndex]
+        let leafMonth = lunarDateData & 0xf
+        let hasLeaf = lunarDateData & 0xf > 0
+        var lunarMonth = lunarMonthIndex
+        var isLeapMonth = false
+        if hasLeaf{
+            if Int(leafMonth) > lunarMonthIndex{
+                lunarMonth = lunarMonthIndex + 1
+            }else if Int(leafMonth) == lunarMonthIndex {     //为闰月
+                isLeapMonth = true
+            }
+        }else{
+            lunarMonth += 1
+        }
+        
+        return (lunarYear: lunarYearIndex + 1900,
+                lunarMonth: lunarMonth,
+                lunarDay: Int64(lunarDayIndex) + 1,
+                isLeapYear: isIgnoreYear ? false : hasLeaf,
+                isLeapMonth: isIgnoreYear ? false : isLeapMonth,
+                leapMonth: isIgnoreYear ? 0 : Int(leafMonth))
+    }
+}
+
+//MARK:- pickerview delegate
+extension GANLunarPicker: UIPickerViewDelegate, UIPickerViewDataSource{
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        if isIgnoreYear  {
+            return 2
+        }
+        return 3
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return componentHeight
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+        if isIgnoreYear {
+            return frame.width / 2
+        }
+        return frame.width / 3
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        //判断是否隐藏年份
+        if isIgnoreYear {
+            if component == 0{  //隐藏年份的情况下，忽略闰月
+                return 12
+            }else{
+                return 31
+            }
+        }
+        
+        if component == 0{                      //农历年份
+            return lunarDateDataList.count
+        }else if component == 1{                //农历月份
+            if let lDate = lunarDate{
+                return lDate.isLeapYear ? 13 : 12
+            }
+        }else{                                  //农历日期
+            if isIgnoreYear{
+                return 31
+            }
+            
+            let yearRow = pickerView.selectedRow(inComponent: 0)
+            let monthRow = pickerView.selectedRow(inComponent: 1)
+            let lunarDateData = lunarDateDataList[yearRow]
+            let leapMonth = lunarDateData % 10
+            let hasLeap = leapMonth > 0
+            
+            if hasLeap && leapMonth != 0{
+                if monthRow == leapMonth {          //闰月
+                    return lunarDateData & 0xf0000 == 0 ? 29 : 30
+                }else if monthRow < leapMonth {
+                    let monthData = (lunarDateData & 0x0fff0) & (0x10 << (12 - leapMonth))
+                    return monthData == 0 ? 29 : 30
+                }else{
+                    let offset = hasLeap ? 1 : 0
+                    
+                    if monthRow == leapMonth { //选择为闰月
+                        return (lunarDateData & (0xF << 16)) > 0 ? 30 : 29
+                    }else{
+                        let subOffset: Int = (monthRow < leapMonth) ? 0 : offset
+                        return (lunarDateData & 0x1 << (4 + (12 - monthRow + subOffset))) == 0 ? 29 : 30
+                    }
+                }
+            }else{
+                let monthData = (lunarDateData & 0x0fff0) & (0x10 << UInt32(12 - monthRow))
+                return monthData == 0 ? 29 : 30
+            }
+        }
+        return 0
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        let yearRow = pickerView.selectedRow(inComponent: 0)
+        let lunarDateData = lunarDateDataList[yearRow]
+        let leapMonth = lunarDateData & 0xf
+        let hasLeap = leapMonth > 0
+        
+        //主cell
+        let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+        pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+        pickerLabel0?.backgroundColor = .clear
+        
+        var length = 0
+        var text: String
+        if isIgnoreYear{
+            if component == 0 {     //忽略年份的情况下，返回月份
+                text = lunarMonthList[row]
+            }else{                  //忽略年份的情况下，返回日
+                text = lunarDayList[row]
+            }
+        }else{
+            switch component {
+            case 0:     //年
+                text = "\(row + 1900)"//lunarYearList[(row + 36) % lunarYearList.count]
+                text += "   1"
+                length = 1
+            case 1:     //月
+                if hasLeap && leapMonth != 0{
+                    if row == leapMonth {       //闰月
+                        text = "闰" + lunarMonthList[row - 1]
+                    }else if row < leapMonth {
+                        text = lunarMonthList[row]
+                    }else{
+                        let offset = hasLeap ? 1 : 0
+                        text = lunarMonthList[row - offset]
+                    }
+                }else{
+                    if row < lunarMonthList.count{
+                        text = lunarMonthList[row]
+                    }else{
+                        text = ""
+                    }
+                }
+            default:    //日
+                text = lunarDayList[row]
+            }
+        }
+        
+        //其他小cell
+        let frame = CGRect(x: 0, y: 0, width: bounds.width / 3, height: 52)
+        let pickerLabel = UILabel(frame: frame)
+        pickerLabel.font = UIFont(withNormalFontSize: 17)
+        pickerLabel.textColor = UIColor(colorHex: 0x333333)
+        
+        pickerLabel.backgroundColor = .clear
+        pickerLabel.layer.transform = CATransform3DIdentity
+        pickerLabel.textAlignment = .center
+        
+        var labelFont = UIFont(withNormalFontSize: 17)
+        if component != 0 {
+            labelFont = UIFont(withNormalFontSize: 15)
+        }
+        
+        let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: labelFont])
+        attributedString.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+        pickerLabel.attributedText = attributedString
+        
+        
+        let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: labelFont])
+        attributedString0.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+        pickerLabel0?.attributedText = attributedString0
+        
+        return pickerLabel
+    }
+    
+    
+    //MARK:- 选择
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        lunarDate = getCurLunarDate()
+        
+        if component == 0{
+            pickerView.reloadComponent(1)
+            if !isIgnoreYear{               //未忽略年份，更新年份
+                let text = lunarYearList[(row + 36) % lunarYearList.count]
+                yearLabel.text = text
+            }
+        }else if component == 1{
+            if !isIgnoreYear{               //未忽略年份，刷新日
+                pickerView.reloadComponent(2)
+            }
+        }
+        
+        //回调
+        if let ld = lunarDate{
+            selectedClosure?(ld)
+        }
+    }
+}

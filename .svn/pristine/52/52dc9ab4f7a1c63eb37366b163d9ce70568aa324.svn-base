@@ -1,0 +1,146 @@
+//
+//  extension+UIView.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/6.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+extension UIView{
+   
+    func drawRectView(){
+        let radiu:CGSize = CGSize.init(width: ZXD_coner, height: ZXD_coner)
+        let corner : UIRectCorner = [UIRectCorner.bottomLeft,UIRectCorner.bottomRight]
+        let path = UIBezierPath.init(roundedRect: self.bounds, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        self.layer.mask = maskLayer
+    }
+    func drawTopRectView(){
+        let radiu:CGSize = CGSize.init(width: ZXD_coner, height: ZXD_coner)
+        let corner : UIRectCorner = [UIRectCorner.topLeft,UIRectCorner.topRight]
+        let path = UIBezierPath.init(roundedRect: self.bounds, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        self.layer.mask = maskLayer
+    }
+    func resetNomalView(){
+        
+        let radiu:CGSize = CGSize.init(width: 0, height: 0)
+        let corner : UIRectCorner = [UIRectCorner.topLeft,UIRectCorner.topRight,UIRectCorner.bottomLeft,UIRectCorner.bottomRight]
+        let path = UIBezierPath.init(roundedRect: self.bounds, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        self.layer.mask = maskLayer
+    }
+    func drawFourRectView(){
+        let radiu:CGSize = CGSize.init(width: ZXD_coner, height: ZXD_coner)
+        let corner : UIRectCorner = [UIRectCorner.topLeft,UIRectCorner.topRight,UIRectCorner.bottomLeft,UIRectCorner.bottomRight]
+        let path = UIBezierPath.init(roundedRect: self.bounds, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        self.layer.mask = maskLayer
+    }
+    
+    ///MARK:- cell绘制圆角并修改缩小宽度
+    func customDraw(withTopCornerRadius topFlag: Bool, withBottomCornerRadius bottomFlag: Bool, byForceDraw forceDraw: Bool = false){
+        if !forceDraw{
+            guard layer.mask == nil else {
+                return
+            }
+        }
+        
+        let size  = CGSize(width: CGFloat.cornerRadius, height: .cornerRadius)
+        let corner : UIRectCorner
+        if topFlag && bottomFlag{
+            corner = [.topLeft, .topRight, .bottomLeft, .bottomRight]
+        }else if topFlag{
+            corner = [.topLeft, .topRight]
+        }else if bottomFlag{
+            corner = [.bottomLeft, .bottomRight]
+        }else{
+            corner = []
+        }
+        
+        let maskFrame = CGRect(x: .edge10, y: 0, width: view_size.width - .edge10 * 2, height: frame.height)
+        let path = UIBezierPath(roundedRect: maskFrame, byRoundingCorners: corner, cornerRadii: size)
+        let maskLayer = CAShapeLayer()
+        maskLayer.frame = bounds
+        maskLayer.path = path.cgPath
+        layer.mask = maskLayer        
+    }
+    
+    ///MARK:- cell仅缩小不处理圆角
+    func customOriginDraw(){
+        
+        let radiu:CGSize = CGSize.init(width: 0, height: 0)
+        let corner : UIRectCorner = [.topLeft,.topRight,.bottomLeft,.bottomRight]
+        let maskFrame = CGRect(x: .edge10, y: 0, width: view_size.width - .edge10 * 2, height: frame.height)
+        let path = UIBezierPath.init(roundedRect: maskFrame, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        self.layer.mask = maskLayer
+    }
+    
+    ///处理个人头像遮罩
+    func customHeadDraw(){
+        let imageSize = CGSize(width: 86 + .edge8, height: 86 + .edge8)
+        let height: CGFloat = 160
+        let availableHeight: CGFloat = 118
+        let cr = CGFloat.cornerRadius * 2
+        
+        
+        let bezier = UIBezierPath()
+        //0
+        bezier.move(to: CGPoint(x: .edge8, y: bounds.height))
+        //1
+        bezier.addLine(to: CGPoint(x: .edge8, y: height - availableHeight + .edge8 + cr))
+        //2
+        var controlPoint = CGPoint(x: .edge8, y: height - availableHeight + .edge8)
+        bezier.addCurve(to: CGPoint(x: .edge8 + cr, y: height - availableHeight + .edge8), controlPoint1: controlPoint, controlPoint2: controlPoint)
+        //3
+        bezier.addLine(to: CGPoint(x: view_size.width / 2 - imageSize.width / 2, y: height - availableHeight + .edge8))
+        //4
+        bezier.addArc(withCenter: CGPoint(x: view_size.width / 2, y: height - availableHeight + .edge8), radius: imageSize.width / 2, startAngle: .pi, endAngle: .pi * 2, clockwise: true)
+        //5
+        bezier.addLine(to: CGPoint(x: view_size.width - .edge8 - cr, y: height - availableHeight + .edge8))
+        //6
+        controlPoint = CGPoint(x: view_size.width - .edge8, y: height - availableHeight + .edge8)
+        bezier.addCurve(to: CGPoint(x: view_size.width - .edge8, y: height - availableHeight + .edge8 + cr), controlPoint1: controlPoint, controlPoint2: controlPoint)
+        //7
+        bezier.addLine(to: CGPoint(x: view_size.width - .edge8, y: height))
+        bezier.close()
+        
+        let maskLayer = CAShapeLayer()
+        maskLayer.path = bezier.cgPath
+        layer.mask = maskLayer
+    }
+    
+    ///MARK:- cell 仅处理提示音情况
+    func customSoundDraw(){
+        
+        let radiu:CGSize = CGSize(width: CGFloat.cornerRadius, height: .cornerRadius)
+        let corner : UIRectCorner = [.bottomLeft, .bottomRight]
+        let maskFrame = CGRect(x: .edge10, y: 0, width: view_size.width - .edge10 * 2, height: frame.height)
+        let path = UIBezierPath(roundedRect: maskFrame, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer = CAShapeLayer()
+        maskLayer.frame = self.bounds
+        maskLayer.path = path.cgPath
+        layer.mask = maskLayer
+    }
+    ///MARK:- 为view四条边加上阴影
+    func addShadow(){
+        let shadowPath = UIBezierPath.init(rect: self.bounds)
+        self.layer.masksToBounds = false
+        self.layer.shadowColor = UIColor(colorHex: 0x999999).cgColor
+        self.layer.shadowOpacity = 0.3
+        self.layer.shadowOffset = CGSize.init(width: 0, height: 5)
+        self.layer.shadowPath = shadowPath.cgPath
+    }
+}

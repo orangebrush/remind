@@ -1,0 +1,232 @@
+//
+//  ProfileVC.swift
+//  Remind
+//
+//  Created by gg on 16/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class ProfileVC: UIViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var settingBarButtonItem: UIBarButtonItem!
+    
+    fileprivate var infoModel: InfoModel?
+    
+    //MARK:- init--------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        let firstIndexPath = IndexPath(row: 0, section: 2)
+        tableView.scrollToRow(at: firstIndexPath, at: .bottom, animated: true)
+        
+        setBlur(flag: true)
+        updateBackground()
+        
+        createContents()
+    }
+    
+    private func config(){
+        
+        automaticallyAdjustsScrollViewInsets = false
+        settingBarButtonItem.tintColor = .subWord
+        
+        navigationItem.rightBarButtonItem = nil
+    }
+    
+    private func createContents(){
+        let dataManager = DataManager.share()
+        
+        //获取个人信息
+        dataManager.getInfo { (codeResult, message, infoModel) in
+            guard codeResult == .success else{
+                return
+            }
+            self.infoModel = infoModel
+            self.tableView.reloadData()
+        }
+    }
+    
+    //MARK:- 设置
+    @IBAction func clickSetting(_ sender: UIBarButtonItem) {
+        performSegue(withIdentifier: "setting", sender: nil)
+    }    
+}
+
+
+//MARK:- tableview delegate
+extension ProfileVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 4
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0{
+            return 0
+        }
+        if section == 1{
+            return 0
+        }
+        if section == 2{
+            return 3
+        }
+        return 2
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let section = indexPath.section
+        
+        if section == 0{
+           return 90
+        }
+        if section == 3 && indexPath.row == 0{
+            return 0
+        }
+        return 52
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0{
+           
+                let prefileHeadCell = tableView.dequeueReusableCell(withIdentifier: "cell0") as! PrefileHeadCell
+                prefileHeadCell.nameLabel.text = infoModel?.nickName ?? ""
+
+                //prefileHeadCell.headImageView.image = UIImage(named: "")
+                
+                prefileHeadCell.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true)
+                return prefileHeadCell
+           
+         }else if indexPath.section == 1{
+            let prefileButtonCell = tableView.dequeueReusableCell(withIdentifier: "cell2") as! PrefileButtonCell
+            prefileButtonCell.iconImageView.image = #imageLiteral(resourceName: "me_icon_birthday")
+            prefileButtonCell.valueLabel.text = "生日详情"
+            //星座生肖
+            var list = [String]()
+            if let zodiac = infoModel?.zodiac, zodiac != ""{
+                list.append(zodiac)
+            }
+            if let constellation = infoModel?.constellation, constellation != ""{
+                list.append(constellation)
+            }
+            if let birthday = infoModel?.birthday{
+               list.append(birthday.formatString(with: "yyyy"))
+                
+            }
+            var label1Text = ""
+            for (index, element) in list.enumerated(){
+                if index != 0{
+                    label1Text += "·"
+                }
+                label1Text += " "
+                label1Text += element
+            }
+           
+            prefileButtonCell.tipLabel.text = label1Text
+            prefileButtonCell.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true)
+            return prefileButtonCell
+        } else {
+            var isTopFlag = false
+            var isBottomFlag = false
+            
+            let prefileButtonCell = tableView.dequeueReusableCell(withIdentifier: "cell2") as! PrefileButtonCell
+            prefileButtonCell.tipLabel.text = ""
+            
+            
+            if row == 0{
+                prefileButtonCell.iconImageView.image = section == 2 ? #imageLiteral(resourceName: "me_icon_card") : #imageLiteral(resourceName: "me_icon_help")
+                prefileButtonCell.valueLabel.text = section == 2 ? "卡片设置" : "帮助与反馈"
+                
+                isTopFlag = true
+            }else if row == 1{
+                prefileButtonCell.iconImageView.image = section == 2 ? #imageLiteral(resourceName: "me_icon_wechat") : #imageLiteral(resourceName: "me_icon_recommend")
+                prefileButtonCell.valueLabel.text = section == 2 ? "关联微信" : "推荐给好友"
+                
+                if section == 3{
+                    isBottomFlag = true
+                    isTopFlag = true //隐藏
+                }
+                
+                //判断微信绑定
+                if section == 2 {
+                    if let iModel = infoModel, iModel.isWeixinBinding {
+                        prefileButtonCell.tipLabel.text = "已关联"
+                    }
+                }
+            }else{
+                prefileButtonCell.iconImageView.image = #imageLiteral(resourceName: "me_icon_mailbox")
+                prefileButtonCell.valueLabel.text = "关联邮箱"
+                
+                //判断邮箱绑定
+                if section == 2 {
+                    if let iModel = infoModel, iModel.isEmailBinding {
+                        prefileButtonCell.tipLabel.text = "已关联"
+                    }
+                }
+                isBottomFlag = true
+            }
+            
+            prefileButtonCell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+            if row != 0{
+                prefileButtonCell.addTopSeparator()
+            }
+            return prefileButtonCell
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, didEndDisplaying cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath)
+        cell?.setSelected(false, animated: true)
+        
+        switch section {
+        case 0:
+            break
+        case 1:
+            break
+        case 2:
+            if row == 0{                    //卡片设置
+                performSegue(withIdentifier: "cardsetting", sender: nil)
+            }else if row == 1{              //微信绑定
+                if let bindingWXVC = UIStoryboard(name: "Binding", bundle: Bundle.main).instantiateViewController(withIdentifier: "wxpush") as? BindingWXVC{
+                    navigationController?.show(bindingWXVC, sender: nil)
+                }
+            }else{
+                if let bindingEmailVC = UIStoryboard(name: "Binding", bundle: Bundle.main).instantiateViewController(withIdentifier: "emailpush") as? BindingEmailVC{
+                    navigationController?.show(bindingEmailVC, sender: nil)
+                }
+            }
+        default:
+            if row == 0{
+                alert(withTitle: "text text"){
+                    confirm in
+                    print(confirm)
+                }
+                //performSegue(withIdentifier: "feedback", sender: nil)
+            }else{
+                let url = URL(string: "http://www.mc.cn")
+                share(withText: "米橙提醒", withImage: nil, withURL: url)
+            }
+        }
+    }
+}

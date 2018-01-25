@@ -1,0 +1,53 @@
+//
+//  EventViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class EventViewController: UIViewController {
+    fileprivate lazy var EventTableView : UITableView = {
+        let tableview = UITableView.init(frame: CGRect.zero)
+         tableview.separatorStyle = .none
+        return tableview
+    }()
+    fileprivate lazy var LocalTableView : UITableView = {
+        let tableview = UITableView.init(frame: CGRect.zero, style: .grouped)
+        tableview.separatorStyle = .none
+        return tableview
+    }()
+    fileprivate lazy var MainScrollView : ZXDScrollView = {
+        let scrollview = ZXDScrollView.init(frame: CGRect.zero)
+        return scrollview
+    }()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.addMianView()
+     }
+    //MARK:- 添加主要视图
+    func addMianView(){
+        self.view.addSubview(MainScrollView)
+        MainScrollView.addSubview(EventTableView)
+        MainScrollView.addSubview(LocalTableView)
+        let navHeight = UIApplication.shared.statusBarFrame.height + (self.navigationController?.navigationBar.frame.height)!
+        let tabHeight = self.tabBarController?.tabBar.frame.height
+        let viewHeight = UIScreen.main.bounds.height - navHeight - tabHeight!
+        
+        MainScrollView.frame = CGRect.init(x: 0, y: navHeight, width: self.view.frame.width, height: viewHeight)
+        MainScrollView.configScrollView(2)
+        EventTableView.frame = CGRect.init(x: 0, y: 0, width: self.view.frame.width, height: viewHeight)
+        LocalTableView.frame = CGRect.init(x: self.view.frame.width, y: 0, width: self.view.frame.width, height: viewHeight)
+        
+     }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+       
+    }
+    
+}
+

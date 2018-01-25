@@ -1,0 +1,72 @@
+//
+//  StepSettingCell.swift
+//  Remind
+//
+//  Created by gg on 19/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepSettingCell0: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        valueLabel.font = .content
+        valueLabel.textColor = UIColor.subSubWord
+    }
+}
+
+class StepSettingCell1: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var customSwitch: CustomSwitch!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        customSwitch.shadowColor = UIColor.clear
+        customSwitch.borderColor = UIColor.clear
+    }
+    
+    @IBAction func valueChanged(_ sender: CustomSwitch) {
+        //closure?(sender.isOn())
+    }
+}
+
+class StepSettingCell2: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        valueLabel.font = .content
+        valueLabel.textColor = UIColor.subSubWord
+    }
+}

@@ -1,0 +1,174 @@
+//
+//  DH+EventClient.swift
+//  RemindData
+//
+//  Created by gg on 05/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+import CoreData
+extension DataHandler{
+    func insertEventClient(withEventClientType eventClientType: Int, withEventClientId eventClientId: Int) -> EventClient?{
+        guard let eventClient = NSEntityDescription.insertNewObject(forEntityName: "EventClient", into: context) as? EventClient else{
+            return nil
+        }
+        eventClient.id = Int32(eventClientId)
+        eventClient.type = Int32(eventClientType)
+        eventClient.createDate = Date()
+        eventClient.status = Int32(EventClientStatus.normal.rawValue)
+        eventClient.isSynced = false
+        
+        //添加关系表... oneToOne
+        guard let member = getMember() else{
+            return nil
+        }
+        
+        member.addToEventClientList(eventClient)
+        
+        guard commit() else {
+            return nil
+        }
+        
+        //自增
+        PlistManager.share().add()
+        
+        return eventClient
+    }
+    
+    //MARK:- 获取单个事件
+    public func getEventClient(byEventClientType eventClientType: Int, byEventClientId eventClientId: Int? = nil) -> EventClient?{
+        let request: NSFetchRequest<EventClient> = EventClient.fetchRequest()
+        
+        //通过类型匹配
+        let predicate = NSPredicate(format: "type=\(eventClientType)")
+        request.predicate = predicate
+        
+        //如果id为空，则自增一位
+        let id = eventClientId ?? PlistManager.share().getNewEventClientId()
+        
+        //自定义每日提醒类型值
+        let customType = 8
+        
+        do {
+            let resultList = try context.fetch(request)
+            
+            if !resultList.isEmpty {                //查找到相应类型
+                if eventClientType == customType{        //自定义类型
+                    let clientList = resultList.filter{$0.id == id}
+                    if clientList.isEmpty{
+                        return insertEventClient(withEventClientType: customType, withEventClientId: id)
+                    }else{
+                        return clientList.first
+                    }
+                }else{                          //其他类型，只能创建一次
+                    return resultList.first
+                }
+            }else{                                              //自定义类型
+                return insertEventClient(withEventClientType: eventClientType, withEventClientId: id)
+            }
+        } catch let error {
+            debugPrint("<Core Data> fetch error: \(error)")
+            return nil
+        }
+    }
+    
+    ///异步查找查
+    public func executeEventClient(byEventClientType eventClientType: Int, byEventClientId eventClientId: Int? = nil, closure: @escaping (EventClient?)->()){
+        let request: NSFetchRequest<EventClient> = EventClient.fetchRequest()
+        
+        //通过类型匹配
+        let predicate = NSPredicate(format: "type=\(eventClientType)")
+        request.predicate = predicate
+        
+        //如果id为空，则自增一位
+        let id = eventClientId ?? PlistManager.share().getNewEventClientId()
+        
+        //自定义每日提醒类型值
+        let customType = 8
+        
+        executeSelect(withFetchRequest: request as! NSFetchRequest<NSFetchRequestResult>) { (results) in
+            if let res = results as? [EventClient]{
+                if res.isEmpty{
+                    closure(self.insertEventClient(withEventClientType: customType, withEventClientId: id))
+                }else{
+                    if eventClientType == customType{       //自定义情况
+                        let clientList = res.filter{$0.id == id}
+                        if clientList.isEmpty{      //判断是否存在,否则创建
+                            closure(self.insertEventClient(withEventClientType: customType, withEventClientId: id))
+                        }else{
+                            closure(clientList.first)
+                        }
+                    }else{                                  //其他情况
+                        closure(res.first)
+                    }
+                }
+            }else{
+                closure(nil)
+            }
+        }
+    }
+    
+    ///判断该事件是否存在
+    public func isExistEventClient(withEventClientType eventClientType: Int) -> Bool{
+        let request: NSFetchRequest<EventClient> = EventClient.fetchRequest()
+        
+        //通过类型匹配
+        let predicate = NSPredicate(format: "type=\(eventClientType)")
+        request.predicate = predicate
+        
+        //自定义每日提醒类型值
+        let customType = 8
+        
+        do {
+            let resultList = try context.fetch(request)
+            
+            if !resultList.isEmpty {                //查找到相应类型
+                if eventClientType == customType{        //自定义类型    返回false
+                    return false
+                }else{                          //其他类型，只能创建一次   返回存在值
+                    if resultList[0].status == 2{   //如果状态为删除       返回false
+                        return false
+                    }
+                    return true
+                }
+            }else{                                              //自定义类型
+                return false
+            }
+        } catch let error {
+            debugPrint("<Core Data> fetch error: \(error)")
+            return false
+        }
+    }
+    
+    //MARK:- 获取所有事件
+    public func getAllEventClients() -> [EventClient]{
+        let request: NSFetchRequest<EventClient> = EventClient.fetchRequest()
+        
+        do{
+            let resultList = try context.fetch(request)
+            return resultList
+        }catch let error{
+            debugPrint("<Core Data> fetch error: \(error)")
+            return []
+        }
+    }
+    
+    //MARK:- 异步获取所有事件
+    public func executeAllEventClients(closure: @escaping ([EventClient])->()){
+        let request: NSFetchRequest<EventClient> = EventClient.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor.init(key: "createDate", ascending: false)]
+        executeSelect(withFetchRequest: request as! NSFetchRequest<NSFetchRequestResult>) { (results) in
+            if let eventClientList = results as? [EventClient]{
+                closure(eventClientList)
+            }else{
+                closure([])
+            }
+        }
+    }
+    
+    //MARK:- 删除事件(暂时不做删除处理)
+    func deleteEventClient(withEventClientId eventClientId: Int){
+        delete(EventClient.self, byConditionFormat: "id=\(eventClientId)")
+    }
+}

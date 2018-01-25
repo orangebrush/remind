@@ -1,0 +1,60 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'roots': [
+    {
+      'type': 'directory',
+      'name': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/Pods_Remind.framework/Headers",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "Pods-Remind-umbrella.h",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/Pods/Target Support Files/Pods-Remind/Pods-Remind-umbrella.h"
+        },
+        {
+          'type': 'file',
+          'name': "Pods_Remind-Swift.h",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/Pods_Remind.framework/Headers/Pods_Remind-Swift.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/Pods_Remind.framework/Modules",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Pods.build/Debug-iphoneos/Pods-Remind.build/module.modulemap"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/SnapKit/SnapKit.framework/Headers",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "SnapKit-Swift.h",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/SnapKit/SnapKit.framework/Headers/SnapKit-Swift.h"
+        },
+        {
+          'type': 'file',
+          'name': "SnapKit-umbrella.h",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/Pods/Target Support Files/SnapKit/SnapKit-umbrella.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Debug-iphoneos/SnapKit/SnapKit.framework/Modules",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "/Users/gg/Documents/Remind-IOS-2018/app/Remind/build/Pods.build/Debug-iphoneos/SnapKit.build/module.modulemap"
+        }
+      ]
+    }
+  ]
+}

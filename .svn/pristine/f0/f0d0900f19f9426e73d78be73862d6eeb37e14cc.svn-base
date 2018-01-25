@@ -1,0 +1,106 @@
+//
+//  EventEnumTypeCell.swift
+//  Remind
+//
+//  Created by gg on 09/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventEnumTypeCell: UICollectionViewCell {
+    var tip: Tip?{
+        didSet{
+            guard let t = tip else {
+                imageView?.image = nil
+                label?.text = ""
+                return
+            }
+            
+            guard let name = t.name else{
+                return
+            }
+            let type = t.type
+            
+            let imageStr = t.isClient ? "eventClient_" : "event_"
+            let originImage = UIImage(named: imageStr + "\(type)")
+            //let image = originImage?.withRenderingMode(.alwaysOriginal)
+            imageView?.image = originImage
+            
+            
+            //添加以创建标记
+            var isExistText = ""
+            if t.isClient && DataHandler.share().isExistEventClient(withEventClientType: Int(type)){
+                isExistText = "\n已创建"
+            }
+            
+            //将行间距设置为4
+            let paraph = NSMutableParagraphStyle()
+            paraph.lineSpacing = -4
+
+            var attributes = [NSAttributedStringKey.paragraphStyle: paraph, NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 14), NSAttributedStringKey.foregroundColor: UIColor.word]
+            let attributedString = NSMutableAttributedString(string: name + isExistText, attributes: attributes)
+            
+            attributes = [NSAttributedStringKey.font : UIFont.init(withThinFontSize: 11), NSAttributedStringKey.foregroundColor: UIColor.subSubWord]
+            attributedString.addAttributes(attributes, range: NSMakeRange(name.count, isExistText.count))
+            
+            label?.attributedText = attributedString
+            
+            //添加新内容标记
+            newView?.isHidden = !t.isNew
+
+            createContents()
+        }
+    }
+    
+    private lazy var newView: UIImageView? = {
+        let image = UIImage.redDotCircle
+        let imageSize = image.size
+        let imageview = UIImageView(image: image)
+        imageview.frame = CGRect(x: self.bounds.width - 15 - imageSize.width, y: (self.bounds.height - imageSize.height) / 2, width: imageSize.width, height: imageSize.height)
+        return imageview
+    }()
+    
+    private lazy var imageView: UIImageView? = {
+        let length = 30
+        let imageViewFrame = CGRect(x: 15, y: 13, width: length, height: length)
+        let imageView: UIImageView = UIImageView(frame: imageViewFrame)
+        imageView.layer.cornerRadius = 15
+        return imageView
+    }()
+    
+    private lazy var label: UILabel? = {
+        let width = self.bounds.width - self.bounds.height
+        let height = self.bounds.height //self.imageView!.frame.height
+        let labelFrame = CGRect(x: 15 * 2 + self.imageView!.frame.width, y: 0, width: width, height: height)
+        let label: UILabel = UILabel(frame: labelFrame)
+        label.numberOfLines = 2
+        label.textAlignment = .left
+        label.font = .normal
+        label.textColor = UIColor.word
+        return label
+    }()
+    
+    //MARK:- 运动类型子页
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+        createContents()
+    }
+    
+    private func config(){
+        backgroundColor = .white
+        layer.cornerRadius = .cornerRadius
+    }
+    
+    private func createContents(){
+        addSubview(imageView!)
+        addSubview(label!)
+        addSubview(newView!)
+    }
+}

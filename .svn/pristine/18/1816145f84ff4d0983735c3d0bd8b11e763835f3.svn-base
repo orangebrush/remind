@@ -1,0 +1,53 @@
+//
+//  GANCalendarMoreVC.swift
+//  Remind
+//
+//  Created by gg on 24/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANCalendarMoreVC: UIViewController {
+    
+    @IBOutlet weak var headerHeightConstraint: NSLayoutConstraint!
+    
+    @IBOutlet weak var button0: UIButton!
+    @IBOutlet weak var button1: UIButton!
+    @IBOutlet weak var button2: UIButton!
+    @IBOutlet weak var button3: UIButton!
+    
+    //MARK:- public-------------------------------------------------------------------------------------------
+    ///当前选择目录下标
+    var selectedMenuTag: Int?
+    
+    //MARK:- private---------------------------------------------------------------------------------------------------
+    
+    //MARK:- init--------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+    }
+    
+    private func config(){
+        
+        //未选择目录情况下 隐藏header
+        if selectedMenuTag == nil {
+            headerHeightConstraint.constant = 0
+        }
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    //MARK:- 目录选择
+    @IBAction func selectMenu(_ sender: UIButton) {
+    }
+}

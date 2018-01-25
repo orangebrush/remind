@@ -1,0 +1,29 @@
+//
+//  GANCalendarMoreVC.swift
+//  Remind
+//
+//  Created by gg on 24/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANCalendarMoreVC: UIViewController {
+    
+    
+    
+    //MARK:- init--------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+    }
+    
+    private func createContents(){
+        
+    }
+}

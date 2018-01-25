@@ -1,0 +1,852 @@
+//
+//  DM+Event.swift
+//  RemindData
+//
+//  Created by gg on 05/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+public enum Ring: String{
+    case boy = "boy", girl = "girl"
+}
+public enum FrequencyCycle: Int{
+    case none = 0, minute, hour, day, week, month, year
+}
+
+public enum RemindStatusType: Int{
+    case normal = 0, done, finished, paused, deleted
+}
+
+//beginning 预提醒
+public class BeginningModel: NSObject {
+    public var list: [(FrequencyCycle, Int)] = [(FrequencyCycle.minute, 5)]
+    public var next: (FrequencyCycle, Int)? = (FrequencyCycle.minute, 5)
+    
+    //解包
+    func encoderList() -> String{
+        var result = ""
+        for (index, beginning) in list.enumerated() {
+            if index != 0{
+                result += ","
+            }
+            result += "\(beginning.0.rawValue):\(beginning.1)"
+        }
+        return result
+    }
+    
+    //MARK:- 转换nowBeginning为字符串
+    func encoderNext() -> String{
+        guard let n = next else{
+            return ""
+        }
+        return "\(n.0.rawValue):\(n.1)"
+    }
+}
+
+//frequency 周期
+public class FrequencyModel: NSObject{
+    ///周期
+    public var frequencyCycle = FrequencyCycle.none
+    ///间隔（根据周期单位计算）
+    public var per = 0
+    ///月数（周期为年的情况下）
+    public var months = [Int]()
+    ///星期（周期为星期的情况下）
+    public var weekdays = [Int]()
+    ///按日期或按星期 0:日期 1:星期
+    public var baseOnWeek = false
+    ///日期（按日期）
+    public var days = [Int]()
+    ///星期数（按星期）
+    public var weeksTuple: (Int, Int) = (1,1)
+    
+    ///单独拼接日期字符串
+    func showDayStr() -> String{
+        var result = ""
+        let sortedDays = days.sorted{$0<$1}
+        var index = 0
+        while index < sortedDays.count {
+            if index != 0{
+                result += ","
+            }
+            let day = sortedDays[index]
+            var nextIndex = index + 1
+            var nextDay = day + 1
+            var addIndex = 0
+            while nextIndex < sortedDays.count && nextDay == sortedDays[nextIndex] {
+                nextIndex += 1
+                nextDay += 1
+                addIndex += 1
+            }
+            if addIndex > 1{
+                index += addIndex
+                result += "\(day)日~\(nextDay-1)日"
+            }else{
+                result += "\(day)日"
+            }
+            index += 1
+        }
+        return result
+    }
+    
+    ///返回显示字符串
+    public func showTimes() -> String{
+        let list = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"]
+        
+        var result = "每"
+        switch frequencyCycle {
+        case .minute:
+            let hour = per / 60
+            let minute = per % 60
+            let hourStr = hour > 0 ? "\(hour)小时" : ""
+            let minuteStr = minute > 0 ? "\(minute)分钟" : ""
+            result += hourStr
+            result += minuteStr
+        case .day:
+            result += "\(per)天"
+        case .week:
+            let textList = ["日", "一", "二", "三", "四", "五", "六"]
+            let sortedWeekdays = weekdays.sorted{$0<$1}
+            if per == 1{
+                if sortedWeekdays == [2, 3, 4, 5, 6]{
+                    result += "个工作日"
+                }else if sortedWeekdays == [1, 7] {
+                    result += "个周末"
+                }else if sortedWeekdays == [1, 2, 3, 4, 5, 6, 7]{
+                    result += "天"
+                }else{
+                    result += "个星期"
+                    
+                    for (index, weekday) in sortedWeekdays.enumerated(){
+                        if index != 0{
+                            result += "、"
+                        }
+                        result += textList[weekday - 1]
+                    }
+                }
+            }else{
+                result += "\(per)个星期的"
+                if sortedWeekdays == [2, 3, 4, 5, 6]{
+                    result += "工作日"
+                }else if sortedWeekdays == [1, 7]{
+                    result += "周末"
+                }else{
+                    result += "星期"
+                    for (index, weekday) in sortedWeekdays.enumerated(){
+                        if index != 0{
+                            result += "、"
+                        }
+                        result += textList[weekday - 1]
+                    }
+                }
+            }
+            
+        case .month:
+            result += per == 1 ? "月" : "\(per)个月的"
+            if baseOnWeek{
+                result += "第\(weeksTuple.0)个\(list[weeksTuple.1 - 1])"
+            }else{
+                result += showDayStr()
+            }
+        case .year:
+            result += "\(per)年"
+            result += "的"
+            let sortedMonths = months.sorted{$0<$1}
+            for (index, month) in sortedMonths.enumerated(){
+                if index != 0{
+                    result += ","
+                }
+                result += "\(month)月"
+            }
+            if baseOnWeek{
+                result += "第\(weeksTuple.0)个\(list[weeksTuple.1 - 1])"
+            }else{
+                result += showDayStr()
+            }
+        default:
+            result = "无周期"
+        }
+        
+        
+        
+        //result += "提醒"
+        return result
+    }
+    
+    //MARK:- 转换times为字符串
+    func encoderTimes() -> String{
+        switch frequencyCycle {
+        case .week:
+            var result = ""
+            for (index, weekday) in weekdays.enumerated(){
+                if index != 0{
+                    result += ","
+                }
+                result += "\(weekday)"
+            }
+            return result
+        case .month:
+            var result = baseOnWeek ? "1:" : "0:"
+            if baseOnWeek{
+                result += "\(weeksTuple.0),\(weeksTuple.1)"
+            }else{
+                for (index, day) in days.enumerated(){
+                    if index != 0{
+                        result += ","
+                    }
+                    result += "\(day)"
+                }
+            }
+            return result
+        case .year:
+            var result = ""
+            for (index, month) in months.enumerated(){
+                if index != 0{
+                    result += ","
+                }
+                result += "\(month)-"
+                result += baseOnWeek ? "1:" : "0:"
+                if baseOnWeek{
+                    result += "\(weeksTuple.0)_\(weeksTuple.1)"
+                }else{
+                    for (index, day) in days.enumerated(){
+                        if index != 0{
+                            result += "_"
+                        }
+                        result += "\(day)"
+                    }
+                }
+            }
+            return result
+        default:
+            return ""
+        }
+    }
+}
+
+//添加事件模型
+public struct EventParam{
+    
+    public init() {
+    }
+    
+    ///事件id
+    //public var id = 0
+    ///事件说明
+    public var introduce = ""
+    ///事件开始时间
+    public var beginDate = Date()
+    ///频率
+    public var frequencyModel = FrequencyModel()
+    ///提醒次数
+    public var count = 0
+    ///如果要求重复提醒,每隔多长分钟提醒一次
+    public var intercycle = 0
+    ///预提醒
+    public var beginningModel = BeginningModel()
+    ///提示音
+    public var sound = ""
+    ///铃声声音
+    public var ring = Ring.boy
+    ///是否有微信提醒
+    public var hasWeixinRemind = false
+    ///是否有邮箱提醒
+    public var hasEmailRemind = false
+    ///事件类型
+    public var type = 0 //EventType.custom
+    //    public var festivals = "公历"
+    ///是否为农历
+    public var  isLunar = false
+    ///周期保存文字
+    public var param1 = ""
+    ///时间保存文字
+    public var param2 = ""
+    ///类型保存文字
+    public var param3 = ""
+    ///提醒状态文字
+    public var remindText = ""
+    ///提醒状态
+    public var remindStatus = RemindStatusType.normal
+}
+
+
+extension DataManager{
+    
+    
+    //MARK:- 获取所有事件
+    ///获取所有事件----提醒类型：0:自定义日程、1:生日、2:纪念日、3:节日、4:会议、5:备忘、6:定期问候、7:股指交割、8:国债交割、9信用卡还款、10生活缴费 11单次事件（不传默认查询全部）
+    public func getAllEventList(withPage page: Int, withEventType eventType: Int? = nil, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ eventList: [Event])->()){
+        var dic = ["page": "\(page)"]
+        if let type = eventType{
+            dic["type"] = "\(type)"
+        }
+        Session.session(withAction: Actions.getAllEvents, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            guard codeResult == .success else{
+                DispatchQueue.main.async {
+                    closure(.failure, message, [])
+                }
+                return
+            }
+            
+            let dataHandler = DataHandler.share()
+            //                dataHandler.deleteAllEvent()
+            
+            guard let dataDic = data as? [String: Any] else{
+                DispatchQueue.main.async {
+                    closure(.failure, message, [])
+                }
+                return
+            }
+            
+            guard let recordsDicList = dataDic["records"] as? [Any] else{
+                DispatchQueue.main.async {
+                    closure(.failure, "no 'records' key", [])
+                }
+                return
+            }
+            
+            //重新封装数据
+            var eventList = [Event]()
+            for recordsDic in recordsDicList{
+                guard let event = self.getEvent(fromJSON: recordsDic) else{
+                    continue
+                }
+                eventList.append(event)
+            }
+            dataHandler.commit()
+            
+                //从数据库返回
+            DispatchQueue.main.async {
+                closure(.success, message, eventList)
+            }
+        }
+    }
+    
+    //MARK:- 获取事件详情
+    public func getEventInfo(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ event: Event?)->()){
+        let dic = ["eventId": "\(eventId)"]
+        Session.session(withAction: Actions.getEventInfo, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, nil)
+                    return
+                }
+                
+                //解析数据，并更新数据库
+                guard let event = self.getEvent(fromJSON: data) else{
+                    closure(.failure, "not a event json", nil)
+                    return
+                }
+                DataHandler.share().commit()
+                closure(.success, message, event)
+            }
+        }
+    }
+    
+    //MARK:- 预添加事件
+    public func getEventPre(withEventType eventType: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ weixinID: String?, _ email: String?, _ leftSmsCount: Int)->()){
+        let dict = ["type": "\(eventType)"]
+        Session.session(withAction: Actions.getEventPre, withRequestMethod: .post, withParam: dict) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, nil, nil, 0)
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else{
+                    return
+                }
+                
+                let weixinID = dataDic["weixin"] as? String
+                let email = dataDic["emailAddr"] as? String
+                let leftSmsCount = dataDic["leftSmsCount"] as? Int
+                closure(.success, message, weixinID, email, leftSmsCount ?? 0)
+            }
+        }
+    }
+    
+    //MARK:- 添加事件
+    public func addEvent(withEventParam eventParam: EventParam, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ eventId: Int)->()){
+        //事件重复方式。0:不重复、1:每天、2:工作日(五天制)、3:工作日(六天制)、4:法定工作日、5:每周、6:每月、7:每年、8:自定义（目前生日、节日和纪念日写7，其余写8）
+        let dict = [
+            "introduce": eventParam.introduce,
+            "beginTime": eventParam.beginDate.formatString(with: "yyyy-MM-dd HH:mm:ss"),
+            "mode": (eventParam.type == 1 || eventParam.type == 2 || eventParam.type == 3) ? "7" : "8",
+            "frequency": "\(eventParam.frequencyModel.frequencyCycle.rawValue)",
+            "per": "\(eventParam.frequencyModel.per)",
+            "count": "\(eventParam.count)",
+            "intercycle": "\(eventParam.intercycle)",
+            "times": eventParam.frequencyModel.encoderTimes(),
+            "beginning": eventParam.beginningModel.encoderList(),
+            "ring": eventParam.sound,
+            "weixin": eventParam.hasWeixinRemind ? "1" : "0",
+            "email": eventParam.hasEmailRemind ? "1" : "0",
+            "phone": "",
+            "type": "\(eventParam.type)",
+            "festivals": "",
+            "lunar": eventParam.isLunar ? "1" : "0",
+            "param1": eventParam.param1,
+            "param2": eventParam.param2,
+            "param3": eventParam.param3
+        ]
+        
+        Session.session(withAction: Actions.addEvent, withRequestMethod: .post, withParam: dict) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, 0)
+                    return
+                }
+                
+                //解析数据
+                guard let dataDic = data as? [String: Int] , let eventId = dataDic["id"] else{
+                    return
+                }
+                
+                //提交数据库
+                self.getEvent(fromJSON: dict)
+                DataHandler.share().commit()
+                closure(.success, message, eventId)
+            }
+        }
+    }
+    
+    //MARK:- 预编辑事件
+    public func getUpdateEventPre(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ eventParam: EventParam)->()){
+        let dic = ["id": "\(eventId)"]
+        Session.session(withAction: Actions.getUpdateEventPre, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, EventParam())
+                    return
+                }
+                
+                guard let event = self.getEvent(fromJSON: data) else{
+                    closure(.failure, "json error", EventParam())
+                    return
+                }
+                
+                var eventParam = EventParam()
+                eventParam.beginDate = event.beginDate ?? Date()
+                
+                let beginningModel = BeginningModel()
+                beginningModel.list.removeAll()
+                
+                eventParam.beginningModel = self.getBeginningModel(fromBeginningList: event.beginningList, andBeginningNext: event.beginningNext) ?? BeginningModel()
+                eventParam.count = Int(event.count)
+                eventParam.frequencyModel = self.getFrequencyModel(fromFrequency: event.frequency) ?? FrequencyModel()
+                eventParam.hasEmailRemind = event.hasEmailRemind
+                eventParam.hasWeixinRemind = event.hasWeixinRemind
+                eventParam.intercycle = Int(event.intercycle)
+                eventParam.introduce = event.introduce ?? ""
+                eventParam.isLunar = event.isLunar
+                eventParam.param1 = event.param1 ?? ""
+                eventParam.param2 = event.param2 ?? ""
+                eventParam.param3 = event.param3 ?? ""
+                eventParam.sound = event.sound ?? ""
+                eventParam.ring = Ring(rawValue: event.ring ?? "boy") ?? Ring.boy
+                eventParam.type = Int(event.type) //EventType(rawValue: Int(event.type)) ?? EventType.custom
+                
+                DataHandler.share().reset()
+                closure(.success, message, eventParam)
+            }
+        }
+    }
+    
+    //MARK:- 修改事件
+    public func updateEvent(withEvent event: Event, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let id = "\(event.id)"
+        //let eventType = EventType(rawValue: Int(event.type)) ?? EventType.custom
+        //let mode = (eventType == .birthday || eventType == .festival || eventType == .anniversary) ? "7" : "8"
+        let mode = (event.type == 1 || event.type == 2 || event.type == 3) ? "7" : "8"
+        let beginTime = event.beginDate?.formatString(with: "yyyy-MM-dd HH:mm:ss") ?? ""
+        let frequency = "\(event.frequency?.cycle ?? 1)"
+        let per = "\(event.frequency?.per ?? 1)"
+        let count = "\(event.count)"
+        let intercycle = "\(event.intercycle)"
+        //let interval = "\(Int(event.interval))"
+        let time = getFrequencyModel(fromFrequency: event.frequency)?.encoderTimes() ?? ""
+        
+        let dic = [
+            "eventId": id,
+            "introduce": event.introduce ?? "",
+            "beginTime": beginTime,
+            "mode": mode,
+            "frequency": frequency,
+            "per": per,
+            "count": count,
+            "intercycle": intercycle,
+            "times": time,
+            "beginning": self.getBeginningModel(fromBeginningList: event.beginningList, andBeginningNext: event.beginningNext)?.encoderList() ?? "",
+            "ring": event.ring ?? "",
+            "weixin": event.hasWeixinRemind ? "1" : "0",
+            "email": event.hasEmailRemind ? "1" : "0",
+            "phone": "",
+            "type": "\(event.type)",
+            "festivals": "",
+            "lunar": event.isLunar ? "1" : "0",
+            "param1": event.param1 ?? "",
+            "param2": event.param2 ?? "",
+            "param3": event.param3 ?? ""
+        ]
+        
+        Session.session(withAction: Actions.updateEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 暂停事件
+    public func pauseEvent(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["eventId": "\(eventId)"]
+        Session.session(withAction: Actions.pauseEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 开始或重新开始事件
+    public func startEvent(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["eventId": "\(eventId)"]
+        Session.session(withAction: Actions.startEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 删除事件
+    public func deleteEvent(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["eventId": "\(eventId)"]
+        Session.session(withAction: Actions.deleteEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    ///标记事件为已处理
+    public func finishEvent(withEventId eventId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["eventId": "\(eventId)"]
+        Session.session(withAction: Actions.finishEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, _) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    //******************************************************************************************************************************
+    //MARK:- 转换beginning
+    public func getBeginningModel(fromBeginningList beginningList: NSSet?, andBeginningNext beginningNext: Beginning?) -> BeginningModel?{
+        guard let bgnList = beginningList, let bgnNext = beginningNext else {
+            return nil
+        }
+        let beginningModel = BeginningModel()
+        beginningModel.list.removeAll()
+        
+        for element in bgnList{
+            
+            guard let beginning = element as? Beginning else{
+                continue
+            }
+            guard let frequencyCycle = FrequencyCycle(rawValue: Int(beginning.cycle)) else {
+                continue
+            }
+            beginningModel.list.append((frequencyCycle, Int(beginning.count)))
+        }
+        
+        if let frequencyCycle = FrequencyCycle(rawValue: Int(bgnNext.cycle)){
+            beginningModel.next = (frequencyCycle, Int(bgnNext.count))
+        }
+        return beginningModel
+    }
+    
+    //MARK:- 转换frequency
+    public func getFrequencyModel(fromFrequency frequency: Frequency?) -> FrequencyModel?{
+        guard let fre = frequency else {
+            return nil
+        }
+        let frequencyModel = FrequencyModel()
+        
+        frequencyModel.frequencyCycle = FrequencyCycle(rawValue: Int(fre.cycle)) ?? FrequencyCycle.minute
+        frequencyModel.per = Int(fre.per)
+        frequencyModel.baseOnWeek = fre.baseOnWeek
+        var days = [Int]()
+        for element in fre.days!{
+            if let frequencyDay = element as? FrequencyDay{
+                days.append(Int(frequencyDay.day))
+            }
+        }
+        frequencyModel.days = days
+        var months = [Int]()
+        for element in fre.months!{
+            if let frequencyMonth = element as? FrequencyMonth{
+                months.append(Int(frequencyMonth.month))
+            }
+        }
+        frequencyModel.months = months
+        var weekdays = [Int]()
+        for element in fre.weekdays!{
+            if let frequencyWeekday = element as? FrequencyWeekday{
+                weekdays.append(Int(frequencyWeekday.weekday))
+            }
+        }
+        frequencyModel.weekdays = weekdays
+        if let weeksTuple = fre.weeksTuple{
+            frequencyModel.weeksTuple = (Int(weeksTuple.weekNumber), Int(weeksTuple.weekday))
+        }
+        
+        return frequencyModel
+    }
+    
+    
+    //MARK:- 解析event数据
+    @discardableResult
+    func getEvent(fromJSON jsonData: Any?) -> Event?{
+        guard let jsonDic = jsonData as? [String: Any] else {
+            return nil
+        }
+        guard let id = jsonDic["id"] as? Int else{
+            return nil
+        }
+        
+        //从数据库获取事件或创建事件
+        guard let event = DataHandler.share().getEvent(byEventId: id) else{
+            return nil
+        }
+        
+        //基本信息
+        event.content = jsonDic["content"] as? String
+        if let createTime = jsonDic["createTime"] as? TimeInterval{
+            event.createDate = Date(timeIntervalSince1970: createTime)
+        }
+        if let beginningStr = jsonDic["beginning"] as? String{
+            let list = decoderBeginningList(withBeginningStr: beginningStr)
+            if !list.isEmpty{
+                if let beginningList = event.beginningList{
+                    event.removeFromBeginningList(beginningList)
+                }
+                for (cycle, count) in list{
+                    if let beginning = DataHandler.share().insertBeginning(withEventId: id){
+                        beginning.cycle = Int32(cycle.rawValue)
+                        beginning.count = Int32(count)
+                        event.addToBeginningList(beginning)
+                    }
+                }
+            }
+        }
+        if let nowBeginningStr = jsonDic["nowBeginning"] as? String{
+            if let next = decoderNowBeginning(withNowBeginningStr: nowBeginningStr){
+                event.beginningNext?.cycle = Int32(next.0.rawValue)
+                event.beginningNext?.count = Int32(next.1)
+            }
+        }
+        if let interval = jsonDic["interval"] as? TimeInterval{
+            event.interval = interval
+        }
+        if let count = jsonDic["count"] as? Int32{
+            event.count = count
+        }
+        if let statusRawvalue = jsonDic["status"] as? Int32{
+            event.status = statusRawvalue
+        }
+        if let sendedCount = jsonDic["sendCount"] as? Int32{
+            event.sendedCount = sendedCount
+        }
+        event.introduce = jsonDic["introduce"] as? String           //事件说明
+        if let type = jsonDic["type"] as? Int32{
+            event.type = type
+        }
+        event.text3 = jsonDic["text3"] as? String
+        if let intervalDay = jsonDic["intervalDay"] as? Int32{
+            event.intervalDay = intervalDay
+        }
+        event.intervalText = jsonDic["intervalText"] as? String
+        event.formalTime = jsonDic["formalTime"] as? String
+        
+        //详情信息
+        if let mode = jsonDic["mode"] as? Int32 {                   //事件重复方式 0:不重复、1:每天 2:工作日(五天制) 3:工作日(六天制) 4:法定工作日 5:每周 6:每月 7:每年 8:自定义
+            event.mode = mode
+        }
+        //频率 0:不重复 1:分钟 2:小时 3:日 4周 5:月 6:年
+        //时间周期，如果是每日、每周、每年，格式1,12,14(各时间点以,隔开)，如果是每月,格式为0:1,2(:前面0为按日期1为按星期，1,2为各时间点,时间点以,隔开。如果是每月第一个星期二，格式为1:1,3)
+        //获取周期，频率，周期详情（封装对象）
+        if let timesStr = jsonDic["times"] as? String, let frequency = jsonDic["frequency"] as? Int, let per = jsonDic["per"] as? Int {
+            let frequencyCycly = FrequencyCycle(rawValue: frequency) ?? .minute
+            decoderFrequency(withEventId: id, byFrequencyCycle: frequencyCycly, withPer: per, withTimesStr: timesStr, frequency: &(event.frequency))
+        }
+        if let intercycle = jsonDic["intercycle"] as? Int32 {       //如果要求重复提醒,每隔多长分钟提醒一次
+            event.intercycle = intercycle
+        }
+        if let lunar = jsonDic["lunar"] as? String{                 //是否农历：0否、1是
+            event.isLunar = lunar == "1"
+        }
+
+        event.lunarYear = jsonDic["lunarYear"] as? String
+        if let lunarMonth = jsonDic["lunarMonth"] as? Int32{
+            event.lunarMonth = lunarMonth
+        }
+        if let lunarDay = jsonDic["lunarDay"] as? Int32{
+            event.lunarDay = lunarDay
+        }
+        event.festivals = jsonDic["festivals"] as? String           //农历|公历
+        event.ring = jsonDic["ring"] as? String                     //铃声
+        event.sound = jsonDic["ring"] as? String
+        if let weixin = jsonDic["weixin"] as? String{               //是否微信提醒0:否,1:是
+            event.hasWeixinRemind = weixin == "1"
+        }
+        if let email = jsonDic["email"] as? String{                 //是否邮件提醒0:否,1:是
+            event.hasEmailRemind = email == "1"
+        }
+        if let nextTime = jsonDic["nextTime"] as? String{           //下次提醒时间
+            let interval = TimeInterval(nextTime) ?? 0
+            event.nextNotificationDate = Date(timeIntervalSince1970: interval)
+        }
+        event.weixinID = jsonDic["wxNickName"] as? String             //微信ID
+        event.emailAddr = jsonDic["emailAdd"] as? String           //邮箱地址
+        if let leftSmsCount = jsonDic["leftSmsCount"] as? String{   //剩余可发送短信数
+            event.leftSmsCount = Int32(leftSmsCount) ?? 0
+        }
+        event.date = jsonDic["date"] as? String                     //时间日期、下一个节日
+        event.time = jsonDic["time"] as? String                     //事件时间 x月x日 星期x
+        event.time2 = jsonDic["time2"] as? String
+        if let today = jsonDic["today"] as? String{                 //是否是今天：0否、1是
+            event.isToday = today == "1"
+        }
+        event.param1 = jsonDic["param1"] as? String
+        event.param2 = jsonDic["param2"] as? String
+        event.param3 = jsonDic["param3"] as? String
+        
+        event.zodiac = jsonDic["zodiac"] as? String                 //生肖
+        event.constellation = jsonDic["constellation"] as? String   //星座
+        event.lunarDate = jsonDic["lunarDate"] as? String           //农历月日
+        event.age = jsonDic["age"] as? Int32 ?? 0                   //年龄
+        
+        event.typeName = jsonDic["typeName"] as? String             //事件类型名称
+        event.remindStatus = jsonDic["remindStatus"] as? Int32 ?? 0 //提醒状态
+        event.remindText = jsonDic["remindText"] as? String ?? ""   //提醒文字
+        if let interval = jsonDic["beginTime"] as? TimeInterval{
+            event.beginDate = Date(timeIntervalSince1970: interval / 1000)
+        }
+        
+        if let weixin = jsonDic["weixin"] as? Int{
+            event.isWeixinOpen = weixin == 1
+        }
+        if let email = jsonDic["email"] as? Int{
+            event.isEmailOpen = email == 1
+        }
+        if let bindWeixin = jsonDic["bindWeixin"] as? Int{
+            event.isWeixinBinded = bindWeixin == 1
+        }
+        if let bindEmail = jsonDic["bindEmail"]as?Int{
+            event.isEmailBinded = bindEmail == 1
+        }
+        DataHandler.share().commit()
+        return event
+    }
+    
+    //MARK:- 映射beginning
+    func decoderBeginningList(withBeginningStr beginningStr: String) -> [(FrequencyCycle, Int)]{
+        var result = [(FrequencyCycle, Int)]()
+        
+        let list = beginningStr.components(separatedBy: ",")
+        for element in list{
+            if let tuple = decoderNowBeginning(withNowBeginningStr: element){
+                result.append(tuple)
+            }
+        }
+        return result
+    }
+    
+    //MARK:- 映射nowBeginning
+    func decoderNowBeginning(withNowBeginningStr nowBeginningStr: String) -> (FrequencyCycle, Int)?{
+        let list = nowBeginningStr.components(separatedBy: ":")
+        guard list.count == 2 else {
+            return nil
+        }
+        guard let typeRawvalue = Int(list[0]), let value = Int(list[1]) else {
+            return nil
+        }
+        guard let type = FrequencyCycle(rawValue: typeRawvalue) else{
+            return nil
+        }
+        return (type, value)
+    }
+    
+    //MARK:- 映射times
+    func decoderFrequency(withEventId eventId: Int, byFrequencyCycle frequencyCycle: FrequencyCycle, withPer per: Int, withTimesStr timesStr: String, frequency: inout Frequency?) {
+        func decoderSub(withSubTimesStr subTimesStr: String, isYear: Bool, withOriginFrequency originFrequency: inout Frequency?){
+            let isBaseOnWeek = subTimesStr.hasPrefix("0") ? false : true
+            originFrequency?.baseOnWeek = isBaseOnWeek
+            
+            let staIndex = subTimesStr.index(timesStr.startIndex, offsetBy: 2)
+            let listSequence = timesStr[staIndex...]
+            let listStr = String(listSequence)
+            let list = listStr.components(separatedBy: isYear ? "_" : ",")
+            if isBaseOnWeek{
+                if list.count == 2{
+                    let intList = list.map{Int($0) ?? 1}
+                    originFrequency?.weeksTuple?.weekNumber = Int32(intList[0])
+                    originFrequency?.weeksTuple?.weekday = Int32(intList[1])
+                }
+            }else{
+                for dayNum in list{
+                    if let frequencyDay = DataHandler.share().insertFrequencyDay(withEventId: eventId){
+                        frequencyDay.day = Int32(dayNum) ?? 1
+                    }
+                }
+            }
+        }
+        
+        //var frequency = DataHandler.share().fre  //Frequency()
+        let cycyle =  Int32(frequencyCycle.rawValue)
+        frequency?.cycle = cycyle
+        frequency?.per = Int32(per)
+        
+        switch frequencyCycle {
+        case .week:
+            if let oldWeekdays = frequency?.weekdays{
+                frequency?.removeFromWeekdays(oldWeekdays)
+            }
+            let timesList = timesStr.components(separatedBy: ",")
+            for times in timesList{
+                if let frequencyWeekday = DataHandler.share().insertFrequencyWeekday(withEventId: eventId){
+                    frequencyWeekday.weekday = Int32(times) ?? 1
+                    //frequency?.addToWeekdays(frequencyWeekday)
+                }
+            }
+        case .month:
+            decoderSub(withSubTimesStr: timesStr, isYear: false, withOriginFrequency: &frequency)
+        case .year:
+            //根据月份拆分
+            let monthStrList = timesStr.components(separatedBy: ",")
+            for (index, monthStr) in monthStrList.enumerated() {
+                //获取月份
+                let month = String(monthStr[monthStr.startIndex])
+                
+                if let frequencyMonth = DataHandler.share().insertFrequencyMonth(withEventId: eventId){
+                    frequencyMonth.month = Int32(month) ?? 1
+                }
+                
+                if index == 0{
+                    //获取times
+                    let staIndex = monthStr.index(monthStr.startIndex, offsetBy: 2)
+                    let otherStr = monthStr[staIndex...]
+                    
+                    decoderSub(withSubTimesStr: String(otherStr), isYear: true, withOriginFrequency: &frequency)
+                }
+            }
+        default:
+            break
+        }
+    }
+}
+

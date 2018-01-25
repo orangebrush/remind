@@ -1,0 +1,151 @@
+//
+//  CKFestivalBaseViewController.swift
+//  Remind
+//
+//  Created by mk on 2018/1/25.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CKFestivalModel: NSObject {
+    var name: String?
+    var dateInfo: String?
+    var dateExtra: String?
+    var dateIntervalInfo: String?
+}
+
+class CKFestivalBaseViewController: UIViewController {
+    var datasource = [[CKFestivalModel]]()
+    let tableView: UITableView = UITableView(frame: .zero, style: UITableViewStyle.plain)
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        view.backgroundColor = .blue
+        
+        tableView.backgroundColor = UIColor.clear
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        tableView.tableHeaderView = UIView(frame: CGRect(x: 0, y: 0, width: view.width, height: 12))
+        tableView.tableFooterView = UIView(frame: CGRect(x: 0, y: 0, width: view.width, height: 12))
+        view.addSubview(tableView)
+        tableView.snp.makeConstraints { (make) in
+            make.left.right.bottom.top.equalTo(0)
+        }
+        
+        if #available(iOS 11.0, *) {
+            tableView.contentInsetAdjustmentBehavior = .never
+        } else {
+            automaticallyAdjustsScrollViewInsets = false
+        }
+        
+        tableView.register(CKFestivalHeaderTableViewCell.self, forCellReuseIdentifier: "CKFestivalHeaderTableViewCell")
+        tableView.register(CKFestivalFooterTableViewCell.self, forCellReuseIdentifier: "CKFestivalFooterTableViewCell")
+        tableView.register(CKFestivalTableViewCell.self, forCellReuseIdentifier: "CKFestivalTableViewCell")
+        tableView.register(CKFestivalHolidayTableViewCell.self, forCellReuseIdentifier: "CKFestivalHolidayTableViewCell")
+        
+        var section = [CKFestivalModel]()
+        for index in 1...20 {
+            let model = CKFestivalModel()
+            model.name = "北方小年"
+            model.dateInfo = "2月8日 星期四 腊月十二"
+            model.dateIntervalInfo = "16天后"
+            if index % 2 == 0 {
+                model.dateExtra = "4月28（星期六） 补班"
+            }
+            section.append(model)
+        }
+        datasource.append(section)
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        
+    }
+    
+}
+
+
+
+extension CKFestivalBaseViewController: UITableViewDataSource, UITableViewDelegate {
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return datasource.count
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+       return datasource[section].count + 2
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.row == 0 {
+            return 42
+        }
+        else if indexPath.row == datasource[indexPath.section].count + 1 {
+            return 10
+        }
+        else {
+            let model = datasource[indexPath.section][indexPath.row - 1]
+            if model.dateExtra == nil {
+                return 68
+            }
+            else {
+                return 86
+            }
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+
+        if indexPath.row == 0 {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "CKFestivalHeaderTableViewCell", for: indexPath) as! CKFestivalHeaderTableViewCell
+            cell.lblDate.text = "2018年1月"
+            return cell
+        }
+        else if indexPath.row == datasource[indexPath.section].count + 1 {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "CKFestivalFooterTableViewCell", for: indexPath) as! CKFestivalFooterTableViewCell
+            return cell
+        }
+        else {
+            let model = datasource[indexPath.section][indexPath.row - 1]
+            if model.dateExtra == nil {
+                let cell = tableView.dequeueReusableCell(withIdentifier: "CKFestivalTableViewCell", for: indexPath) as! CKFestivalTableViewCell
+                cell.lblName.text = model.name
+                cell.lblDate.text = model.dateInfo
+                cell.lblInterval.text =  model.dateIntervalInfo
+                if indexPath.row == datasource[indexPath.section].count  {
+                    cell.line.isHidden = true
+                }
+                else {
+                    cell.line.isHidden = false
+                }
+                return cell
+            }
+            else {
+                let cell = tableView.dequeueReusableCell(withIdentifier: "CKFestivalHolidayTableViewCell", for: indexPath) as! CKFestivalHolidayTableViewCell
+                cell.lblName.text = model.name
+                cell.lblDate.text = model.dateInfo
+                cell.lblDateExtra.text = model.dateExtra
+                cell.lblInterval.text =  model.dateIntervalInfo
+                if indexPath.row == datasource[indexPath.section].count  {
+                    cell.line.isHidden = true
+                }
+                else {
+                    cell.line.isHidden = false
+                }
+                return cell
+            }
+        }
+        
+
+    }
+    
+}

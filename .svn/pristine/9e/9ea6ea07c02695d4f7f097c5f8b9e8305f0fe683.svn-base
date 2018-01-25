@@ -1,0 +1,182 @@
+
+//
+//  stockTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/6.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class stockTableViewCell: UITableViewCell {
+    fileprivate lazy var iconImageView = UIImageView()
+    fileprivate lazy var nameLabel : UILabel = {
+        let lable = UILabel.init()
+        lable.font =  UIFont.normal
+        lable.textColor = UIColor.word
+        return lable
+    }()
+    
+    fileprivate lazy var typeLabel : UILabel = {
+        let lable = UILabel.init()
+        lable.font =  UIFont.init(withNormalFontSize: 8)
+        lable.textColor = UIColor.white
+        lable.backgroundColor = UIColor.grayBtn
+        lable.clipsToBounds = true
+        lable.textAlignment = .center
+        lable.layer.cornerRadius = 2
+        return lable
+    }()
+    fileprivate lazy var numberLable: UILabel = {
+        let lable = UILabel.init()
+        lable.font = UIFont.init(withNormalFontSize: 10)
+        lable.textColor = UIColor.subSubWord
+        return lable
+    }()
+    fileprivate lazy var moneyLable: UILabel = {
+        let lable = UILabel.init()
+        lable.font = UIFont.content
+        lable.textColor = UIColor.word
+        lable.textAlignment = .right
+        return lable
+    }()
+    fileprivate lazy var addmoneyLable: UILabel = {
+        let lable = UILabel.init()
+        lable.font = UIFont.content
+        lable.textColor = UIColor.subSubWord
+        lable.textAlignment = .right
+        return lable
+    }()
+    fileprivate lazy var percentLable: UILabel = {
+        let lable = UILabel.init()
+        lable.font = UIFont.content
+        lable.textColor = UIColor.subSubWord
+        lable.textAlignment = .right
+        return lable
+    }()
+    fileprivate lazy var cutLable: UILabel = {
+        let lable = UILabel.init()
+        lable.backgroundColor = UIColor.separator
+        return lable
+    }()
+    
+    fileprivate lazy var BackView:UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.header
+        return view
+    }()
+    fileprivate lazy var mainBackView:UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.selectionStyle = .none
+        self.backgroundColor = UIColor.clear
+        BackView.frame = CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height:64)
+        self.addSubview(BackView)
+        mainBackView.frame = CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height:64)
+        self.addSubview(mainBackView)
+        mainBackView.addSubview(iconImageView)
+        mainBackView.addSubview(nameLabel)
+        mainBackView.addSubview(typeLabel)
+        mainBackView.addSubview(numberLable)
+        mainBackView.addSubview(moneyLable)
+        mainBackView.addSubview(addmoneyLable)
+        mainBackView.addSubview(percentLable)
+        mainBackView.addSubview(cutLable)
+        iconImageView.snp.makeConstraints { (make) in
+            make.left.equalTo(15 )
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(34)
+        }
+        nameLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(iconImageView.snp.right).offset(15)
+            make.top.equalTo(12)
+            make.height.equalTo(21)
+            make.right.equalTo(numberLable.snp.right)
+        }
+        typeLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(nameLabel)
+            make.top.equalTo(nameLabel.snp.bottom).offset(4.5)
+            make.height.equalTo(13)
+            make.width.equalTo(15)
+            make.right.equalTo(numberLable.snp.left).offset(-5)
+        }
+        numberLable.snp.makeConstraints { (make) in
+            make.centerY.equalTo(typeLabel.snp.centerY)
+            make.height.equalTo(typeLabel.snp.height)
+            
+        }
+        moneyLable.snp.makeConstraints { (make) in
+            make.centerY.equalToSuperview()
+            make.height.equalTo(percentLable)
+            make.right.equalTo(addmoneyLable.snp.left)
+            make.width.equalTo(83)
+        }
+        addmoneyLable.snp.makeConstraints { (make) in
+            make.centerY.equalToSuperview()
+            make.right.equalTo(percentLable.snp.left)
+            make.height.equalTo(percentLable)
+            make.width.equalTo(percentLable)
+        }
+        percentLable.snp.makeConstraints { (make) in
+            make.centerY.equalToSuperview()
+            make.right.equalTo(-15)
+            make.height.equalTo(21)
+            make.width.equalTo(50)
+        }
+        cutLable.snp.makeConstraints { (make) in
+            make.left.equalTo(iconImageView)
+            make.right.equalTo(0)
+            make.bottom.equalToSuperview()
+            make.height.equalTo(kLineHeight)
+        }
+        
+    }
+    func configcell(_ isneedClip:Bool,_ isfrist:Bool,_ stock:StockModel){
+        iconImageView.image = UIImage(named:"event_7")
+        nameLabel.text = stock.prodName
+        
+        mainBackView.resetNomalView()
+        BackView.resetNomalView()
+        if isfrist{
+            mainBackView.drawTopRectView()
+        }
+        if isneedClip {
+            cutLable.isHidden = true
+            BackView.drawFourRectView()
+            mainBackView.drawRectView()
+        }else{
+            cutLable.isHidden = false
+            BackView.drawRectView()
+        }
+        typeLabel.text = stock.prodCode
+        numberLable.text = stock.prefix
+        moneyLable.text = String(format: "%.2f", stock.lastPx) + "CNY"
+        addmoneyLable.text = String(format: "%.2f", stock.pxChange)
+        addmoneyLable.textColor = stock.pxChange > 0 ? UIColor(colorHex:0xff0000) : UIColor(colorHex:0x39b54a)
+        percentLable.text = String(format: "%.2f", stock.pxChangeRate) + "%"
+        percentLable.textColor = stock.pxChangeRate > 0 ? UIColor(colorHex:0xff0000) : UIColor(colorHex:0x39b54a)
+        typeLabel.snp.updateConstraints { (make) in
+           make.width.equalTo(typeLabel.text!.computationStringWidth(typeLabel.font, 12, 0).0)
+        }
+        
+    }
+    
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        
+        // Configure the view for the selected state
+    }
+    
+}
+

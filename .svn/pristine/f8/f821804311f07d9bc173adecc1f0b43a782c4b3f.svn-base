@@ -1,0 +1,311 @@
+//
+//  EventBeginningVC.swift
+//  Remind
+//
+//  Created by gg on 13/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventBeginningVC: UIViewController {
+    
+    @IBOutlet weak var collectionView: UICollectionView!
+    
+    //本地数据
+    private let originLocalList: [[(FrequencyCycle, Int)]] = [
+        [(FrequencyCycle.none, 0)],
+        [(.minute, 5), (.minute, 10), (.minute, 15), (.minute, 30),
+         (.hour, 1), (.hour, 2), (.hour, 3), (.hour, 5),
+         (.day, 1), (.day, 2), (.day, 3),
+         (.week, 1), (.week, 2), (.week, 3),
+         (.month, 1), (.month, 2), (.month, 3)]
+    ]
+    private var localList: [[(FrequencyCycle, Int)]] = [
+        [(FrequencyCycle.none, 0)],
+        []
+    ]
+    
+    var beginDate: Date?
+    var frequency: FrequencyModel?
+    var beginningModel: BeginningModel?
+    
+    var collectionSelectID: [IndexPath]  = [IndexPath]()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+        
+        self.view.backgroundColor = UIColor.separator
+        self.collectionView.backgroundColor = UIColor.separator
+        
+        self.collectionView.register(UICollectionReusableView.self, forSupplementaryViewOfKind: UICollectionElementKindSectionHeader, withReuseIdentifier: "headerView")
+        self.collectionView.register(EventBeginningCustomCell.self, forCellWithReuseIdentifier: "eventBeginningCustomCell")
+        
+        //清除多余的数据
+        if let fre = frequency{
+            if fre.frequencyCycle != .none{
+                for element in originLocalList[1]{
+                    if element.0.rawValue < fre.frequencyCycle.rawValue{
+                        localList[1].append(element)
+                    }else if element.0.rawValue == fre.frequencyCycle.rawValue{
+                        if element.1 < fre.per{
+                            localList[1].append(element)
+                        }
+                    }else if element.0 == .hour && fre.frequencyCycle == .minute{         //特殊情况(周期内无小时选项)
+                        let elementMins = element.1 * 60
+                        if elementMins < fre.per{
+                            localList[1].append(element)
+                        }
+                    }
+                }
+            }else{
+                for element in originLocalList[1]{
+                    localList[1].append(element)
+                }
+                if let date = beginDate{
+                    for element in originLocalList[1]{
+                        
+                    }
+                }
+            }
+        }
+        
+        
+        if let list = beginningModel?.list{
+            if list.isEmpty{
+                let indexPath = IndexPath(row: 0, section: 0)
+                if !collectionSelectID.contains(indexPath) {
+                     collectionSelectID.append(indexPath)
+                }
+            }else {
+                for (n, tuple) in localList[1].enumerated() {
+                    let existList = list.filter{$0 == tuple}
+                    if !existList.isEmpty{
+                         let indexPath = IndexPath(row: n, section: 1)
+                        if !collectionSelectID.contains(indexPath) {
+                            collectionSelectID.append(indexPath)
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item1 = BarButtonItem(textStr: "返回", imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(textStr: "确定", tSelector: #selector(save(_:)))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if let indexPaths = collectionView.indexPathsForSelectedItems{
+            for indexPath in indexPaths{
+//                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        }
+        
+        //仅判断无选择时，默认选择无预提醒项
+        if let list = beginningModel?.list{
+            if list.isEmpty{
+                let indexPath = IndexPath(row: 0, section: 0)
+//                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        }
+    }
+
+    private func config(){
+        
+        automaticallyAdjustsScrollViewInsets = false
+        
+        collectionView.allowsMultipleSelection = true
+        
+        navigationItem.rightBarButtonItem?.tintColor = .confirm
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    @objc func save(_ sender: UIBarButtonItem){
+        
+        let newBeginningModel = BeginningModel()
+        newBeginningModel.list.removeAll()
+        let selectedItems: [IndexPath]? = self.collectionSelectID
+        if let indexPaths = selectedItems?.filter({$0.section != 0}){
+            for indexPath in indexPaths{
+                let localTuple = localList[indexPath.section][indexPath.row]
+                
+                //如果有选择无预提醒项，清空所有
+                if localTuple.0 == FrequencyCycle.none{
+                    newBeginningModel.list.removeAll()
+                    break
+                }
+                newBeginningModel.list.append(localTuple)
+            }
+        }
+        if let viewControllers = navigationController?.viewControllers{
+            if let parentVC = viewControllers[viewControllers.count - 2] as? EventEditorVC{
+                parentVC.eventBeginning = newBeginningModel
+            }else if let parentVC = viewControllers[viewControllers.count - 2] as? CardSettingViewController{
+                parentVC.eventBeginningModel = newBeginningModel
+            }
+        }
+        navigationController?.popViewController(animated: true)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        
+    }
+}
+
+extension EventBeginningVC: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return localList.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return localList[section].count
+    }
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
+        if section == 0 {
+            return CGSize.init(width: view.width, height: 42)
+        }
+        return CGSize.init(width: view.width, height: 10)
+    }
+    func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+        let headerView = collectionView.dequeueReusableSupplementaryView(ofKind: UICollectionElementKindSectionHeader, withReuseIdentifier: "headerView", for: indexPath)
+        if indexPath.section == 0 {
+            let label = UILabel()
+            label.textColor = UIColor.subSubWord
+            label.font = UIFont.content
+            label.frame = CGRect.init(x: 25, y: 12, width: keyDeviceWidth, height: 20)
+            label.text = "事件发生前预提醒"
+            headerView.addSubview(label)
+        }
+        headerView.clipsToBounds = true
+        return headerView
+ 
+    }
+    
+    //MARK:- cell
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let row = indexPath.row
+        let identifier = "eventBeginningCustomCell"
+        let tuple = localList[indexPath.section][row]
+        
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: identifier, for: indexPath) as! EventBeginningCustomCell
+        cell.tuple = tuple
+        if indexPath.section == 0 && indexPath.row == 0 {
+            cell.setData(.all, isShowsSeparatorLine: false)
+        }else if indexPath.section == 1 && indexPath.row == 0 {
+            cell.setData(.top, isShowsSeparatorLine: true)
+        }else if indexPath.section == 1 && indexPath.row == localList[1].count - 1 {
+            cell.setData(.bottom, isShowsSeparatorLine: false)
+        }else{
+            cell.setData(.none, isShowsSeparatorLine: true)
+        }
+        if collectionSelectID.contains(indexPath) {
+            cell.imageView.isHidden = false
+        }else {
+            cell.imageView.isHidden = true
+        }
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        let row = indexPath.row
+        let tuple = localList[indexPath.section][row]
+        
+        if let list = beginningModel?.list{
+            let existList = list.filter{$0 == tuple}
+            if !existList.isEmpty{
+//                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+    
+    //flow layout
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        //返回等同于窗口大小的尺寸
+//        let width = indexPath.row == 0 ? view.frame.width - 4 * 2 : (view.frame.width - 4 * 4) / 3
+        return CGSize(width: view.width, height: 48)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
+        return UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 0
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 0
+    }
+    
+    //delegate
+    func collectionView(_ collectionView: UICollectionView, shouldHighlightItemAt indexPath: IndexPath) -> Bool {
+        let row = indexPath.row
+        if row >= localList[indexPath.section].count {
+            return false
+        }
+        return true
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let row = indexPath.row
+        if row < localList[indexPath.section].count{
+            if indexPath.section == 0, let items = collectionView.indexPathsForSelectedItems{
+                
+                let otherItemsWithoutFirst = items.filter{$0 != indexPath}
+                for item in otherItemsWithoutFirst{
+//                    collectionView.deselectItem(at: item, animated: true)
+                }
+                collectionSelectID.removeAll()
+                if !collectionSelectID.contains(indexPath) {
+                     collectionSelectID.append(indexPath)
+                }
+                
+            }else{
+                let firstIndexPath = IndexPath(row: 0, section: 0)
+//                collectionView.deselectItem(at: firstIndexPath, animated: true)
+                if collectionSelectID.contains(firstIndexPath) {
+                    for (n, tuple) in collectionSelectID.enumerated() {
+                        if tuple == firstIndexPath {
+                            collectionSelectID.remove(at: n)
+                            break
+                        }
+                    }
+                }
+               
+                if !collectionSelectID.contains(indexPath) {
+                    collectionSelectID.append(indexPath)
+                }else {
+                    for (n, tuple) in collectionSelectID.enumerated() {
+                        if tuple == indexPath {
+                            collectionSelectID.remove(at: n)
+                            break
+                        }
+                    }
+                }
+            }
+            collectionView.reloadData()
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, shouldShowMenuForItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+}

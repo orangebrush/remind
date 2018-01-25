@@ -1,0 +1,143 @@
+//
+//  StepSettingVC.swift
+//  Remind
+//
+//  Created by gg on 19/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepSettingVC: UIViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    //数据
+    var targetStep: Int?
+    var isRemind = false
+    var remindTime = Date()
+    var remindSound = soundList[2]
+    
+    
+    
+    //MARK:- init--------------------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+    }
+    
+    private func createContents(){
+        
+    }
+}
+
+extension StepSettingVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 3
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0{
+            return 1
+        }else if section == 1{
+            return 3
+        }else{
+            return 2
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell: UITableViewCell?
+        let identifier: String
+        if section == 0 {
+            identifier = "cell0"
+        }else if section == 1{
+            if row == 0{
+                identifier = "cell1"
+            }else{
+                identifier = "cell0"
+            }
+        }else{
+            identifier = "cell2"
+        }
+        
+        
+        cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+        
+        if section == 0{
+            let cell0 = cell as! StepSettingCell0
+            cell0.keyLabel.text = "目标步数"
+            cell0.valueLabel.text = targetStep == nil ? "8000" : "\(targetStep!)"
+        }else if section == 1{
+            if row == 0{
+                let cell1 = cell as! StepSettingCell1
+                cell1.keyLabel.text = "提醒"
+            }else if row == 1{
+                let cell0 = cell as! StepSettingCell0
+                cell0.keyLabel.text = "提醒时间"
+            }else{
+                let cell0 = cell as! StepSettingCell0
+                cell0.keyLabel.text = "提示音"
+            }
+        }else if section == 2{
+            let cell2 = cell as! StepSettingCell2
+            if row == 0{
+                cell2.keyLabel.text = "同时提醒到微信"
+                cell2.closure = {
+                    isOn in
+                }
+            }else{
+                cell2.keyLabel.text = "同时提醒到邮箱"
+                cell2.closure = {
+                    isOn in
+                }
+            }
+        }
+        return cell!
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0{
+            isTopFlag = true
+        }
+        if row == tableView.numberOfRows(inSection: section) - 1{
+            isBottomFlag = true
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0{        //设置目标步数
+            
+        }else if section == 1{  //
+            if row == 0{        //提醒
+                
+            }else if row == 1{  //提醒时间
+                
+            }else{              //提示音
+                
+            }
+        }else{
+            if row == 0{        //提醒到微信
+                
+            }else{              //提醒到邮箱
+                
+            }
+        }
+    }
+}
+

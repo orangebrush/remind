@@ -1,0 +1,81 @@
+//
+//  ProfileTableViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class ProfileTableViewController: UITableViewController {
+
+    
+    
+    
+    //MARK:- init----------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+    }
+    
+    //MARK:- 跳转提前量
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let identifier = segue.identifier
+        let destination = segue.destination
+        if identifier == ""{
+            
+        }else if identifier == ""{
+            
+        }
+    }
+    
+    private func config(){
+        automaticallyAdjustsScrollViewInsets = true
+    }
+
+    
+    private func createContents(){
+        
+    }
+    
+    
+    //MARK:- 点击头像
+    @IBAction func changeHeadImage(_ sender: UITapGestureRecognizer) {
+        print("click")
+    }
+
+}
+
+extension ProfileTableViewController{
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.section == 1 && indexPath.row == 0 {
+            return 118
+        }
+        return super.tableView(tableView, heightForRowAt: indexPath)
+    }
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
+
+        if row == 0 {
+            cell.customDraw(withTopCornerRadius: true, withBottomCornerRadius: false, byForceDraw: true)
+        }else if section == 3 && row == 1{
+            cell.customOriginDraw()
+        }else{
+            cell.customSoundDraw()
+        }
+        return cell
+    }
+}

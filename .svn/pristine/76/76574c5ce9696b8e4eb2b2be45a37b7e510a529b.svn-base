@@ -1,0 +1,101 @@
+//
+//  BasedViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/28.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class BasedViewController: UIViewController {
+    //判断viewcontroller是push  还是
+    var viewcontrollerCount = 0
+    
+    var backButtonTitle = "" {
+        didSet {
+            let item = BarButtonItem(textStr: backButtonTitle, imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+            self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+        }
+    }//返回按钮标题
+    override func viewDidLoad() {
+        super.viewDidLoad()
+//        let leftBarBtn = UIBarButtonItem(image: #imageLiteral(resourceName: "nav_back"), style: .plain, target: self, action: #selector(backToPrevious))
+//        let spacer = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)
+//        spacer.width = -10
+//        leftBarBtn.imageInsets = UIEdgeInsetsMake(0, -7, 0, 7)
+//
+//        navigationItem.leftBarButtonItem = leftBarBtn
+//        if !isPresent() {
+            let item = BarButtonItem(textStr: backButtonTitle, imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+            self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+//        }
+    }
+    func isPresent() -> Bool {
+        var isPresent = false
+        if self.navigationController != nil {
+            let viewcontrollers: Array = (self.navigationController?.viewControllers)!
+            if viewcontrollers.count > 1 {
+                if viewcontrollers[viewcontrollers.count - 1] == self {
+                    isPresent = false
+                }
+            }else {
+                isPresent = true
+            }
+        }
+        return isPresent
+    }
+
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        guard  (self.navigationController != nil) else {
+            return
+        }
+        viewcontrollerCount = self.navigationController!.viewControllers.count
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        if self.navigationController != nil {
+            let newcount = self.navigationController!.viewControllers.count
+            if newcount > viewcontrollerCount{
+                
+            }else{
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.view.frame.origin.x = 50
+                }) { (true) in
+                    self.view.frame.origin.x = 0
+                }
+            }
+        }else{
+            UIView.animate(withDuration: 0.2, animations: {
+                self.view.frame.origin.x = 50
+            }) { (true) in
+                self.view.frame.origin.x = 0
+            }
+        }
+        
+        
+    }
+    
+    
+    
+    
+    //MARK: 点击返回方法
+    @objc override func backToPrevious(){
+        guard navigationController?.popViewController(animated: true) == nil else{
+            return
+        }
+        
+        dismiss(animated: true, completion: nil)
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+
+   
+
+}

@@ -1,0 +1,246 @@
+//
+//  BirthdayVC.swift
+//  Remind
+//
+//  Created by gg on 25/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class BirthdayVC: BasedViewController {
+    
+    @IBOutlet weak var shareView: UIView!
+    @IBOutlet weak var contentView: UIView!
+    
+    @IBOutlet weak var label0: UILabel!
+    
+    @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var nameLabel: UILabel!
+    @IBOutlet weak var dateLabel: UILabel!
+    @IBOutlet weak var dayLabel: UILabel!
+    @IBOutlet weak var lunarLabel: UILabel!
+    
+    
+    var birthdayEvent: Event?
+    
+    
+    //MARK:- init------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        navigationController?.navigationBar.tintColor = .white
+        navigationController?.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        navigationController?.navigationBar.shadowImage = nil
+
+        setNeedsStatusBarAppearanceUpdate()
+        
+        //修改状态栏颜色
+        UIApplication.shared.statusBarStyle = UIStatusBarStyle.lightContent
+        
+        if let evt = birthdayEvent {
+            //从传入的数据填充页面
+            nameLabel.text = (evt.introduce ?? "") + "的生日"
+            if let beginDate = evt.beginDate{
+                let thisYear = calendar.component(.year, from: Date())
+                var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: beginDate)
+                components.year = thisYear
+                let thisBirthday = calendar.date(from: components)
+                if let result = thisBirthday?.compare(Date()){
+                    if result == .orderedAscending{         //今年未到生日
+                        dateLabel.text = thisBirthday?.formatString(with: "yyyy年M月d日 E")
+                    }else{                                  //今年已过生日
+                        components.year = thisYear + 1
+                        let nextBirthday = calendar.date(from: components)
+                        dateLabel.text = nextBirthday?.formatString(with: "yyyy年M月d日 E")
+                    }
+                }else{
+                    dateLabel.text = nil
+                }
+            }
+            
+            //获取间隔时间
+            if let birthday = evt.beginDate{
+                if let interval = self.getNextBirthdayIntervalDay(withBrithday: birthday){
+                    let intervalDay = Int32(interval)
+                    if intervalDay < 2{
+                        let attributedString = NSAttributedString(string: intervalDay.intervalDayText(), attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 130)])
+                        self.dayLabel.attributedText = attributedString
+                        label0.text = ""
+                    }else{
+                        let text = "\(intervalDay)" + "天"
+                        let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 130)])
+                        attributedString.addAttribute(NSAttributedStringKey.font, value: UIFont.init(withNormalFontSize: 26), range: NSMakeRange(text.count - 1, 1))
+                        self.dayLabel.attributedText = attributedString
+                    }
+                }else{
+                    self.dayLabel.text = ""
+                }
+            }else{
+                dayLabel.text = ""
+            }
+            
+            //"正月二十七\n/水瓶座/"
+            let lunarDateStr = evt.lunarDate ?? ""
+            let zodiacStr = evt.zodiac ?? ""
+            let constellationStr = evt.constellation ?? ""
+            lunarLabel.text = lunarDateStr + " · " + zodiacStr + " · " + constellationStr
+        }else{
+            //从后台获取个人生日详情
+            DataManager.share().getInfo { (codeResult, message, infoModel) in
+                self.nameLabel.text = infoModel.nickName + "的生日"
+                
+                //农历与星座字符
+                var lunarAndConstellationStr = ""
+                
+                //计算生日
+                if let birthday = infoModel.birthday{
+                    self.dateLabel.text = birthday.formatString(with: "yyyy年MM月dd日 E")
+                    
+                    //获取间隔时间
+                    if let interval = self.getNextBirthdayIntervalDay(withBrithday: birthday){
+                        let intervalDay = Int32(interval)
+                        if intervalDay < 2{
+                            let attributedString = NSAttributedString(string: intervalDay.intervalDayText(), attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 80)])
+                            self.dayLabel.attributedText = attributedString
+                            self.label0.text = ""
+                        }else{
+                            let text = "\(intervalDay)" + "天"
+                            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font : UIFont.init(withNormalFontSize: 80)])
+                            attributedString.addAttribute(NSAttributedStringKey.font, value: UIFont.init(withNormalFontSize: 26), range: NSMakeRange(text.count - 1, 1))
+                            self.dayLabel.attributedText = attributedString
+                        }
+                    }else{
+                        self.dayLabel.text = ""
+                    }
+                    
+                    //计算农历
+                    let lunarDate = transformGregorianToLunar(byDate: birthday)
+                    let lunarMonthStr = lunarMonthList[lunarDate.lunarMonth - 1]
+                    let lunarDayStr = lunarDayList[Int(lunarDate.lunarDay) - 1]
+                    
+                    lunarAndConstellationStr += lunarMonthStr + lunarDayStr + " · "
+                    
+                }else{
+                    self.dateLabel.text = ""
+                    self.dayLabel.text = ""
+                }
+                
+                //星座
+                let constellation = infoModel.constellation
+                if constellation != ""{
+                    lunarAndConstellationStr += " · " + constellation
+                }
+                
+                //显示农历生日与星座
+                self.lunarLabel.text = lunarAndConstellationStr
+            }
+        }
+    }
+    
+    //MARK:- 获取下次生日时长
+    private func getNextBirthdayIntervalDay(withBrithday birthday: Date) -> Int32?{
+        let year = calendar.component(.year, from: Date())
+        var birthdayComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: birthday)
+        birthdayComponents.year = year
+        if let thisBirthday = calendar.date(from: birthdayComponents){
+            let compareResult = thisBirthday.compare(Date())
+            if compareResult == ComparisonResult.orderedAscending{      //小于当前，下次生日移到明年
+                birthdayComponents.year = year + 1
+                if let lastYearBirthday = calendar.date(from: birthdayComponents){
+                    let interval = lastYearBirthday.timeIntervalSinceNow
+                    let dayInterval = lastYearBirthday.timeIntervalSince(lastYearBirthday.offset(with: 0, withTime: false))
+                    return Int32((interval - dayInterval) / 60 / 60 / 24)
+                }
+            }else{
+                let interval = thisBirthday.timeIntervalSinceNow
+                let dayInterval = thisBirthday.timeIntervalSince(thisBirthday.offset(with: 0, withTime: false))
+                return Int32((interval - dayInterval) / 60 / 60 / 24)
+            }
+        }
+        return nil
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.navigationBar.tintColor = UIColor.subWord
+        navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
+        navigationController?.navigationBar.shadowImage = nil
+        
+        //修改状态栏颜色
+//        UIApplication.shared.statusBarStyle = UIStatusBarStyle.default
+        setNeedsStatusBarAppearanceUpdate()
+    }
+    
+    private func config(){
+        //imageView.image = bgList[bgIndex]
+        
+        self.nameLabel.text = ""
+        self.dateLabel.text = ""
+        self.dayLabel.text = ""
+        self.lunarLabel.text = ""
+        
+        nameLabel.textColor = .white
+        nameLabel.font = UIFont(withSemiboldFontSize: 36)
+        
+        
+        dateLabel.font = UIFont(withNormalFontSize: 17)
+        dateLabel.textColor = .white
+        
+        
+        dayLabel.textColor = .white
+        dayLabel.font = UIFont(withNormalFontSize: 40)
+        
+        
+        lunarLabel.textColor = .white
+        lunarLabel.font = UIFont(withNormalFontSize: 17)
+        
+        label0.font = UIFont(withNormalFontSize: 17)
+        label0.textColor = .white
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    //MARK:- 点击切换背景
+    private let bgList = [#imageLiteral(resourceName: "pro_brith_bg1"), #imageLiteral(resourceName: "pro_brith_bg2")]
+    private var bgIndex = 0
+    @IBAction func changeBackground(_ sender: UIButton) {
+        bgIndex = bgIndex == 0 ? 1 : 0
+        imageView.image = bgList[bgIndex]
+    }
+    
+    //MARK:- 分享
+    @IBAction func share(_ sender: UIBarButtonItem) {
+        
+        //获取分享图片
+        let rect = view.frame
+        UIGraphicsBeginImageContext(rect.size)
+        guard let ctx = UIGraphicsGetCurrentContext() else{
+            return
+        }
+        view.layer.render(in: ctx)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        share(withText: "分享图片", withImage: image, withURL: nil)
+    }
+}
+
+//MARK:- scrollview delegate
+extension BirthdayVC: UIScrollViewDelegate {
+    
+}

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="13772" systemVersion="17B1003" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Beginning" representedClassName="Beginning" syncable="YES" codeGenerationType="class">
+        <attribute name="count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="cycle" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="event" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Event" inverseName="beginningNext" inverseEntity="Event" syncable="YES"/>
+    </entity>
+    <entity name="Custom" representedClassName="Custom" syncable="YES" codeGenerationType="class">
+        <attribute name="a" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="b" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="bgImg" optional="YES" attributeType="Binary" syncable="YES"/>
+        <attribute name="g" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="index" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isCustom" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isImage" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="r" optional="YES" attributeType="Float" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="custom" inverseEntity="Member" syncable="YES"/>
+    </entity>
+    <entity name="Event" representedClassName="Event" syncable="YES" codeGenerationType="class">
+        <attribute name="age" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="beginDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="constellation" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="content" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="createDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="date" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="emailAddr" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="festivals" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="formalTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="hasEmailRemind" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="hasWeixinRemind" optional="YES" attributeType="Boolean" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="intercycle" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="interval" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="intervalDay" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="intervalText" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="introduce" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="isEmailBinded" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isEmailOpen" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isLoop" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isLunar" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isToday" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isWeixinBinded" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isWeixinOpen" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lastNotificationDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="leadTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="leftSmsCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="loopInterval" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lunarDate" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="lunarDay" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lunarMonth" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lunarYear" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="mode" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="nextLeadTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="nextNotificationDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="nowBeginning" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="param1" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="param2" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="param3" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="phone" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="remindStatus" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="remindText" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="ring" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sendedCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="sound" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="status" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" customClassName=".EventStatus" syncable="YES"/>
+        <attribute name="text3" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="time" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="time2" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="typeName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="updateDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="weixinID" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="zodiac" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="beginningList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Beginning" syncable="YES"/>
+        <relationship name="beginningNext" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Beginning" inverseName="event" inverseEntity="Beginning" syncable="YES"/>
+        <relationship name="frequency" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Frequency" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="eventList" inverseEntity="Member" syncable="YES"/>
+    </entity>
+    <entity name="EventClient" representedClassName="EventClient" syncable="YES" codeGenerationType="class">
+        <attribute name="afterInterval" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="clientId" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="createDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="defultDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isSynced" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="ringId" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="status" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="typeName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="updateDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="userTime" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="eventClientList" inverseEntity="Member" syncable="YES"/>
+        <relationship name="timesList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="EventClientTimes" inverseName="eventClient" inverseEntity="EventClientTimes" syncable="YES"/>
+    </entity>
+    <entity name="EventClientTimes" representedClassName="EventClientTimes" syncable="YES" codeGenerationType="class">
+        <attribute name="hour" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="minute" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="eventClient" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="EventClient" inverseName="timesList" inverseEntity="EventClient" syncable="YES"/>
+    </entity>
+    <entity name="Frequency" representedClassName="Frequency" syncable="YES" codeGenerationType="class">
+        <attribute name="baseOnWeek" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="cycle" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="per" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="days" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="FrequencyDay" syncable="YES"/>
+        <relationship name="months" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="FrequencyMonth" syncable="YES"/>
+        <relationship name="weekdays" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="FrequencyWeekday" syncable="YES"/>
+        <relationship name="weeksTuple" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FrequencyWeeksTuple" syncable="YES"/>
+    </entity>
+    <entity name="FrequencyDay" representedClassName="FrequencyDay" syncable="YES" codeGenerationType="class">
+        <attribute name="day" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+    </entity>
+    <entity name="FrequencyMonth" representedClassName="FrequencyMonth" syncable="YES" codeGenerationType="class">
+        <attribute name="month" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+    </entity>
+    <entity name="FrequencyWeekday" representedClassName="FrequencyWeekday" syncable="YES" codeGenerationType="class">
+        <attribute name="weekday" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+    </entity>
+    <entity name="FrequencyWeeksTuple" representedClassName="FrequencyWeeksTuple" syncable="YES" codeGenerationType="class">
+        <attribute name="weekday" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="weekNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+    </entity>
+    <entity name="Member" representedClassName="Member" syncable="YES" codeGenerationType="class">
+        <attribute name="device" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="email" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="emailBindTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="idfa" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="ip" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="phone" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="registerDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="system" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="token" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="uuid" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="weixinBindTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="weixinId" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="weixinName" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="custom" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Custom" inverseName="member" inverseEntity="Custom" syncable="YES"/>
+        <relationship name="eventClientList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="EventClient" inverseName="member" inverseEntity="EventClient" syncable="YES"/>
+        <relationship name="eventClientTipList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tip" syncable="YES"/>
+        <relationship name="eventList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Event" inverseName="member" inverseEntity="Event" syncable="YES"/>
+        <relationship name="noticeList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Notice" inverseName="member" inverseEntity="Notice" syncable="YES"/>
+        <relationship name="stepList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Step" inverseName="member" inverseEntity="Step" syncable="YES"/>
+        <relationship name="tipList" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tip" inverseName="member" inverseEntity="Tip" syncable="YES"/>
+    </entity>
+    <entity name="Notice" representedClassName="Notice" syncable="YES" codeGenerationType="class">
+        <attribute name="count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="eventId" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="eventTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isBeginning" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isOperated" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="nextTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="sendCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="text1" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="text2" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="text3" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="text4" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="text5" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="time" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="typeName" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="noticeList" inverseEntity="Member" syncable="YES"/>
+    </entity>
+    <entity name="Step" representedClassName="Step" syncable="YES" codeGenerationType="class">
+        <attribute name="createDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="distanceM" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="stepCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="stepList" inverseEntity="Member" syncable="YES"/>
+    </entity>
+    <entity name="Tip" representedClassName="Tip" syncable="YES" codeGenerationType="class">
+        <attribute name="isClient" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="isNew" optional="YES" attributeType="Boolean" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sort" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member" inverseName="tipList" inverseEntity="Member" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="Beginning" positionX="144" positionY="135" width="128" height="90"/>
+        <element name="Custom" positionX="153" positionY="144" width="128" height="180"/>
+        <element name="Event" positionX="511" positionY="360" width="128" height="930"/>
+        <element name="EventClient" positionX="502" positionY="9" width="128" height="285"/>
+        <element name="EventClientTimes" positionX="198" positionY="189" width="128" height="90"/>
+        <element name="Frequency" positionX="153" positionY="144" width="128" height="150"/>
+        <element name="FrequencyDay" positionX="162" positionY="153" width="128" height="60"/>
+        <element name="FrequencyMonth" positionX="180" positionY="171" width="128" height="60"/>
+        <element name="FrequencyWeekday" positionX="171" positionY="162" width="128" height="60"/>
+        <element name="FrequencyWeeksTuple" positionX="189" positionY="180" width="128" height="75"/>
+        <element name="Member" positionX="-63" positionY="-18" width="128" height="360"/>
+        <element name="Notice" positionX="198" positionY="189" width="128" height="300"/>
+        <element name="Step" positionX="144" positionY="135" width="128" height="105"/>
+        <element name="Tip" positionX="144" positionY="135" width="128" height="135"/>
+    </elements>
+</model>

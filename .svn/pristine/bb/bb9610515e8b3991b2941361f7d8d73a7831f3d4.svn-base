@@ -1,0 +1,33 @@
+//
+//  UINavgationBar+extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/27.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UINavigationBar{
+    func hideBoottomHairLine (){
+      let view =  hairlineImageViewInNavigationBar(view: self)
+        view?.isHidden = true
+    }
+    func showBootomHairLine() {
+        let view =  hairlineImageViewInNavigationBar(view: self)
+        view?.isHidden = false
+    }
+    private func hairlineImageViewInNavigationBar(view: UIView) -> UIImageView? {
+        if view.isKind(of: UIImageView.self) && view.bounds.height <= 1.0 {
+            return (view as! UIImageView)
+        }
+        
+        let subviews = (view.subviews as [UIView])
+        for subview: UIView in subviews {
+            if let imageView: UIImageView = hairlineImageViewInNavigationBar(view: subview) {
+                return imageView
+            }
+        }
+        
+        return nil
+    }
+}

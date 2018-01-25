@@ -1,0 +1,63 @@
+//
+//  ProfileCell.swift
+//  Remind
+//
+//  Created by gg on 16/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class PrefileButtonCell: UITableViewCell {
+    
+    @IBOutlet weak var iconImageView: UIImageView!
+    @IBOutlet weak var valueLabel: UILabel!
+    @IBOutlet weak var tipLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        valueLabel.font = .normal
+        valueLabel.textColor = .word
+        tipLabel.font = .content
+        tipLabel.textColor = .subWord
+    }
+}
+
+class PrefileInfoCell: UITableViewCell {
+    
+    @IBOutlet weak var iconImageView: UIImageView!
+    @IBOutlet weak var birthdayLabel: UILabel!
+    @IBOutlet weak var label1: UILabel!
+    @IBOutlet weak var label2: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        birthdayLabel.font = .content
+        birthdayLabel.textColor = .subWord
+        
+        label1.font = .content
+        label1.textColor = .subWord
+        
+        label2.font = .content
+        label2.textColor = .subWord
+    }
+}
+
+class PrefileHeadCell: UITableViewCell {
+    @IBOutlet weak var headImageView: UIImageView!
+    @IBOutlet weak var nameLabel: UILabel!
+   // @IBOutlet weak var editLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        nameLabel.font = .normal
+        nameLabel.textColor = .word
+        
+//        editLabel.font = .content
+//        editLabel.textColor = .subWord
+        
+        headImageView.layer.cornerRadius = headImageView.bounds.width / 2
+    }
+}

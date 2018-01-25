@@ -1,0 +1,164 @@
+//
+//  festivalDetailViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+import Kingfisher
+import SnapKit
+
+class festivalDetailViewController: BasedViewController {
+    var festival:FestivalModel!
+    let ivBg = UIImageView()
+    let ivCanlendar = UIImageView()
+    let lblTitle = UILabel()
+    let lblTime = UILabel()
+    let lblDayLunar = UILabel()
+    let lblYearLunar = UILabel()
+    let btnBack = UIButton()
+    let btnDownload = UIButton()
+    let btnShare = UIButton()
+    let lblURL = UILabel()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.navigationController?.navigationBar.isHidden = true
+        //UIApplication.shared.isStatusBarHidden = true
+        var str = "http://120.79.52.214/appwall_remind/restfull/img/festival/ios/"
+        if keyDeviceHeight/keyDeviceWidth < 2.0{
+            str.append("16x9/")
+        }else{
+            str.append("19.5x9/")
+        }
+        
+        str.append(festival.bgImg)
+        ivBg.kf.setImage(with: URL.init(string: str))
+        self.view.addSubview(ivBg)
+        ivBg.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+
+        lblTitle.text = "米橙日历"
+        lblTitle.textColor = UIColor(colorHex: 0x685e52)
+        lblTitle.font = UIFont.systemFont(ofSize: 17)
+        view.addSubview(lblTitle)
+        lblTitle.snp.makeConstraints { (make) in
+            make.top.equalTo(37)
+            make.left.equalTo(30)
+        }
+        
+        ivCanlendar.image = UIImage(named: "calendar_fest")
+        view.addSubview(ivCanlendar)
+        ivCanlendar.snp.makeConstraints { (make) in
+            make.width.equalTo(80)
+            make.height.equalTo(128)
+            make.left.equalTo(25)
+            make.top.equalTo(lblTitle.snp.bottom).offset(8)
+        }
+
+        
+        
+        lblTime.font = UIFont.systemFont(ofSize: 14)
+       
+        lblTime.text =  "\(festival.date.formatString(with: "MM.dd E"))"
+        lblTime.textColor = UIColor(colorHex: 0xffffff)
+        lblTime.textAlignment = .center
+        view.addSubview(lblTime)
+        lblTime.snp.makeConstraints { (make) in
+            make.left.equalTo(30)
+            make.top.equalTo(lblTitle.snp.bottom).offset(15)
+        }
+        
+        lblDayLunar.font = UIFont(name: "FZSKBXKJW-GB1-0", size: 20)
+        lblDayLunar.text = "腊\n月\n初\n四"
+        lblDayLunar.numberOfLines = 0
+        lblDayLunar.textColor = UIColor(colorHex: 0xffffff)
+        lblDayLunar.textAlignment = .center
+        view.addSubview(lblDayLunar)
+        lblDayLunar.snp.makeConstraints { (make) in
+            make.top.equalTo(lblTime.snp.bottom).offset(16)
+            make.left.equalToSuperview().offset(39)
+        }
+        
+        lblYearLunar.font = UIFont(name: "FZSKBXKJW-GB1-0", size: 15)
+        lblYearLunar.text = "丁\n酉\n鸡\n年"
+        lblYearLunar.numberOfLines = 0
+        lblYearLunar.textColor = UIColor(colorHex: 0xffffff)
+        lblYearLunar.textAlignment = .center
+        view.addSubview(lblYearLunar)
+        lblYearLunar.snp.makeConstraints { (make) in
+            make.top.equalTo(lblTime.snp.bottom).offset(28)
+            make.left.equalTo(lblDayLunar.snp.right).offset(17)
+        }
+        
+        
+        //buttons
+        
+        btnBack.setImage(UIImage(named: "back_fest"), for: .normal)
+        btnBack.addTarget(self, action: #selector(backBtnClick), for: .touchUpInside)
+        view.addSubview(btnBack)
+        btnBack.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.left.equalTo(25)
+            make.bottom.equalToSuperview().offset(-24)
+        }
+        
+        btnDownload.setImage(UIImage(named: "download_fest"), for: .normal)
+        btnDownload.addTarget(self, action: #selector(downloadBtnClick), for: .touchUpInside)
+        view.addSubview(btnDownload)
+        btnDownload.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.left.equalTo(btnBack.snp.right).offset(15)
+            make.bottom.equalToSuperview().offset(-24)
+        }
+        
+        btnShare.setImage(UIImage(named: "share_fest"), for: .normal)
+        btnShare.addTarget(self, action: #selector(shareBtnClick), for: .touchUpInside)
+        view.addSubview(btnShare)
+        btnShare.snp.makeConstraints { (make) in
+            make.height.width.equalTo(34)
+            make.left.equalTo(btnDownload.snp.right).offset(15)
+            make.bottom.equalToSuperview().offset(-24)
+        }
+        
+        
+        lblURL.font = UIFont.systemFont(ofSize: 12)
+        lblURL.text = "www.mc.cn"
+        lblURL.textColor = UIColor(colorHex: 0x685e52)
+        lblURL.textAlignment = .center
+        view.addSubview(lblURL)
+        lblURL.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.bottom.equalToSuperview().offset(-24)
+        }
+        
+
+    }
+    
+    ///返回按钮点击
+    @objc func backBtnClick(){
+        //UIApplication.shared.isStatusBarHidden = false
+        self.navigationController?.popViewController(animated: true)
+    }
+    ///分享按钮点击
+    @objc func shareBtnClick(){
+        self.share(withText: "米橙分享", withImage: self.ivBg.image, withURL: nil)
+    }
+    //下载
+    @objc func downloadBtnClick(){
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        self.navigationController?.navigationBar.isHidden = false
+        super.viewWillDisappear(animated)
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}

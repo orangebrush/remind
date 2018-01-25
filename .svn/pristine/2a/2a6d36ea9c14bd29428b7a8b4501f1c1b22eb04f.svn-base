@@ -1,0 +1,803 @@
+//
+//  FrequencySeletorView.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+//请求数据
+enum FrequencySelectorType{
+    case cycle(hasNone: Bool)
+    case interval((FrequencyCycle, [Int]))            //范围
+    case baseOnWeek
+    case date(withHasLunar: Bool)
+}
+//返回数据
+enum FrequencySelectorValueType {
+    case cycle(FrequencyCycle)
+    case interval(Int)
+    case baseOnWeek(Bool)
+    case date(isLunar: Bool, date: Date, lunarDate: LunarDate)
+}
+
+let frequencyCycleList = ["单次事件", "按时间重复", "按天重复", "按星期重复", "按月重复", "按年重复"]
+
+//MARK:- 输入器
+class FrequencySelector: UIView {
+    
+    private var intervalList = [Int]()
+    fileprivate var frequencySelectorType: FrequencySelectorType?
+    private let buttonHeight: CGFloat = 56
+    private let headerHeight: CGFloat = 56
+    
+    private var datePickerView: GANDatePicker?
+    private var pickerView: UIPickerView?
+    private var hasNone = false
+    
+    
+    
+    private lazy var pickerViewFrame: CGRect! = {
+        return CGRect(x: 0, y: headerHeight, width: frame.width, height: frame.height - headerHeight - buttonHeight)
+    }()
+    
+    //设置默认值
+    var defaultValue: Any?
+    
+    //回调
+    var closure: ((_ compeleted: Bool, _ value: FrequencySelectorValueType?)->())?
+    
+    private lazy var componentWidth: CGFloat! = {
+        return self.frame.width / 3
+    }()
+    private let componentHeight: CGFloat = 55
+    
+    //fileprivate var datePickerView: GANDatePicker?
+    
+    //模糊视图
+    private lazy var blurView = { () -> UIVisualEffectView in
+        let blur = UIBlurEffect(style: UIBlurEffectStyle.extraLight)
+        let effectView: UIVisualEffectView = UIVisualEffectView(effect: blur)
+        effectView.tag = 111
+        effectView.alpha = 1
+        effectView.frame = CGRect(x: 0, y: 0, width: self.bounds.width, height: self.bounds.height)
+        effectView.alpha = 0.9
+        return effectView
+    }()
+    
+    //农历
+    var lunarDate: LunarDate?
+    private var hasLunar = false
+    var isLunar = false
+    
+    private lazy var leftLabel: UILabel! = {
+        let frame = CGRect(x: componentWidth * 0.58, y: (self.frame.height - componentHeight) / 2 + (17 - 9) / 4, width: 42, height: componentHeight)
+        let label = UILabel(frame: frame)
+        label.backgroundColor = .clear
+        label.font = UIFont(withNormalFontSize: 9)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.text = ""
+        return label
+    }()
+    
+    
+    //MARK:- init--------------------------------------------------------------------
+    init(withFrequencySelectorType frequencySelectorType: FrequencySelectorType, withDefaultValue defaultValue: Any?) {
+        let width = view_size.width - .edge10 * 2
+        let height: CGFloat = 327
+
+        if case FrequencySelectorType.date(withHasLunar: let hasLunar) = frequencySelectorType{
+            self.hasLunar = hasLunar
+        }
+        
+        self.frequencySelectorType = frequencySelectorType
+        self.defaultValue = defaultValue
+        
+        let iphoneXHeight: CGFloat = isIphoneX ? 34 : 0
+        
+        let frame = CGRect(x: .edge10, y: view_size.height - height - .edge10 - iphoneXHeight, width: width, height: height)
+        super.init(frame: frame)
+        
+        config()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        let fromValue = view_size.height + frame.height / 2
+        let value1 = view_size.height - frame.height / 2 - CGFloat.edge10  - (isIphoneX ? 34 : 0) - .edge8
+        let toValue = view_size.height - frame.height / 2 - CGFloat.edge10  - (isIphoneX ? 34 : 0)
+        
+        //添加出场动画
+        let group = CAAnimationGroup()
+        group.duration = 0.5
+        group.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut)
+        group.fillMode = kCAFillModeBoth
+        group.isRemovedOnCompletion = true
+        
+        let moveAnim = CAKeyframeAnimation(keyPath: "position.y")
+        moveAnim.values = [fromValue, value1, toValue]
+        moveAnim.keyTimes = [0, 0.7, 1]
+        
+        let fadeAnim = CABasicAnimation(keyPath: "opacity")
+        fadeAnim.fromValue = 0.5
+        fadeAnim.toValue = 1
+        
+        group.animations = [moveAnim, fadeAnim]
+        
+        layer.add(group, forKey: nil)
+    }
+    
+    private func config(){
+        
+        isUserInteractionEnabled = true
+        isMultipleTouchEnabled = true
+        
+        backgroundColor = UIColor(colorHex: 0xf4f4f4, alpha: 1)
+        
+        //设置圆角
+        layer.cornerRadius = .cornerRadius
+        clipsToBounds = true
+        
+        //addSubview(blurView)
+        //设置投影
+//        layer.shadowColor = UIColor.gray.cgColor
+//        layer.shadowOffset = CGSize(width: 0, height: -5)
+//        layer.shadowRadius = 5
+//        layer.shadowOpacity = 0.8
+        
+        //添加背景白色
+        let backViewFrame = CGRect(x: 0, y: (bounds.height - componentHeight) / 2, width: bounds.width, height: componentHeight)
+        let backView = UIView(frame: backViewFrame)
+        backView.backgroundColor = .white
+        backView.layer.zPosition = 0
+        addSubview(backView)
+        
+        //添加按钮
+        if let selType = frequencySelectorType{
+
+            switch selType{
+            case .interval(let (freCycle, intervalList)):       //比较特殊的选择时分
+                
+                if freCycle == FrequencyCycle.minute{
+                    let timePicker = GANTimePicker(frame: pickerViewFrame)
+                    
+                    timePicker.selectedDate = defaultValue as? Date ?? Date(withDateStr: "00:01", withFormatStr: "HH:mm")
+                    timePicker.selectedClosure = {
+                        selectedDate in
+                        guard self.frequencySelectorType != nil else{
+                            return
+                        }
+                        
+                        self.defaultValue = selectedDate
+                    }
+                    addSubview(timePicker)
+                }else{
+                    self.intervalList = intervalList
+
+                    pickerView = UIPickerView(frame: pickerViewFrame)
+                    pickerView?.backgroundColor = .header
+                    pickerView?.delegate = self
+                    pickerView?.dataSource = self
+                    addSubview(pickerView!)
+                    
+                    //添加分割线
+                    for i in 0..<2{
+                        let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+                        let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+                        let vsep = UIView(frame: vframe)
+                        vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+                        addSubview(vsep)
+                    }
+                }
+                
+            case .date(withHasLunar: hasLunar):
+                datePickerView = GANDatePicker(frame: pickerViewFrame)
+                datePickerView?.selectedClosure = {
+                    selectedDate in
+                    guard self.frequencySelectorType != nil else{
+                        return
+                    }
+                    
+                    self.defaultValue = selectedDate
+                    self.resetLunarOrGregorian(withJustLunar: true, withDate: self.defaultValue as? Date, orWithLunarDate: nil)
+                }
+                
+                //设置往后两分钟
+                let nowDate = Date(timeIntervalSinceNow: 60 * 10)
+                
+                
+                if let defaultValueDate = defaultValue as? Date{
+                    datePickerView?.selectedDate = defaultValueDate
+                }else{
+                    defaultValue = nowDate
+                    datePickerView?.selectedDate = nowDate
+                }
+                datePickerView?.maxDate = Date(timeIntervalSinceNow: 100 * 60 * 60 * 24 * 365)
+                datePickerView?.minDate = nowDate
+                
+                //
+
+                    if hasLunar{
+                        let minDate = Date(withDateStr: "1900-01-31", withFormatStr: "yyyy-MM-dd")
+                        let maxDate = Date()
+                        datePickerView?.minDate = minDate
+                        datePickerView?.maxDate = maxDate
+                    }else{
+                        datePickerView?.minDate = nowDate
+                        datePickerView?.maxDate = Date(timeIntervalSinceNow: 100 * 60 * 60 * 24 * 365)
+                    }
+                addSubview(datePickerView!)
+
+                
+                //如果包含农历，覆盖一层pickview。。。吧
+                if hasLunar{
+                    
+                    pickerView = UIPickerView(frame: pickerViewFrame)
+                    pickerView?.backgroundColor = .clear
+                    pickerView?.delegate = self
+                    pickerView?.dataSource = self
+                    pickerView?.isHidden = !isLunar
+                    addSubview(pickerView!)
+                    
+                    datePickerView?.isHidden = isLunar
+                    
+                    
+                    
+                    
+                    //添加分割线
+                    for i in 0..<2{
+                        let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+                        let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+                        let vsep = UIView(frame: vframe)
+                        vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+                        addSubview(vsep)
+                        
+                        let hx = CGFloat(i) * componentWidth + componentWidth
+                        let hFrame = CGRect(x: hx, y: 0, width: kLineHeight, height: bounds.height)
+                        let hSep = UIView(frame: hFrame)
+                        hSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+                        pickerView?.addSubview(hSep)
+                    }
+                }
+                
+                //设置
+                resetLunarOrGregorian(withJustLunar: true, withDate: defaultValue as? Date ?? nowDate, orWithLunarDate: nil)
+                
+            case .cycle(hasNone: let hasNone):      //修改周期
+                self.hasNone = hasNone
+                pickerView = UIPickerView(frame: pickerViewFrame)
+                pickerView?.delegate = self
+                pickerView?.dataSource = self
+                addSubview(pickerView!)
+                
+                if let defaultCycle = defaultValue as? FrequencyCycle{
+                    var offset = hasNone ? 0 : 1    //反的 每写错 - -
+                    if defaultCycle.rawValue > 1 {
+                        offset += 1
+                    }
+                    pickerView?.selectRow(defaultCycle.rawValue - offset, inComponent: 0, animated: true)
+                }
+                
+                //添加分割线
+                for i in 0..<2{
+                    let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+                    let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+                    let vsep = UIView(frame: vframe)
+                    vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+                    addSubview(vsep)
+                }
+            default:            //日期或星期修改
+                pickerView = UIPickerView(frame: pickerViewFrame)
+                pickerView?.delegate = self
+                pickerView?.dataSource = self
+                addSubview(pickerView!)
+                
+                if let baseOnWeek = defaultValue as? Bool{
+                    let row = baseOnWeek ? 1 : 0
+                    pickerView?.selectRow(row, inComponent: 0, animated: true)
+                }
+                
+                //添加分割线
+                for i in 0..<2{
+                    let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+                    let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+                    let vsep = UIView(frame: vframe)
+                    vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+                    addSubview(vsep)
+                }
+                
+                
+            }
+            
+            leftLabel.isHidden = !isLunar
+            
+            //添加通用ui
+            createContents()
+            
+        }
+    }
+    
+    private var segmentedControl: UISegmentedControl?
+    private func createContents(){
+        
+        addSubview(leftLabel)
+        
+        //header
+        if hasLunar{        //创建农历切换
+            let segmentedWidth: CGFloat = 123
+            let segmentedHeight: CGFloat = 32
+            let segmentedFrame = CGRect(x: (frame.width - segmentedWidth) / 2, y: (headerHeight - segmentedHeight) / 2, width: segmentedWidth, height: segmentedHeight)
+            segmentedControl = UISegmentedControl(items: ["公历", "农历"])
+            segmentedControl?.layer.cornerRadius = .cornerRadius
+            segmentedControl?.frame = segmentedFrame
+            segmentedControl?.addTarget(self, action: #selector(segValueChange(_:)), for: .valueChanged)
+            segmentedControl?.tintColor = UIColor(colorHex: 0x999999)
+            segmentedControl?.selectedSegmentIndex = 0
+            addSubview(segmentedControl!)
+            
+            segmentedControl?.selectedSegmentIndex = isLunar ? 1 : 0
+        }else{
+            //header
+            let headerLabelFrame = CGRect(x: 0, y: 0, width: frame.width, height: headerHeight)
+            let headerLabel = UILabel(frame: headerLabelFrame)
+            var text = ""
+            if let selType = frequencySelectorType{
+                switch selType{
+                case .cycle:
+                    text = "周期"
+                case .interval(let (cycle, _)):
+                    let index = cycle.rawValue
+                    text =  frequencyCycleList[index > 1 ? index - 1 : index]
+                //                text = "周期数"
+                case .baseOnWeek:
+                    text = "日期或星期"
+                case .date:
+                    text = "日期选择"
+                }
+            }
+            headerLabel.text = text
+            headerLabel.textAlignment = .center
+            headerLabel.textColor = .subWord
+            headerLabel.font = .normal
+            addSubview(headerLabel)
+        }
+        
+        
+        
+        
+        
+        
+        
+        //两个按钮取消确定
+        let cancelButtonFrame = CGRect(x: 0, y: frame.height - buttonHeight, width: frame.width / 2, height: buttonHeight)
+        let cancelButton = UIButton(frame: cancelButtonFrame)
+        cancelButton.setTitle("取消", for: .normal)
+        cancelButton.setTitleColor(UIColor(colorHex: 0x666666), for: .normal)
+        cancelButton.titleLabel?.font = UIFont(withNormalFontSize: 15)
+        cancelButton.tag = 0
+        cancelButton.addTarget(self, action: #selector(click(_:)), for: .touchUpInside)
+        addSubview(cancelButton)
+        
+        drawCorner(withBottomLeft: true, withBottomRight: false, withButton: cancelButton)
+        
+        let confirmButtonFrame = CGRect(x: frame.width / 2, y: frame.height - buttonHeight, width: frame.width / 2, height: buttonHeight)
+        let confirmButton = UIButton(frame: confirmButtonFrame)
+        confirmButton.setTitle("确定", for: .normal)
+        confirmButton.setTitleColor(.confirm, for: .normal)
+        confirmButton.titleLabel?.font = UIFont(withSemiboldFontSize: 15)
+        confirmButton.tag = 1
+        confirmButton.addTarget(self, action: #selector(click(_:)), for: .touchUpInside)
+        addSubview(confirmButton)
+        
+        drawCorner(withBottomLeft: false, withBottomRight: true, withButton: confirmButton)
+        
+        //分割线
+        let separatorFrame0 = CGRect(x: 0, y: frame.height - buttonHeight, width: frame.width, height: kLineHeight)
+        let separator0 = UIView(frame: separatorFrame0)
+        separator0.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(separator0)
+        
+        let separatorFrame1 = CGRect(x: 0, y: headerHeight - 1, width: frame.width, height: kLineHeight)
+        let separator1 = UIView(frame: separatorFrame1)
+        separator1.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(separator1)
+        
+        let vSeparatorFrame = CGRect(x: frame.width / 2, y: (frame.height - buttonHeight + 1) + (buttonHeight - 24) / 2, width: kLineHeight, height: 24)
+        let vSeparator = UIView(frame: vSeparatorFrame)
+        vSeparator.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(vSeparator)
+        
+        
+    }
+    
+    //MARK:- 切换公农历
+    @objc private func segValueChange(_ sender: UISegmentedControl){
+        let index = sender.selectedSegmentIndex
+        isLunar = index == 1
+        
+        pickerView?.isHidden = !isLunar
+        leftLabel.isHidden = !isLunar
+        datePickerView?.isHidden = isLunar
+        if isLunar {    //切换为农历
+            //defaultValue = datePickerView?.selectedDate
+            lunarDate = transformGregorianToLunar(byDate: datePickerView?.selectedDate ?? Date())
+            pickerView?.reloadAllComponents()
+            
+        }else{          //切换为公历
+            lunarDate = getCurLunarDate()
+            if let ld = lunarDate{
+                let date = transformLunarToGregorian(byLunarDate: ld)
+                defaultValue = date
+                datePickerView?.selectedDate = date
+            }
+        }
+    }
+    
+    //MARK:- 获取当前选择的农历日期
+    func getCurLunarDate() -> LunarDate? {
+        guard let lunarYearIndex = pickerView?.selectedRow(inComponent: 0),
+            let lunarMonthIndex = pickerView?.selectedRow(inComponent: 1),
+            let lunarDayIndex = pickerView?.selectedRow(inComponent: 2) else{
+                return nil
+        }
+        
+        
+        let lunarDateData = lunarDateDataList[lunarYearIndex]
+        let leafMonth = lunarDateData & 0xf
+        let hasLeaf = lunarDateData & 0xf > 0
+        var lunarMonth = lunarMonthIndex
+        var isLeapMonth = false
+        if hasLeaf{
+            if Int(leafMonth) > lunarMonthIndex{
+                lunarMonth = lunarMonthIndex + 1
+            }else if Int(leafMonth) == lunarMonthIndex {     //为闰月
+                isLeapMonth = true
+            }
+        }else{
+            lunarMonth += 1
+        }
+        
+        return (lunarYear: lunarYearIndex + 1900, lunarMonth: lunarMonth, lunarDay: Int64(lunarDayIndex) + 1, isLeapYear: hasLeaf, isLeapMonth: isLeapMonth, leapMonth: Int(leafMonth))
+    }
+    //MARK:- 设置农历ui
+    fileprivate func resetLunarOrGregorian(withJustLunar flag: Bool, withDate date: Date?, orWithLunarDate lunarDate: LunarDate?){
+        if flag {       //根据公历重置农历
+            let lunarDate = transformGregorianToLunar(byDate: date ?? Date())
+            self.lunarDate = lunarDate
+            pickerView?.selectRow(lunarDate.lunarYear - 1900, inComponent: 0, animated: true)
+            pickerView?.reloadComponent(1)
+            leftLabel.text = lunarYearList[(lunarDate.lunarYear - 1900 + 36) % lunarYearList.count] //date?.formatString(with: "yyyy")
+            if lunarDate.isLeapYear{
+                if lunarDate.leapMonth > lunarDate.lunarMonth{
+                    if lunarDate.isLeapMonth{
+                        pickerView?.selectRow(lunarDate.lunarMonth - 1 + 1, inComponent: 1, animated: false)
+                    }else{
+                        pickerView?.selectRow(lunarDate.lunarMonth - 1, inComponent: 1, animated: false)
+                    }
+                }else{
+                    pickerView?.selectRow(lunarDate.lunarMonth - 1 + 1, inComponent: 1, animated: false)
+                }
+            }else{
+                pickerView?.selectRow(lunarDate.lunarMonth - 1, inComponent: 1, animated: false)
+            }
+            pickerView?.reloadComponent(2)
+            if lunarDate.lunarDay > 1{
+                pickerView?.selectRow(Int(lunarDate.lunarDay) - 1, inComponent: 2, animated: false)
+            }
+        }else{          //根据农历重置公历
+            
+        }
+    }
+    
+    //MARK:- 选择日期或时间
+    @objc private func selectedDate(sender: UIDatePicker){
+        guard frequencySelectorType != nil else{
+            return
+        }
+        
+        defaultValue = sender.countDownDuration
+    }
+    
+    //MARK:- 点击按钮
+    @objc private func click(_ sender: UIButton){
+        guard let selType = frequencySelectorType else{
+            return
+        }
+        
+        let tag = sender.tag
+        var selectorValueType: FrequencySelectorValueType?
+        if tag == 1{
+            switch selType{
+            case .cycle:
+                if let row = pickerView?.selectedRow(inComponent: 0){
+                    var offset = row > 0 ? 1 : 0
+                    if !hasNone{
+                        offset += 1
+                    }
+                    if let frequencyCyele = FrequencyCycle(rawValue: row + offset){
+                        selectorValueType = FrequencySelectorValueType.cycle(frequencyCyele)
+                    }
+                }
+            case .baseOnWeek:
+                if let row = pickerView?.selectedRow(inComponent: 0){
+                    selectorValueType = FrequencySelectorValueType.baseOnWeek(row == 1)
+                }
+            case .interval(let (cycle, _)):
+                if cycle == FrequencyCycle.minute{
+                    if let timeInterval = self.defaultValue as? Date{
+                        let components = calendar.dateComponents([.hour, .minute], from: timeInterval)
+                        let hour = components.hour ?? 0
+                        let minute = components.minute ?? 0
+                        let interval = hour * 60 + minute
+                        selectorValueType = FrequencySelectorValueType.interval(interval)
+                    }
+                }else if let row = pickerView?.selectedRow(inComponent: 0){
+                    selectorValueType = FrequencySelectorValueType.interval(row + 1)
+                }
+            case .date:
+                selectorValueType = FrequencySelectorValueType.date(isLunar: isLunar, date: defaultValue as! Date, lunarDate: lunarDate ?? (0,0,0,false,false,0))
+            }
+        }else{
+            selectorValueType = nil
+        }
+        
+        closure?(tag == 1, selectorValueType)
+    }
+    
+    
+    //MARK:- 设置按钮圆角
+    private func drawCorner(withBottomLeft bottomLeftFlag: Bool, withBottomRight bottomRightFlag: Bool, withButton button: UIButton){
+        let size  = CGSize(width: .cornerRadius, height: .cornerRadius)
+        let corner : UIRectCorner
+        if bottomLeftFlag && bottomRightFlag{
+            corner = [.bottomLeft, .bottomRight]
+        }else if bottomLeftFlag{
+            corner = [.bottomLeft]
+        }else if bottomRightFlag{
+            corner = [.bottomRight]
+        }else{
+            corner = []
+        }
+        
+        let maskFrame = button.bounds
+        let path = UIBezierPath(roundedRect: maskFrame, byRoundingCorners: corner, cornerRadii: size)
+        let maskLayer = CAShapeLayer()
+        maskLayer.frame = maskFrame
+        maskLayer.path = path.cgPath
+        button.layer.mask = maskLayer
+    }
+}
+
+
+//MARK:- picker delegate (仅提醒次数使用)
+extension FrequencySelector: UIPickerViewDelegate, UIPickerViewDataSource{
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        if hasLunar{
+            return 3
+        }
+        return 1
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        guard let selType = frequencySelectorType else {
+            return 0
+        }
+        
+        if case .baseOnWeek = selType{
+            return 2
+        }else if case FrequencySelectorType.interval(let (_, list)) = selType{
+            return list.count
+        }else if case FrequencySelectorType.date(withHasLunar: hasLunar) = selType{
+            if hasLunar {
+                
+                if component == 0{                      //农历年份
+                    return lunarDateDataList.count
+                }else if component == 1{                //农历月份
+                    //                let yearRow = pickerView.selectedRow(inComponent: 0)
+                    //                var leapMonth: UInt32 = 0x00
+                    //                leapMonth = lunarDateDataList[yearRow] & 0xf
+                    //                let isLeap = leapMonth > 0
+                    //                return isLeap ? 13 : 12
+                    if let lDate = lunarDate{
+                        return lDate.isLeapYear ? 13 : 12
+                    }
+                }else{                                  //农历日期
+                    //*
+                    let yearRow = pickerView.selectedRow(inComponent: 0)
+                    let monthRow = pickerView.selectedRow(inComponent: 1)
+                    let lunarDateData = lunarDateDataList[yearRow]
+                    let leapMonth = lunarDateData % 10
+                    let hasLeap = leapMonth > 0
+                    
+                    if hasLeap && leapMonth != 0{
+                        if monthRow == leapMonth {          //闰月
+                            return lunarDateData & 0xf0000 == 0 ? 29 : 30
+                        }else if monthRow < leapMonth {
+                            let monthData = (lunarDateData & 0x0fff0) & (0x10 << (12 - leapMonth))
+                            return monthData == 0 ? 29 : 30
+                        }else{
+                            let offset = hasLeap ? 1 : 0
+                            
+                            if monthRow == leapMonth { //选择为闰月
+                                return (lunarDateData & (0xF << 16)) > 0 ? 30 : 29
+                            }else{
+                                let subOffset: Int = (monthRow < leapMonth) ? 0 : offset
+                                return (lunarDateData & 0x1 << (4 + (12 - monthRow + subOffset))) == 0 ? 29 : 30
+                            }
+                        }
+                    }else{
+                        let monthData = (lunarDateData & 0x0fff0) & (0x10 << UInt32(12 - monthRow))
+                        return monthData == 0 ? 29 : 30
+                    }
+                }
+                return 0
+            }
+        } else{
+            
+            return hasNone ? frequencyCycleList.count : frequencyCycleList.count - 1
+        }
+        return 0
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return componentHeight
+    }
+    
+//    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+//        guard let selType = frequencySelectorType else {
+//            return nil
+//        }
+//
+//        let text: String
+//        if case .baseOnWeek = selType{
+//            text = row == 0 ? "日期" : "星期"
+//        }else if case FrequencySelectorType.interval(let (_, list)) = selType{
+//            text = "\(list[row])"
+//        }else{
+//            text = frequencyCycleList[hasNone ? row : row + 1]
+//        }
+//
+//        let attributes = [NSAttributedStringKey.font: UIFont.content, NSAttributedStringKey.foregroundColor: UIColor.subWord]
+//        let attributedString = NSAttributedString(string: text, attributes: attributes)
+//        return attributedString
+//    }
+    
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        if hasLunar {
+            let yearRow = pickerView.selectedRow(inComponent: 0)
+            let lunarDateData = lunarDateDataList[yearRow]
+            let leapMonth = lunarDateData & 0xf
+            let hasLeap = leapMonth > 0
+            
+            //主cell
+            let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+            pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+            pickerLabel0?.backgroundColor = .clear
+            
+            var length = 0
+            var text: String
+            switch component {
+            case 0:     //年
+                text = "\(row + 1900)"//lunarYearList[(row + 36) % lunarYearList.count]
+                text += "   1"
+                length = 1
+                
+                //更新年份值
+                
+                
+                //let offset = row < preRow ? 2 : -2
+            //leftLabel.text = "\(1900 + row + offset)"
+            case 1:     //月
+                if hasLeap && leapMonth != 0{
+                    if row == leapMonth {       //闰月
+                        text = "闰" + lunarMonthList[row - 1]
+                    }else if row < leapMonth {
+                        text = lunarMonthList[row]
+                    }else{
+                        let offset = hasLeap ? 1 : 0
+                        text = lunarMonthList[row - offset]
+                    }
+                }else{
+                    if row < lunarMonthList.count{
+                        text = lunarMonthList[row]
+                    }else{
+                        text = ""
+                    }
+                }
+            default:    //日
+                text = lunarDayList[row]
+            }
+            
+            //其他小cell
+            let frame = CGRect(x: 0, y: 0, width: bounds.width / 3, height: 55)
+            let pickerLabel = UILabel(frame: frame)
+            pickerLabel.font = UIFont(withNormalFontSize: 17)
+            pickerLabel.textColor = UIColor(colorHex: 0x333333)
+            
+            pickerLabel.backgroundColor = .clear
+            pickerLabel.layer.transform = CATransform3DIdentity
+            pickerLabel.textAlignment = .center
+            
+            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+            attributedString.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+            pickerLabel.attributedText = attributedString
+            
+            
+            let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+            attributedString0.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+            pickerLabel0?.attributedText = attributedString0
+            
+            return pickerLabel
+            
+        }else{
+            guard let selType = frequencySelectorType else {
+                return UIView()
+            }
+            
+            var text: String
+            if case .baseOnWeek = selType{
+                text = row == 0 ? "日期" : "星期"
+            }else if case FrequencySelectorType.interval(let (_, list)) = selType{
+                text = "\(list[row])"
+            }else{
+                text = frequencyCycleList[hasNone ? row : row + 1]
+            }
+            
+            //主cell
+            let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+            pickerLabel0?.backgroundColor = .clear
+            pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+            
+            
+            //其他小cell
+            let frame = CGRect(x: 0, y: 0, width: bounds.width / 3, height: 55)
+            let pickerLabel = UILabel(frame: frame)
+            pickerLabel.font = UIFont(withNormalFontSize: 17)
+            pickerLabel.textColor = UIColor(colorHex: 0x333333)
+            
+            pickerLabel.backgroundColor = .clear
+            pickerLabel.layer.transform = CATransform3DIdentity
+            pickerLabel.textAlignment = .center
+            
+            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+            pickerLabel.attributedText = attributedString
+            
+            let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+            //        attributedString0.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.clear, range: NSMakeRange(text.count - 1, length))
+            pickerLabel0?.attributedText = attributedString0
+            
+            return pickerLabel
+        }
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        if hasLunar{        //农历
+            lunarDate = getCurLunarDate()
+            if component == 0{
+                pickerView.reloadComponent(1)
+                
+                let text = lunarYearList[(row + 36) % lunarYearList.count]
+                leftLabel.text = text
+            }else if component == 1{
+                pickerView.reloadComponent(2)
+            }else{
+            }
+            if let ld = lunarDate{
+                defaultValue = transformLunarToGregorian(byLunarDate: ld)
+            }
+        }else{
+            guard frequencySelectorType != nil else {
+                return
+            }
+        }
+    }
+}
+
+

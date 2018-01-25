@@ -1,0 +1,53 @@
+//
+//  StepSettingVC.swift
+//  Remind
+//
+//  Created by gg on 19/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepSettingVC: UIViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    //MARK:- init--------------------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+    }
+    
+    private func createContents(){
+        
+    }
+}
+
+//extension StepSettingVC: UITableViewDelegate, UITableViewDataSource{
+//    func numberOfSections(in tableView: UITableView) -> Int {
+//        return 3
+//    }
+//    
+//    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+//        if section == 0{
+//            return 1
+//        }else if section == 1{
+//            return 3
+//        }else{
+//            return 2
+//        }
+//    }
+//    
+//    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+//        let section = indexPath.section
+//        let row = indexPath.row
+//        
+//        let cell = tableView.dequeueReusableCell(withIdentifier: "cell")
+//    }
+//}
+

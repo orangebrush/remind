@@ -1,0 +1,164 @@
+//
+//  GANCalendar.swift
+//  Remind
+//
+//  Created by gg on 24/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//  日历详情
+
+import Foundation
+class GANCalendarVC: UIViewController {
+    
+    @IBOutlet weak var todayBarButtonItem: UIBarButtonItem!
+    @IBOutlet weak var settingBarButtonItem: UIBarButtonItem!
+    @IBOutlet weak var contentHeaderView: UIView!
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var selectedDateLabel: UILabel!
+    @IBOutlet weak var selectDateButton: UIButton!
+    @IBOutlet weak var weekdayListView: UIView!         //包含周一～日
+    
+    
+    //MARK:- public----------------------------------------------------------------------------------------------------------------------------------
+    
+    
+    //MARK:- private--------------------------------------------------------------------------------------------------------
+    private var tableView: GANCalendarTableView?
+    ///当前选择日期
+    private var selectDate: Date? {
+        didSet{
+            guard let date = selectDate else{
+                return
+            }
+            selectedDateLabel.text = date.formatString(with: "yyyy年M月d日") + " " + date.weekdayString()
+            tableView?.reloadData()
+        }
+    }
+    
+    
+    //MARK:- init-------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    //跳转
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let identifier = segue.identifier
+        let destination = segue.destination
+        
+        if identifier == "more" {                      //预提醒
+//            let beginningVC = destination as? EventBeginningVC
+//            beginningVC?.beginningModel = sender as? BeginningModel
+//            beginningVC?.navigationItem.title = "预提醒"
+//            beginningVC?.frequency = eventFrequency
+//            beginningVC?.beginDate = eventDate
+//            beginningVC?.eventType = eventType
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        if selectDate == nil{
+            selectDate = Date()
+        }
+    }
+    
+    private func config(){
+        
+        contentHeaderView.layer.cornerRadius = .cornerRadius
+        contentHeaderView.backgroundColor = UIColor.white.withAlphaComponent(0.3) 
+        
+        contentView.layer.cornerRadius = .cornerRadius
+        
+        for subview in weekdayListView.subviews{
+            if let label = subview as? UILabel{
+                label.font = UIFont(withThinFontSize: 12)
+                label.textColor = UIColor(colorHex: 0x666666)
+            }
+        }
+        
+        //绘制weekday分割线
+        let seq = UIView(frame: CGRect(x: 15, y: weekdayListView.frame.origin.y + weekdayListView.frame.height - kLineHeight, width: weekdayListView.frame.width, height: kLineHeight))
+        seq.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+    }
+    
+    private func createContents(){
+        
+        let tableViewFrame = CGRect(x: 0, y: weekdayListView.frame.origin.y + weekdayListView.frame.height, width: view.frame.width, height: view.frame.height - weekdayListView.frame.origin.y - weekdayListView.frame.height)
+        tableView = GANCalendarTableView(frame: tableViewFrame)
+        tableView?.delegate = self
+        view.addSubview(tableView!)
+    }
+    
+    //MARK:- 点击选择日期 选择器
+    @IBAction func selectDate(_ sender: UIButton){
+        
+    }
+    
+    //MARK:- 点击返回今天
+    @IBAction func selectToday(_ sender: UIBarButtonItem){
+        
+    }
+}
+
+
+//MARK:- tableview delegate
+extension GANCalendarVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 4
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 2{
+            return 3
+        }
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 || section == 1 {
+            return kLineHeight
+        }
+        return 36
+    }
+    
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 10
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        if section == 0 || section == 1 {
+            return nil
+        }
+        
+        let header = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 36))
+        let labelFrame = CGRect(x: 0, y: 0, width: view.frame.width - 36, height: 36)
+        let label = UILabel(frame: labelFrame)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.font = UIFont(withNormalFontSize: 14)
+        if section == 2{        //节日节气
+            label.text = "节日节气"
+        }else{
+            label.text = (selectDate?.formatString(with: "yyy") ?? "") + "年法定节假日"
+        }
+        header.addSubview(label)
+        return header
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        let identifier = "\(section)_\(row)"
+        
+        var cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+        if cell == nil {
+            cell = UITableViewCell(style: .default, reuseIdentifier: identifier)
+        }
+        
+        
+        return cell!
+    }
+}

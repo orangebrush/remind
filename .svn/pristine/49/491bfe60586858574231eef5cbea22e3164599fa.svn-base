@@ -1,0 +1,40 @@
+//
+//  DM+Member.swift
+//  RemindData
+//
+//  Created by gg on 05/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension DataManager{
+    //MARK:- 注册
+    public func register(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ uuid: String)->()){
+        let dict = [
+            "device": "3",
+            "system": "2",
+            "token": UserDefaults.standard.string(forKey: "token") ?? "",
+            "uid": MemberManager.share().uuid ?? ""
+        ]
+        
+        Session.session(withAction: Actions.register, withRequestMethod: .post, withParam: dict) { (codeResult, message, data) in
+            guard let uuid = (data as? [String: Any])?["uid"] as? String else{
+                DispatchQueue.main.async {
+                    closure(.failure, message, "")
+                }
+                return
+            }
+            
+            let memberManager = MemberManager.share()
+            
+            if memberManager.member?.uuid != uuid{                
+                memberManager.member?.uuid = uuid
+                memberManager.commit()
+            }
+            
+            DispatchQueue.main.async {
+                closure(codeResult, message, uuid)
+            }
+        }
+    }
+}

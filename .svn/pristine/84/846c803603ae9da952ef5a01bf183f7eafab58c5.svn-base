@@ -1,0 +1,232 @@
+//
+//  FrequencyCollectionCell.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+class FrequencyCollectionCell: UITableViewCell {
+    @IBOutlet weak var collectionView: UICollectionView!
+    
+    weak var frequency: FrequencyModel?
+    
+    ///判断是月数选择还是日期选择 12 or 31
+    var isMonth = false
+    
+    var closure: ((_ isMonth: Bool, _ value: [Int])->())?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        collectionView.allowsMultipleSelection = true
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        
+        updateData()
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+    }
+    
+    private func updateData(){
+        
+        //选择默认选项
+        guard let fre = frequency else {
+            return
+        }
+        
+        if let selectedIndexPaths = collectionView.indexPathsForSelectedItems{
+            for selectedIndexPath in selectedIndexPaths{
+                collectionView.deselectItem(at: selectedIndexPath, animated: true)
+            }
+        }
+        
+        switch fre.frequencyCycle {
+        case .week:
+            for weekday in fre.weekdays{
+                let indexPath = IndexPath(row: weekday - 1, section: 0)
+                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        case .year:
+            if isMonth{
+                for month in fre.months{
+                    let indexPath = IndexPath(row: month - 1, section: 0)
+                    collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+                }
+            }else{
+                for day in fre.days{
+                    let indexPath = IndexPath(row: day - 1, section: 0)
+                    collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+                }
+            }
+        case .month:
+            for day in fre.days{
+                let indexPath = IndexPath(row: day - 1, section: 0)
+                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        default:
+            break
+        }
+    }
+}
+
+//MARK:- collection delegate
+extension FrequencyCollectionCell: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 1
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        guard let fre = frequency else {
+            return 0
+        }
+        
+        switch fre.frequencyCycle {
+        case .week:
+            return weekdaylist.count
+        case .year:
+            return isMonth ? 12 : 31
+        default:        //月 或者 年&isMonth==false
+            return 31
+        }
+    }
+    
+    //MARK:- cell
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let row = indexPath.row
+        let identifier: String 
+        let text: String
+        switch frequency!.frequencyCycle {
+        case .week:
+            identifier = "cell_weekday"
+            text = weekdaylist[row]
+        case .year:
+            if isMonth{
+                identifier = "cell_month"
+                text = "\(row + 1)月"
+            }else{
+                identifier = "cell_day"
+                text = "\(row + 1)"
+            }
+        default:        //month
+            identifier = "cell_day"
+            text = "\(row + 1)"
+        }
+        
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: identifier, for: indexPath) as! FrequencyCollectionSubCell
+        cell.label.text = text
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        updateData()
+        return
+        //选择默认选项
+        guard let fre = frequency else {
+            return
+        }
+        
+        let row = indexPath.row
+        
+        if let selectedIndexPaths = collectionView.indexPathsForSelectedItems{
+            for selectedIndexPath in selectedIndexPaths{
+                collectionView.deselectItem(at: selectedIndexPath, animated: true)
+            }
+        }
+        
+        switch fre.frequencyCycle {
+        case .week:
+            if fre.weekdays.contains(row + 1){
+                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        case .year:
+            if isMonth{
+                if fre.months.contains(row + 1){
+                    collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+                }
+            }else{
+                if fre.days.contains(row + 1){
+                    collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+                }
+            }
+        case .month:
+            if fre.days.contains(row + 1){
+                collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .bottom)
+            }
+        default:
+            break
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, canMoveItemAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+    
+    //flow layout
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        var width: CGFloat = 55
+        let height: CGFloat = 55
+        switch frequency!.frequencyCycle {
+        case .week:
+            width = view_size.width - .edge10 * 2
+        case .year:
+            if isMonth{
+                width = (view_size.width - .edge8 * 2 - 4 * 5) / 4
+            }
+        default:
+            break
+        }
+        return CGSize(width: width, height: height)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
+        return UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 4
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 3.9
+    }
+    
+    //delegate
+    func collectionView(_ collectionView: UICollectionView, shouldHighlightItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        guard let fre = frequency else {
+            return
+        }
+        
+        let offset = 1 //fre.frequencyCycle == FrequencyCycle.week ? 0 : 1
+        
+        let indexPaths = collectionView.indexPathsForSelectedItems ?? []
+        let indexList = indexPaths.map{$0.row + offset}
+        closure?(isMonth, indexList)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        
+        guard let fre = frequency else {
+            return
+        }
+        
+        let offset = 1 //fre.frequencyCycle == FrequencyCycle.week ? 0 : 1
+        
+        let indexPaths = collectionView.indexPathsForSelectedItems ?? []
+        let indexList = indexPaths.map{$0.row + offset}
+        closure?(isMonth, indexList)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, shouldShowMenuForItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+}

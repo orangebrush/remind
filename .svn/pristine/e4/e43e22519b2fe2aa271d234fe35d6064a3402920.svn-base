@@ -1,0 +1,323 @@
+//
+//  StepCell.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepCell0: UITableViewCell {
+    @IBOutlet weak var stepLabel: UILabel!
+    @IBOutlet weak var distanceMLabel: UILabel!
+    
+    var step: Int = 0{
+        didSet{
+            let text = "\(step)步"
+            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: UIFont.big, NSAttributedStringKey.foregroundColor: UIColor.confirm])
+            attributedString.addAttribute(.font, value: UIFont.normal, range: NSMakeRange(text.count - 1, 1))
+            stepLabel.attributedText = attributedString
+        }
+    }
+    var distanceM = 0{
+        didSet{
+            let distanceKM = CGFloat(distanceM) / 1000
+            let text = String(format: "%.2f", distanceKM) + "公里"
+            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: UIFont.big, NSAttributedStringKey.foregroundColor: UIColor.confirm])
+            attributedString.addAttribute(.font, value: UIFont.normal, range: NSMakeRange(text.count - 2, 2))
+            distanceMLabel.attributedText = attributedString
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+//        step = 0
+//        distanceM = 0
+        
+        StepManager.share().getStepsAndDistanceM { (codeResult, step, distanceM) in
+            guard codeResult == .success else{
+                return
+            }
+            DispatchQueue.main.async {
+                self.step = step
+                self.distanceM = distanceM
+            }
+        }
+    }
+}
+
+class StepCell1: UITableViewCell {
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    var stepsDetailModel = StepsDetailModel() {
+        didSet{
+            setNeedsDisplay()
+        }
+    }
+    
+    var currentDisplayMode = DisplayMode.day7
+    
+    private func config(){
+        
+    }
+    
+    //MARK:- 绘制曲线
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+        let ctx = UIGraphicsGetCurrentContext()
+        ctx?.clear(rect)
+        ctx?.setFillColor(UIColor.white.cgColor)
+        ctx?.fill(rect)
+        
+        ctx?.setAllowsAntialiasing(true) //抗锯齿
+        
+        //文字：配置
+        let paragraphStyle:NSParagraphStyle = NSParagraphStyle.default.mutableCopy() as! NSParagraphStyle
+        let attributes = [
+            NSAttributedStringKey.font: UIFont.content,
+            NSAttributedStringKey.foregroundColor: UIColor.subWord,  //文字颜色
+            NSAttributedStringKey.paragraphStyle: paragraphStyle]
+        
+        var count: Int
+        switch currentDisplayMode {
+        case .day7:         //最近7天
+            count = 7
+        case .day30:        //最近30天
+            count = 30
+        case .day90:         //最近90天
+            count = 90
+        }
+        
+        //边缘距离
+        let edge: CGFloat = .edge8 + .edge16 + 4
+        let textWidth: CGFloat = (view_size.width - edge * 2) / CGFloat(count - 1)
+        let textHeight: CGFloat = 12
+        let textY = frame.height - .edge16 - textHeight
+        
+        //绘制文字： 日期
+        for i in 0..<count{
+            let textHorizonalX = view_size.width - edge - CGFloat(i) * textWidth
+            
+            if i == 0 || i == count - 1 || i == count / 2{
+                let text: String
+                if i == 0{
+                    text = "今日"
+                }else{
+                    text = Date().offset(with: -i).formatString(with: "MM月dd日")
+                }
+                
+                let dataTitle = NSString(string: text)
+                var dataTitleRect = dataTitle.boundingRect(with: frame.size, options: .usesLineFragmentOrigin, attributes: attributes, context: nil)
+                let textX = textHorizonalX - 12
+                dataTitleRect.origin = CGPoint(x: textX, y: textY)
+                dataTitle.draw(in: dataTitleRect, withAttributes: attributes)
+            }
+            
+            //绘制线
+            if i == 0 || i == count - 1{
+                ctx?.move(to: CGPoint(x: textHorizonalX, y: textY))
+                ctx?.addLine(to: CGPoint(x: textHorizonalX, y: .edge16))
+            }
+        }
+        
+        //绘制线条
+        ctx?.move(to: CGPoint(x: edge - 4, y: textY))
+        ctx?.addLine(to: CGPoint(x: view_size.width - edge + 4, y: textY))
+        
+        //设置
+        ctx?.setLineWidth(1)
+        ctx?.setAlpha(0.8)
+        ctx?.setLineCap(CGLineCap.round)
+        ctx?.setLineJoin(CGLineJoin.round)
+        ctx?.setStrokeColor(UIColor.subWord.cgColor)
+        
+        ctx?.drawPath(using: .stroke)
+        
+        //获取数据
+        let targetStep = stepsDetailModel.todayStep.targetStep
+        let highestStep = stepsDetailModel.highestStep.step
+        
+        //图像高度
+        let graphicHeight = textY - .edge8
+        let highestDataStep = highestStep > targetStep ? highestStep : targetStep
+        
+        //绘制目标线
+        let targetY = CGFloat(targetStep) / CGFloat(highestStep) * graphicHeight
+        ctx?.move(to: CGPoint(x: edge - 4, y: targetY))
+        ctx?.addLine(to: CGPoint(x: view_size.width - edge + 4, y: targetY))
+        
+        //设置目标线
+        ctx?.setLineWidth(1)
+        ctx?.setAlpha(0.8)
+        ctx?.setLineCap(CGLineCap.round)
+        ctx?.setLineJoin(CGLineJoin.round)
+        ctx?.setLineDash(phase: 1, lengths: [3, 4])
+        ctx?.setStrokeColor(UIColor.subWord.cgColor)
+        
+        ctx?.drawPath(using: .stroke)
+        
+        //绘制数据
+        var prePoint: CGPoint = .zero
+        for (index, stepModel) in stepsDetailModel.log.enumerated(){
+            let i = index + (count - stepsDetailModel.log.count)
+            let x = edge + CGFloat(i) * textWidth //view_size.width - edge - CGFloat(i) * textWidth
+            let y = .edge8 + CGFloat(stepModel.step) / CGFloat(highestDataStep) * graphicHeight
+            let targetPoint = CGPoint(x: x, y: y)
+            if i == 0{
+                ctx?.move(to: targetPoint)
+            }else{
+                let point1 = CGPoint(x: prePoint.x + textWidth * 0.2, y: prePoint.y)
+                let point2 = CGPoint(x: targetPoint.x - textWidth * 0.2, y: targetPoint.y)
+                ctx?.addCurve(to: targetPoint, control1: point1, control2: point2)
+            }
+            prePoint = targetPoint
+        }
+        
+        //设置曲线
+        ctx?.setLineWidth(4)
+        ctx?.setLineCap(CGLineCap.round)
+        ctx?.setLineJoin(CGLineJoin.round)
+        ctx?.setLineDash(phase: 0, lengths: [])
+        ctx?.setStrokeColor(UIColor.confirm.cgColor)
+        
+        ctx?.drawPath(using: .stroke)
+    }
+}
+
+class StepCell2: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        valueLabel.font = .normal
+        valueLabel.textColor = .subWord
+    }
+}
+
+//选择显示模式
+enum DisplayMode: Int {
+    case day7 = 0, day30, day90
+}
+
+//模式选择cell
+class StepCellSeg: UITableViewCell {
+    @IBOutlet weak var button0: UIButton!
+    @IBOutlet weak var button1: UIButton!
+    @IBOutlet weak var button2: UIButton!
+    
+    //选择显示模式回调
+    var closure: ((DisplayMode)->())?
+    
+    //选择线
+    private var selectedLine: UIView?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        button0.titleLabel?.font = .normal
+        button1.titleLabel?.font = .normal
+        button2.titleLabel?.font = .normal
+        
+        button0.setTitleColor(.word, for: .selected)
+        button0.backgroundColor = .clear
+        button0.tintColor = .white
+        button0.setTitleColor(.subWord, for: .normal)
+        
+        button1.setTitleColor(.word, for: .selected)
+        button1.backgroundColor = .clear
+        button1.tintColor = .white
+        button1.setTitleColor(.subWord, for: .normal)
+        
+        button2.setTitleColor(.word, for: .selected)
+        button2.backgroundColor = .clear
+        button2.tintColor = .white
+        button2.setTitleColor(.subWord, for: .normal)
+        
+        let selectLineFrame = getLineFrameFrom(button: button0)
+        selectedLine = UIView(frame: selectLineFrame)
+        selectedLine?.backgroundColor = .confirm
+        selectedLine?.layer.cornerRadius = 2
+        contentView.addSubview(selectedLine!)
+        
+        //初始化选择
+        didSelectedDisplayMode(button0)
+    }
+    
+    //MARK:- 根据不同按钮获取line frame
+    private func getLineFrameFrom(button: UIButton) -> CGRect{
+        let height: CGFloat = 4
+        let width: CGFloat = 50
+        let y = frame.height - height
+        let x = button.frame.origin.x + (button.frame.width - width) / 2
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+    
+    //MARK:- 选择显示天数
+    @IBAction func didSelectedDisplayMode(_ sender: UIButton){
+        let tag = sender.tag
+        if let displayMode = DisplayMode(rawValue: tag){
+            closure?(displayMode)
+        }
+        button0.isSelected = button0.tag == tag
+        button1.isSelected = button1.tag == tag
+        button2.isSelected = button2.tag == tag
+        
+        let selectButton: UIButton
+        switch tag {
+        case 0:
+            selectButton = button0
+        case 1:
+            selectButton = button1
+        default:
+            selectButton = button2
+        }
+        UIView.animate(withDuration: 0.3) {
+            self.selectedLine?.frame = self.getLineFrameFrom(button: selectButton)
+        }
+    }
+}
+
+class StepCellSel: UITableViewCell {
+    @IBOutlet weak var targetButton: UIButton!
+    
+    ///设置目标步数回调
+    var closure: (()->())?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        backgroundColor = .header
+        targetButton.setTitleColor(.subWord, for: .normal)
+    }
+    
+    @IBAction func setTargetStep(_ sender: UIButton){
+        closure?()
+    }
+}

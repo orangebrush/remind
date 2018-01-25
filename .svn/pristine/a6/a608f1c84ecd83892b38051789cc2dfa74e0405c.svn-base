@@ -1,0 +1,14 @@
+//
+//  Float.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension CGFloat{
+    static let cornerRadius: CGFloat = 6
+    static let edge8: CGFloat = 8
+    static let edge16: CGFloat = 16
+}

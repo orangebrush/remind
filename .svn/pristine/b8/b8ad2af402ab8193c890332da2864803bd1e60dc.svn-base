@@ -1,0 +1,130 @@
+//
+//  DM+Notice.swift
+//  RemindData
+//
+//  Created by gg on 08/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+extension DataManager{
+    
+    ///获取消息历史列表
+    public func getNoticeList(withPageSize pageSize: Int = 20, withId id: Int = 0, withGetNewNerLog isNew: Bool, closure: @escaping (_ codeResult: CodeResult, _ message: String,_ hasOther: Bool, _ noticeList: [Notice])->()){
+        //获取最新的提醒id
+        //let noticeId = DataHandler.share().getLastNoticeId()
+        let dic = [
+            "id": "\(id)",
+            //"page": "\(page)",
+            "pageSize": "\(pageSize)"
+        ]
+        Session.session(withAction: isNew ? Actions.getNewestNotices : Actions.getAllNotices, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, false, [])
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else{
+                    closure(.failure, "wrong json", false, [])
+                    return
+                }
+                
+                var hasOther = false
+                if let has = dataDic["has"] as? Int{
+                    hasOther = has == 1
+                }
+                
+                
+                guard let recordsData = dataDic["records"] as? [[String: Any]] else{
+                    return
+                }
+                
+                
+                
+                //解析并保存数据到本地数据库
+                let dataHandler = DataHandler.share()
+                
+                
+                var noticeList = [Notice]()
+                for recordData in recordsData {
+                    guard let id = recordData["id"] as? Int else{                       //id
+                        continue
+                    }
+                    guard let notice = dataHandler.getNotice(byNoticeId: id) else{
+                        continue
+                    }
+                    if let eventId = recordData["eventId"] as? Int{                     //事件id
+                        notice.eventId = Int32(eventId)
+                    }
+                    if let type = recordData["type"] as? Int{                           //事件类型
+                        notice.type = Int32(type)
+                    }
+                    notice.time = recordData["time"] as? String                         //推送日期
+                    notice.text1 = recordData["text1"] as? String                       //提醒标题
+                    notice.text2 = recordData["text2"] as? String                       //事件提醒日期
+                    notice.text3 = recordData["text3"] as? String                       //事件日期
+                    notice.text4 = recordData["text4"] as? String                       //正式提醒文本
+                    notice.text5 = recordData["text5"] as? String                       //下次提醒文本
+                    if let count = recordData["count"] as? Int32{                       //正式提醒次数
+                        notice.count = count
+                    }
+
+                    notice.typeName = recordData["typeName"] as? String                 //类型名称
+                    if let sendCount = recordData["sendCount"] as? Int32{               //正式提醒 已提醒次数
+                        notice.sendCount = sendCount
+                    }
+                    if let isBeginningInt = recordData["isBeginning"] as? Int{       //是否预提醒
+                        notice.isBeginning = isBeginningInt == 1
+                    }
+                    if let nextTimeInterval = recordData["nextTime"] as? TimeInterval{  //下次提醒时间
+                        notice.nextTime = Date(timeIntervalSince1970: nextTimeInterval)
+                    }
+                    if let eventTimeInterval = recordData["eventTime"] as? TimeInterval{//事件发生时间
+                        notice.eventTime = Date(timeIntervalSince1970: eventTimeInterval/1000)
+                    }
+                    if let isOperatedInt = recordData["status"] as? Int32{              //0:不再提醒可以操作,1:不再提醒不可以操作
+                        notice.isOperated = isOperatedInt == 0
+                    }
+                    
+                    noticeList.append(notice)
+                }
+                
+                //提交修改
+                dataHandler.commit()
+                
+                closure(.success, message, hasOther, noticeList)
+            }
+        }
+    }
+    
+    //MARK:- 不再提醒
+    public func cancelNotice(withNoticeId noticeId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["id": "\(noticeId)"]
+        Session.session(withAction: Actions.cancelNotice, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 删除提醒
+    public func deleteNotice(withNoticeId noticeId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["id": "\(noticeId)"]
+        Session.session(withAction: Actions.deleteNotice, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 删除所有提醒
+    public func deleteAllNotices(closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        Session.session(withAction: Actions.deleteAllNotices, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+}

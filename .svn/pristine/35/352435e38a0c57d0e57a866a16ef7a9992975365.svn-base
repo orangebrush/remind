@@ -1,0 +1,274 @@
+//
+//  addCityViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/9.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class addCityViewController: BasedViewController ,UITextFieldDelegate,UICollectionViewDelegate,UICollectionViewDataSource{
+    var cityArr = [City]()
+    var addCityArr = [City]()
+    var allCityArr = [City]()
+    fileprivate lazy var search : UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.5)
+        return view
+    }()
+    fileprivate lazy var backView : UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    fileprivate lazy var label : UILabel = {
+        let label = UILabel.init()
+        label.text = "搜索全国城市"
+        label.textColor = UIColor.white
+        return label
+    }()
+    fileprivate lazy var imageView : UIImageView = {
+        let img = UIImageView.init()
+        img.image = #imageLiteral(resourceName: "search_withe")
+        return img
+    }()
+    
+    lazy var  textFiled : UITextField = {
+        let textFiled = UITextField()
+        textFiled.placeholder = "搜索全国城市"
+        textFiled.delegate = self
+        textFiled.keyboardType = UIKeyboardType.webSearch
+        textFiled.font = UIFont.normal
+        return textFiled
+        
+    }()
+    var coverView : searchCityView?
+    fileprivate lazy var searchView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        return view
+    }()
+    
+    fileprivate var mainCloectionView : UICollectionView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "添加城市"
+        self.updateBackground()
+        self.addMainView()
+        self.getHotCityList()
+    }
+    
+    
+    //MARK:- 添加主要视图
+    func addMainView(){
+        
+        
+        let navHeight = UIApplication.shared.statusBarFrame.size.height+(navigation_height ?? 64)
+        backView.frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: 60)
+        backView.isHidden = true
+        self.view.addSubview(backView)
+        search.frame = CGRect.init(x: 10, y: navHeight+15, width:keyDeviceWidth-20, height: 45)
+        search.drawFourRectView()
+        self.view.addSubview(search)
+        
+        search.addSubview(imageView)
+        search.addSubview(label)
+        search.addSubview(textFiled)
+        imageView.snp.makeConstraints { (make) in
+            make.width.height.equalTo(18)
+            make.centerY.equalToSuperview()
+            make.right.equalTo(label.snp.left).offset(-5)
+        }
+        label.snp.makeConstraints { (make) in
+            make.top.bottom.equalTo(0)
+            make.left.equalTo((keyDeviceWidth-120)/2+9)
+            make.width.equalTo(120)
+        }
+        textFiled.snp.makeConstraints { (make) in
+            make.top.bottom.equalTo(0)
+            make.left.equalTo(33)
+            make.width.equalTo(keyDeviceWidth-20-33)
+        }
+        textFiled.isHidden = true
+        NotificationCenter.default.addObserver(self, selector: #selector(addCityViewController.valueChange), name: Notification.Name.UITextFieldTextDidChange, object: textFiled)
+        let tap = UITapGestureRecognizer.init(target: self, action: #selector(addCityViewController.textFiledValueChange))
+        search.addGestureRecognizer(tap)
+        let  layout = UICollectionViewFlowLayout()
+        layout.itemSize = CGSize.init(width: keyDeviceWidth/3-40/3, height: (keyDeviceWidth/3-40/3)/113*55)
+        mainCloectionView = UICollectionView.init(frame: CGRect.init(x: 11, y: navHeight+80, width: keyDeviceWidth-18, height: keyDeviceHeight-navHeight-100), collectionViewLayout: layout)
+        mainCloectionView.backgroundColor = UIColor.clear
+        mainCloectionView.delegate = self
+        mainCloectionView.dataSource = self
+        mainCloectionView.register(cityCollectionViewCell.self, forCellWithReuseIdentifier: "cityCollectionViewCell")
+        self.view.addSubview(mainCloectionView)
+        let item = UIBarButtonItem.init(title: "确定", style: .plain, target: self, action: #selector(addCityViewController.confrimBtnClick))
+        item.setTitleTextAttributes([NSAttributedStringKey.foregroundColor : UIColor.white], for: .normal)
+        self.navigationItem.rightBarButtonItem = item
+        
+        coverView = searchCityView.init(frame: CGRect.init(x: 0, y: navHeight+15+45, width: keyDeviceWidth, height: keyDeviceHeight-navHeight-15-45))
+        coverView?.isHidden = true
+        coverView?.delegate = self
+        self.view.addSubview(coverView!)
+        
+        
+        
+    }
+    
+    
+    @objc func valueChange(){
+        self.getCity()
+    }
+   
+    
+    //MARK:- 确定添加城市点击
+    @objc func confrimBtnClick(){
+        
+        DataManager.share().addCityList(withCityList: addCityArr) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+                }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+            self.navigationController?.popViewController(animated: true)
+        }
+    }
+    
+    //MARK:- 获取热门城市列表
+    func getHotCityList(){
+        DataManager.share().getAllHotCityList { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.cityArr = list
+            self.mainCloectionView.reloadData()
+        }
+    }
+    //MARK:- 获取城市列表
+    func getCity(){
+        DataManager.share().getAllCityList(withSearchName: self.textFiled.text) { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.allCityArr = list
+            let navHeight = UIApplication.shared.statusBarFrame.size.height+(navigation_height ?? 64)
+            self.coverView?.configview(self.allCityArr, keyDeviceHeight-navHeight-15-45)
+            
+            
+        }
+        
+    }
+    @objc func textFiledValueChange(){
+        UIView.animate(withDuration: 0.3, animations: {
+             self.search.frame.origin.y =  self.search.frame.origin.y - 7
+            self.label.snp.updateConstraints({ (make) in
+                make.left.equalTo(33)
+            })
+            self.addView()
+            
+        })
+        self.navigationItem.leftBarButtonItem?.tag = 1000
+    }
+   @objc func backBtnClick(_ btn:UIBarButtonItem){
+       if btn.tag == 1001{
+         self.navigationController?.popViewController(animated: true)
+       }else{
+         self.removwView()
+           btn.tag = 1001
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem.init(title: "确定", style: .plain, target: self, action: #selector(addCityViewController.confrimBtnClick))
+       }
+    }
+    
+    func addView(){
+        self.coverView?.isHidden = false
+        self.backView.isHidden = false
+        self.label.isHidden = true
+        self.textFiled.isHidden = false
+        self.imageView.image = #imageLiteral(resourceName: "search_gray")
+        self.search.backgroundColor = UIColor.separator
+        textFiled.becomeFirstResponder()
+        self.navigationItem.rightBarButtonItem = nil
+        
+    }
+    func removwView(){
+        UIView.animate(withDuration: 0.3, animations: {
+            self.search.frame.origin.y =  self.search.frame.origin.y + 7
+            self.label.snp.updateConstraints({ (make) in
+                make.left.equalTo((keyDeviceWidth-120)/2+9)
+            })
+            self.coverView?.isHidden = true
+            self.backView.isHidden = true
+            self.label.isHidden = false
+            self.textFiled.isHidden = true
+            self.imageView.image = #imageLiteral(resourceName: "search_withe")
+            self.search.backgroundColor = UIColor.white.withAlphaComponent(0.5)
+            self.textFiled.resignFirstResponder()
+        })
+        
+    }
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.view.endEditing(true)
+        self.getCity()
+        return true
+    }
+    
+    //MARK:- collectionView的协议方法
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return cityArr.count
+    }
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cityCollectionViewCell", for: indexPath)as!cityCollectionViewCell
+        cell.configCell(cityArr[indexPath.row])
+        return cell
+    }
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        
+        let item = self.mainCloectionView.cellForItem(at: indexPath) as! cityCollectionViewCell
+        var city = cityArr[indexPath.row]
+        if city.followed{
+            city.followed = false
+            
+            for (i, tempCity) in addCityArr.enumerated(){
+                if city.id == tempCity.id{
+                    addCityArr.remove(at: i)
+                }
+            }
+        }else{
+            city.followed = true
+            addCityArr.append(city)
+        }
+        cityArr[indexPath.row] = city
+        item.configCell(city)
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    
+}
+extension addCityViewController : searchCityViewDelegate{
+    func searchcityClick(_ city: City) {
+        let webVC = WebViewController.init(URL.init(string: "http://120.79.52.214/appwall_remind/restfull/weather/info?cityid=\(city.id)")!)
+        //WebViewController.init(URL.init(string: "http://120.79.52.214/appwall_remind/restfull/weather/info?cityid=\(city.id)&uid=\(MemberManager.share().member?.uuid ?? "")")!)
+        webVC.city = city
+        if city.followed{
+            DataManager.share().addCityList(withCityList: addCityArr) { (result, message) in
+                if result == .failure{
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+                    return
+                    }
+                }
+        }
+       
+        self.navigationController?.pushViewController(webVC, animated: true)
+        
+    }
+    
+    
+}
+
+

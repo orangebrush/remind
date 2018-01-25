@@ -1,0 +1,193 @@
+//
+//  UIViewController+BarButtonItem.swift
+//  Remind
+//
+//  Created by dong on 2018/1/5.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+import UIKit
+//返回按钮字体大小
+let backButtonFont = UIFont.systemFont(ofSize: 16.0)
+// ios 版本
+let kIOS_VERSION: Float = ((UIDevice.current.systemVersion as NSString).floatValue)
+
+let SCREEN_WIDTH  = UIScreen.main.bounds.width
+
+enum BarButtonViewPosition: Int {
+    case left
+    case right
+}
+
+extension UIViewController {
+    func customItemsPosition(items: [BarButtonItem], position: BarButtonViewPosition, redPointEdgeInsets: CGPoint = .zero) -> [UIBarButtonItem] {
+        
+        let margin: CGFloat = 0
+        let extactWidth: CGFloat = 19//给按钮额外增加20像素的点击范围
+        var buttonItems = [UIBarButtonItem]()
+        
+        
+        let extactImageWidth: CGFloat = 10//给按钮额外增加20像素的点击范围
+        let tItems = position  == .left ? items : items.reversed()
+        for (index, item) in tItems.enumerated() {
+            let btn = UIButton(type: .custom)
+            btn.addTarget(self, action: item.tSelector, for: .touchUpInside)
+            //            btn.backgroundColor = .red
+            if let text = item.textStr, item.imageName == nil {
+                let textW = (text as NSString).getWidthWithFont(backButtonFont, constrainedToSize: CGSize(width: SCREEN_WIDTH, height: 44))-1
+                btn.frame = CGRect(x: 0, y: 0, width: (position == .left ? textW + extactWidth : textW + extactWidth), height: 44)
+                btn.setTitleColor(item.textColor, for: .normal)
+                btn.setTitle(text, for: .normal)
+                btn.titleLabel?.font = backButtonFont
+                
+            }else if let imageN = item.imageName, item.textStr == nil {
+                let image = UIImage(named: imageN)
+                let imageWidth = image?.size.width ?? 0
+                btn.frame = CGRect(x: 0, y: 0, width: imageWidth+extactImageWidth, height: 44)
+                btn.adjustsImageWhenHighlighted = false
+                btn.setImage(image, for: .normal)
+             
+                if index == items.count-1 && items.count > 1 {
+                    if position == .left {
+                        btn.contentEdgeInsets = UIEdgeInsetsMake(0, 0, 0, 7)
+                    }else{
+                        btn.contentEdgeInsets = UIEdgeInsetsMake(0, 7, 0, 0)
+                    }
+                }else {
+                    if position == .left {
+                        btn.contentEdgeInsets = UIEdgeInsetsMake(0, extactImageWidth, 0, 0)
+                    }else{
+                        btn.contentEdgeInsets = UIEdgeInsetsMake(0, 0, 0, extactImageWidth)
+                    }
+                }
+            } else if let text = item.textStr, let imageN = item.imageName {
+                
+                btn.contentHorizontalAlignment = .left
+                btn.imageEdgeInsets = UIEdgeInsetsMake(0, extactWidth/2, 0, 0)
+                btn.titleEdgeInsets = UIEdgeInsetsMake(0, extactWidth/2 - 6, 0, 0)//设置间距
+                btn.setImage(UIImage(named: imageN), for: .normal)
+                btn.setImage(UIImage(named: imageN), for: .highlighted)
+                let backWidth = (text as NSString).getWidthWithFont(backButtonFont, constrainedToSize: CGSize(width: 100, height: 22)) + 24 + 4 + extactWidth/2//文字加图标加间距
+                btn.frame = CGRect(x: 0, y: 0, width: backWidth, height: 44)
+                btn.setTitle(text, for: .normal)
+                btn.titleLabel?.font = backButtonFont
+            }
+            
+            let redView: UIView = UIView()
+            redView.backgroundColor = .clear
+            let viewWidth: CGFloat = 8.5
+            redView.frame = CGRect.init(x: 0, y: 0, width: viewWidth, height: viewWidth)
+            redView.center = CGPoint(x: btn.frame.maxX-item.offSet.x+redPointEdgeInsets.x, y: btn.centerY-item.offSet.y+redPointEdgeInsets.y)
+            let path=UIBezierPath(roundedRect: redView.bounds, cornerRadius: viewWidth / 2.0)
+            let layer=CAShapeLayer()
+            layer.path=path.cgPath
+            layer.fillColor   = UIColor.red.cgColor
+            redView.layer.addSublayer(layer)
+            redView.isHidden = !item.isShowRedPoint
+            btn.addSubview(redView)
+            
+            
+            if kIOS_VERSION >= 11 {
+                let barBtnView = BarButtonView(frame: btn.frame)
+                barBtnView.position = position
+                barBtnView.margin = margin
+                barBtnView.addSubview(btn)
+                buttonItems.append(UIBarButtonItem(customView: barBtnView))
+            }else {
+                let negativeSpace: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)
+                negativeSpace.width = -20
+                buttonItems.append(negativeSpace)
+                
+                let tItem = UIBarButtonItem(customView: btn)
+                buttonItems.append(tItem)
+                
+            }
+            if index != items.count - 1 {
+                let negativePadding: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)//iOS11不管用
+                negativePadding.width = -4
+                buttonItems.append(negativePadding)
+            }
+            
+        }
+        
+        return buttonItems
+    }
+    
+    
+}
+extension NSString {
+    //根据字体大小获取文字宽度
+    func getWidthWithFont(_ font: UIFont, lineSpacing: CGFloat = 0, constrainedToSize size: CGSize) -> CGFloat {
+        return self.getSizeWithFont(font, lineSpacing: lineSpacing, constrainedToSize: size).width
+    }
+    //根据字体大小获取文字size
+    func getSizeWithFont(_ font: UIFont, lineSpacing: CGFloat = 0, constrainedToSize size: CGSize) -> CGSize {
+        
+        var resultSize = CGSize.zero
+        if self.length <= 0 {
+            return resultSize
+        }
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = lineSpacing
+        style.lineBreakMode = NSLineBreakMode.byWordWrapping
+        let options : NSStringDrawingOptions = [.usesFontLeading , .usesLineFragmentOrigin]
+        resultSize = self.boundingRect(with: CGSize.init(width: size.width, height: size.height), options: options, attributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.paragraphStyle: style], context: nil).size
+        
+        resultSize = CGSize.init(width: resultSize.width+2, height: resultSize.height+1)
+        
+        return resultSize
+    }
+}
+
+class BarButtonItem: NSObject {
+    var textStr: String?
+    var imageName: String?
+    var textColor: UIColor?
+    var tSelector: Selector!
+    var isShowRedPoint: Bool = false
+    var offSet: CGPoint = .zero
+    init(textStr: String? = nil, imageName: String? = nil, textColor: UIColor? = .white, isShowRedPoint: Bool = false, offSet: CGPoint = CGPoint(x: 2, y: 0), tSelector: Selector) {
+        
+        super.init()
+        assert(!(textStr == nil && imageName == nil), "text and image is all nil")
+        self.textStr = textStr
+        self.imageName = imageName
+        self.textColor = textColor
+        self.tSelector = tSelector
+        self.isShowRedPoint = isShowRedPoint
+        self.offSet = offSet
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+}
+
+private class BarButtonView: UIView {
+    var applied: Bool = false
+    var position: BarButtonViewPosition = .left
+    var margin: CGFloat = 0
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if applied || kIOS_VERSION < 11 {
+            return
+        }
+        var view: UIView = self
+        while !view.isKind(of: UINavigationBar.self) && view.superview != nil {
+            view = view.superview!
+            if view.isKind(of: UIStackView.self) && view.superview != nil {
+                if self.position == .left {
+                    view.superview?.addConstraint(NSLayoutConstraint(item: view, attribute: .leading, relatedBy: .equal, toItem: view.superview, attribute: .leading, multiplier: 1.0, constant: margin))
+                    applied = true
+                }else {
+                    view.superview?.addConstraint(NSLayoutConstraint(item: view, attribute: .trailing, relatedBy: .equal, toItem: view.superview, attribute: .trailing, multiplier: 1.0, constant: -margin))
+                    applied = true
+                }
+
+            }
+        }
+    }
+}

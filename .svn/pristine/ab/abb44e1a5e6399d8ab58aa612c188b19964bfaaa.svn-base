@@ -1,0 +1,459 @@
+//
+//  DDSegmentedControl.swift
+//  BatourTool
+//
+//  Created by waipmac02 on 2016/10/11.
+//  Copyright © 2016年 kaicheng. All rights reserved.
+//
+import UIKit
+// MARK: - DDSegmentedControl
+open class DDSegmentedControl: UIControl {
+    //MARK: 点击回调函数
+    public var controlValueChangeBlock:(()->())?
+
+    var lineWidth: CGFloat = 1
+    // MARK: - 选中的背景view
+    fileprivate class IndicatorView: UIView {
+        // MARK: - 显示的 view
+        fileprivate let titleMaskView = UIView()
+        fileprivate var cornerRadius: CGFloat! {
+            didSet {
+                layer.cornerRadius = cornerRadius
+                titleMaskView.layer.cornerRadius = cornerRadius
+            }
+        }
+        override open var frame: CGRect {
+            didSet {
+                titleMaskView.frame = frame
+            }
+        }
+        init() {
+            super.init(frame: CGRect.zero)
+            finishInit()
+        }
+        required init?(coder aDecoder: NSCoder) {
+            super.init(coder: aDecoder)
+            finishInit()
+        }
+        fileprivate func finishInit() {
+            layer.masksToBounds = true
+            titleMaskView.backgroundColor = UIColor.black
+        }
+    }
+    // MARK: - 动画时间和颜色的常量
+    fileprivate struct AnimationParameters {
+        fileprivate static let animationWithBounceDuration: TimeInterval = 0.3
+        fileprivate static let animationWithBounceSpringDamping: CGFloat = 0.75
+        fileprivate static let animationNoBounceDuration: TimeInterval = 0.2
+    }
+    fileprivate struct DefaultColors {
+        fileprivate static let backgroundColor: UIColor = UIColor.white
+        fileprivate static let titleColor: UIColor = UIColor.black
+        fileprivate static let indicatorViewBackgroundColor: UIColor = UIColor.black
+        fileprivate static let selectedTitleColor: UIColor = UIColor.white
+    }
+    // MARK: - index 格式不正确
+    public enum IndexError: Error {
+        case indexBeyondBounds(UInt)
+    }
+    // MARK: - Public 属性
+    //MARK:  选中 index
+    public fileprivate(set) var index: UInt
+    // The titles / 文字显示
+    public var titles: [String] {
+        get {
+            let titleLabels = titleLabelsView.subviews as! [UILabel]
+            return titleLabels.map { $0.text! }
+        }
+        set {
+            guard newValue.count > 1 else {
+                return
+            }
+            let labels: [(UILabel, UILabel)] = newValue.map {
+                (string) -> (UILabel, UILabel) in
+
+                let titleLabel = UILabel()
+                titleLabel.textColor = titleColor
+                titleLabel.text = string
+                titleLabel.lineBreakMode = .byTruncatingTail
+                titleLabel.textAlignment = .center
+                titleLabel.font = titleFont
+
+                let selectedTitleLabel = UILabel()
+                selectedTitleLabel.textColor = selectedTitleColor
+                selectedTitleLabel.text = string
+                selectedTitleLabel.lineBreakMode = .byTruncatingTail
+                selectedTitleLabel.textAlignment = .center
+                selectedTitleLabel.font = selectedTitleFont
+
+                return (titleLabel, selectedTitleLabel)
+            }
+
+            titleLabelsView.subviews.forEach({ $0.removeFromSuperview() })
+            selectedTitleLabelsView.subviews.forEach({ $0.removeFromSuperview() })
+
+            for (inactiveLabel, activeLabel) in labels {
+                titleLabelsView.addSubview(inactiveLabel)
+                selectedTitleLabelsView.addSubview(activeLabel)
+            }
+
+            setNeedsLayout()
+        }
+    }
+    // MARK: 回弹动画 Defaults to false.
+    public var bouncesOnChange = false
+    // MARK:控制是否应该发送消息，ValueChanged事件,无论点击保持不变。 Defaults to false.
+    public var alwaysAnnouncesValue = false
+    // MARK: 控制是否应该忽略长按手势 Defaults to false.
+    public var panningDisabled = false
+    // MARK:滑块的圆角
+    public var cornerRadius: CGFloat {
+        get {
+            return indicatorView.cornerRadius
+        }
+        set {
+
+            indicatorView.cornerRadius = newValue - indicatorViewInset
+        }
+    }
+    // MARK:边框的圆角
+    public var backgroundCornerRadius: CGFloat {
+        get {
+            return self.layer.cornerRadius
+        }
+        set {
+           self.layer.cornerRadius = newValue
+
+        }
+    }
+    // MARK:滑块的颜色
+    public var indicatorViewBackgroundColor: UIColor? {
+        get {
+            return indicatorView.backgroundColor
+        }
+        set { indicatorView.backgroundColor = newValue }
+    }
+    // MARK:滑块与边框的间隙 Defaults to 0.0.
+    public var indicatorViewInset: CGFloat = 0.0 {
+        didSet { setNeedsLayout() }
+    }
+    //MARK: 未选中文字的颜色
+    public var titleColor: UIColor  {
+        didSet {
+            if !titleLabels.isEmpty {
+                for label in titleLabels {
+                    label.textColor = titleColor
+                }
+            }
+        }
+    }
+    //MARK: 选中文字的颜色
+    public var selectedTitleColor: UIColor {
+        didSet {
+            if !selectedTitleLabels.isEmpty {
+                for label in selectedTitleLabels {
+                    label.textColor = selectedTitleColor
+                }
+            }
+        }
+    }
+    // MARK:未选中文字的字体
+    public var titleFont: UIFont = UILabel().font {
+        didSet {
+            if !titleLabels.isEmpty {
+                for label in titleLabels {
+                    label.font = titleFont
+                }
+            }
+        }
+    }
+    //MARK: 选中文字的字体
+    public var selectedTitleFont: UIFont = UILabel().font {
+        didSet {
+            if !selectedTitleLabels.isEmpty {
+                for label in selectedTitleLabels {
+                    label.font = selectedTitleFont
+                }
+            }
+        }
+    }
+    //MARK: 重置文字
+    public func setUpdateTitle(_ text: String, index: Int) {
+        DispatchQueue.main.async {
+            if self.titleLabels.count > index {
+                let label = self.titleLabels[index]
+                label.text = text
+            }
+            if self.selectedTitleLabels.count > index {
+                let label = self.selectedTitleLabels[index]
+                label.text = text
+            }
+        }
+    }
+    
+
+    // MARK: - view 初始化
+    fileprivate let titleLabelsView = UIView()
+    fileprivate let selectedTitleLabelsView = UIView()
+    //MARK: - 滑块
+    fileprivate let indicatorView = IndicatorView()
+    fileprivate var initialIndicatorViewFrame: CGRect?
+    
+    
+     fileprivate let bottomlineView = UIView()
+
+    fileprivate var tapGestureRecognizer: UITapGestureRecognizer!
+    fileprivate var panGestureRecognizer: UIPanGestureRecognizer!
+
+    fileprivate var titleLabelsCount: Int { return titleLabelsView.subviews.count }
+    fileprivate var titleLabels: [UILabel] { return titleLabelsView.subviews as! [UILabel] }
+    fileprivate var selectedTitleLabels: [UILabel] { return selectedTitleLabelsView.subviews as! [UILabel] }
+    fileprivate var totalInsetSize: CGFloat { return indicatorViewInset * 2.0 }
+    fileprivate lazy var defaultTitles: [String] = { return ["First", "Second"] }()
+    // MARK: 是否显示分割线
+    fileprivate var displayLine: Bool
+    // MARK: 跟随滑动
+    fileprivate var isFollowSliding: Bool = false
+
+    required public init?(coder aDecoder: NSCoder) {
+        self.index = 0
+        self.displayLine = false
+        self.titleColor = DefaultColors.titleColor
+        self.selectedTitleColor = DefaultColors.selectedTitleColor
+        super.init(coder: aDecoder)
+        titles = defaultTitles
+        finishInit()
+    }
+    // MARK: 初始化
+    public init(frame: CGRect,
+                displayLine: Bool,   // 是否显示分割线
+                titles: [String],
+                index: UInt,     //默认选中
+                backgroundColor: UIColor, //背景颜色
+                titleColor: UIColor,      //未选中文字颜色
+                indicatorViewBackgroundColor: UIColor, //滑块颜色
+                selectedTitleColor: UIColor,
+                changeBlock:@escaping (()->())) {
+        self.controlValueChangeBlock = changeBlock
+        self.index = index
+        self.displayLine = displayLine
+        self.titleColor = titleColor
+        self.selectedTitleColor = selectedTitleColor
+        super.init(frame: frame)
+        self.titles = titles
+        self.backgroundColor = backgroundColor
+        self.indicatorViewBackgroundColor = indicatorViewBackgroundColor
+        self.backgroundCornerRadius = 3.0
+        self.cornerRadius = 0.0
+
+        finishInit()
+    }
+
+    // MARK: 初始化
+    public init(frame: CGRect,
+                displayLine: Bool,   // 是否显示分割线
+        titles: [String],
+        index: UInt,     //默认选中
+        backgroundColor: UIColor, //背景颜色
+        titleColor: UIColor,      //未选中文字颜色
+        indicatorViewBackgroundColor: UIColor, //滑块颜色
+        selectedTitleColor: UIColor,
+        isFollowSliding: Bool, // 跟随滑动
+        changeBlock:@escaping (()->())) {
+        self.controlValueChangeBlock = changeBlock
+        self.index = index
+        self.displayLine = displayLine
+        self.titleColor = titleColor
+        self.selectedTitleColor = selectedTitleColor
+        super.init(frame: frame)
+        self.titles = titles
+        self.backgroundColor = backgroundColor
+        self.indicatorViewBackgroundColor = indicatorViewBackgroundColor
+        self.backgroundCornerRadius = 3.0
+        self.cornerRadius = 0.0
+
+        self.isFollowSliding = true
+
+        finishInit()
+    }
+    // MARK: 添加子视图
+    fileprivate func finishInit() {
+        layer.masksToBounds = true
+        self.clipsToBounds = true
+        addSubview(titleLabelsView)
+        addSubview(indicatorView)
+        addSubview(selectedTitleLabelsView)
+        
+        addSubview(bottomlineView)
+        
+        bottomlineView.backgroundColor = self.selectedTitleColor
+
+        self.titleFont = UIFont.systemFont(ofSize: 14)
+        self.selectedTitleFont = UIFont.systemFont(ofSize: 14)
+        
+        selectedTitleLabelsView.layer.mask = indicatorView.titleMaskView.layer
+
+        tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(DDSegmentedControl.tapped(_:)))
+        addGestureRecognizer(tapGestureRecognizer)
+
+        panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(DDSegmentedControl.pan(_:)))
+        panGestureRecognizer.delegate = self
+//        addGestureRecognizer(panGestureRecognizer)
+
+    }
+    // MARK: 布局子视图
+    override open func layoutSubviews() {
+        super.layoutSubviews()
+
+        guard titleLabelsCount > 1 else {
+            return
+        }
+
+        titleLabelsView.frame = bounds
+        selectedTitleLabelsView.frame = bounds
+
+        indicatorView.frame = elementFrame(forIndex: index)
+        bottomlineView.frame = bottemViewlementFrame(forIndex: index)
+      // MARK: 边框 和分割线
+        if self.displayLine
+        {
+            layer.cornerRadius = self.backgroundCornerRadius
+            layer.borderWidth = lineWidth
+            layer.borderColor = self.indicatorViewBackgroundColor?.cgColor
+        }
+
+        for index in 0...titleLabelsCount-1 {
+            let frame = elementFrame(forIndex: UInt(index))
+            titleLabelsView.subviews[index].frame = frame
+            selectedTitleLabelsView.subviews[index].frame = frame
+
+            if self.displayLine && index > 0{
+                drawLine(frame)
+            }
+        }
+    }
+     // MARK: 画分割线
+    fileprivate func drawLine(_ rect: CGRect){
+           let line = UIView.init(frame: CGRect.init(origin: rect.origin, size: CGSize.init(width: lineWidth, height: rect.size.height)))
+           line.backgroundColor = self.indicatorViewBackgroundColor
+           addSubview(line)
+    }
+    // MARK: 设置 index 值，选中哪一个
+    public func set(_ index: UInt, animated: Bool = true){
+//        guard titleLabels.indices.contains(Int(index)) else {
+//            throw IndexError.indexBeyondBounds(index)
+//        }
+        if titleLabels.indices.contains(Int(index))
+        {
+            let oldIndex = self.index
+            self.index = index
+            moveIndicatorViewToIndex(animated, shouldSendEvent: (self.index != oldIndex || alwaysAnnouncesValue))
+
+
+        }
+    }
+
+    // MARK: - 动画
+    fileprivate func moveIndicatorViewToIndex(_ animated: Bool, shouldSendEvent: Bool) {
+        if animated {
+            UIView.animate(withDuration: bouncesOnChange ? AnimationParameters.animationWithBounceDuration : AnimationParameters.animationNoBounceDuration,
+                           delay: 0.0,
+                           usingSpringWithDamping: bouncesOnChange ? AnimationParameters.animationWithBounceSpringDamping : 1.0,
+                           initialSpringVelocity: 0.0,
+                           options: [UIViewAnimationOptions.beginFromCurrentState, UIViewAnimationOptions.curveEaseOut],
+                           animations: {
+                            () -> Void in
+                            self.moveIndicatorView()
+                }, completion: { (finished) -> Void in
+                    if finished && shouldSendEvent {
+                        if self.controlValueChangeBlock != nil{
+                            self.controlValueChangeBlock!()
+                        }
+
+                    }
+            })
+        }
+        else {
+            moveIndicatorView()
+            if self.controlValueChangeBlock != nil{
+                self.controlValueChangeBlock!()
+            }
+
+        }
+    }
+
+    // MARK: - 计算滑块位置
+    fileprivate func elementFrame(forIndex index: UInt) -> CGRect {
+        let elementWidth = (width - totalInsetSize) / CGFloat(titleLabelsCount)
+        return CGRect(x: CGFloat(index) * elementWidth + indicatorViewInset,
+                      y: indicatorViewInset,
+                      width: elementWidth,
+                      height: height - totalInsetSize)
+    }
+     // MARK: - 计算滑块位置
+    fileprivate func bottemViewlementFrame(forIndex index: UInt) -> CGRect {
+        return CGRect(x: self.indicatorView.x - (self.bottomlineView.width - self.indicatorView.width) / 2,
+                      y: height - 2,
+                      width: 60,
+                      height: 2)
+    }
+    // MARK: - 下一个滑块位置
+    fileprivate func nearestIndex(toPoint point: CGPoint) -> UInt {
+        let distances = titleLabels.map { abs(point.x - $0.center.x) }
+        return UInt(distances.index(of: distances.min()!)!)
+    }
+    fileprivate func moveIndicatorView() {
+        if self.displayLine && !self.isFollowSliding
+        {
+            self.indicatorView.frame = self.titleLabels[Int(self.index)].frame
+        }
+//        self.indicatorView.frame = self.titleLabels[Int(self.index)].frame
+        self.layoutIfNeeded()
+    }
+    open func moveIndicatorViewFrame(proportionX: CGFloat) {
+        self.indicatorView.frame = CGRect(x: (proportionX * (self.width - self.indicatorView.width)),
+                                          y: self.indicatorView.y,
+                                          width: self.indicatorView.width,
+                                          height: self.indicatorView.height)
+        
+        self.bottomlineView.frame = CGRect(x: self.indicatorView.x - (self.bottomlineView.width - self.indicatorView.width) / 2,
+                                     y: self.bottomlineView.y,
+                                     width: self.bottomlineView.width,
+                                     height: self.bottomlineView.height)
+        self.layoutIfNeeded()
+
+    }
+
+    // MARK: - 点击和长按
+    @objc fileprivate func tapped(_ gestureRecognizer: UITapGestureRecognizer!) {
+        let location = gestureRecognizer.location(in: self)
+        set(nearestIndex(toPoint: location))
+    }
+    @objc fileprivate func pan(_ gestureRecognizer: UIPanGestureRecognizer!) {
+        guard !panningDisabled else {
+            return
+        }
+
+        switch gestureRecognizer.state {
+        case .began:
+            initialIndicatorViewFrame = indicatorView.frame
+        case .changed:
+            var frame = initialIndicatorViewFrame!
+            frame.origin.x += gestureRecognizer.translation(in: self).x
+            frame.origin.x = max(min(frame.origin.x, bounds.width - indicatorViewInset - frame.width), indicatorViewInset)
+            indicatorView.frame = frame
+        case .ended, .failed, .cancelled:
+            set(nearestIndex(toPoint: indicatorView.center))
+        default: break
+        }
+    }
+}
+// MARK: - 长按代理 UIGestureRecognizerDelegate
+extension DDSegmentedControl: UIGestureRecognizerDelegate {
+    override open func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer == panGestureRecognizer {
+            return indicatorView.frame.contains(gestureRecognizer.location(in: self))
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+    }
+}

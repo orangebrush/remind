@@ -1,0 +1,41 @@
+//
+//  Font+Extension.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension UIFont {
+    //通用字体、颜色
+    static let mainName = "PingFang-SC-Regular"//"PingFangTC-Thin"
+    static let small = UIFont(name: UIFont.mainName, size: 4)!
+    static let font10 =  UIFont(name: UIFont.mainName, size: 10)!
+    static let smallContent = UIFont(name: UIFont.mainName, size: 11)
+    static let content = UIFont(name: UIFont.mainName, size: 12)!
+    static let font13 = UIFont(name: UIFont.mainName, size: 13)!
+    static let normal = UIFont(name: UIFont.mainName, size: 14)!
+    static let navNormal = UIFont(name: UIFont.mainName, size: 15)!
+    static let navTitle = UIFont.boldSystemFont(ofSize: 18)
+    static let big = UIFont(name: UIFont.mainName, size: 40)!
+    static let huge = UIFont(name: UIFont.mainName, size: 90)!
+    
+    static let thinName = "PingFangTC-Thin"
+    static let semiboldName = "PingFangTC-Semibold"
+    
+    ///自定义正常文字大小
+    convenience init(withNormalFontSize fontSize: CGFloat){
+        self.init(name: UIFont.mainName, size: fontSize)!
+    }
+    
+    ///自定义细体文字大小
+    convenience init(withThinFontSize fontSize: CGFloat){
+        self.init(name: UIFont.thinName, size: fontSize)!
+    }
+    
+    ///自定义粗体文字大小
+    convenience init(withSemiboldFontSize fontSize: CGFloat){
+        self.init(name: UIFont.semiboldName, size: fontSize)!
+    }
+}

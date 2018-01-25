@@ -1,0 +1,40 @@
+//
+//  ColorCommon.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+//MARK:- 背景图
+let ZXDbgImage = "bgImage"
+let ZXD_changeBgNotice = "bgHaveChanged"
+
+//MARK:- 导航栏高度
+var navigation_height: CGFloat?
+
+//MARK:- 圆角
+let ZXD_coner = 6
+
+//MARK:- 屏幕宽度
+let keyDeviceWidth = UIScreen.main.bounds.size.width
+let keyDeviceHeight = UIScreen.main.bounds.size.height
+
+
+let view_size = UIScreen.main.bounds.size
+
+
+//MARK:- 默认背景颜色
+let backgroundColorList: [UIColor] = [
+    UIColor(colorHex: 0x4bc474),
+    UIColor(colorHex: 0x2b93eb),
+    UIColor(colorHex: 0x7a2ebf),
+    UIColor(colorHex: 0xcfa972)
+]
+
+//MARK:- 星期字符串
+let weekdaylist = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"]
+
+

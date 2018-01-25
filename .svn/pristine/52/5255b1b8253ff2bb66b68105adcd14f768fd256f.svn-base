@@ -1,0 +1,59 @@
+//
+//  EventTimeCell.swift
+//  Remind
+//
+//  Created by gg on 15/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventTimeCell: UICollectionViewCell {
+    
+    @IBOutlet weak var label: UILabel!
+    @IBOutlet weak var imageView: UIImageView!
+    
+    override var isSelected: Bool{
+        didSet{
+            
+            //backgroundColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.5)
+            imageView.isHidden = !isSelected
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        label.textColor = .word
+        label.font = .normal
+        
+        backgroundColor = .white //UIColor.white.withAlphaComponent(0.5)
+        imageView.isHidden = true
+        layer.cornerRadius = .cornerRadius       
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+    }
+}
+
+class EventTimeAddCell: UICollectionViewCell {
+    
+    @IBOutlet weak var imageView: UIImageView!
+    
+    override var isSelected: Bool{
+        didSet{
+            
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        backgroundColor = UIColor.white//.withAlphaComponent(0.5)
+        //layer.cornerRadius = .cornerRadius
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+    }
+}

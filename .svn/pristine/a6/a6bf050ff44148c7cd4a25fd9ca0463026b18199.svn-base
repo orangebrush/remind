@@ -1,0 +1,5 @@
+ extern const unsigned char Pods_RemindVersionString[];
+ extern const double Pods_RemindVersionNumber;
+
+ const unsigned char Pods_RemindVersionString[] __attribute__ ((used)) = "@(#)PROGRAM:Pods_Remind  PROJECT:Pods-1" "\n";
+ const double Pods_RemindVersionNumber __attribute__ ((used)) = (double)1.;

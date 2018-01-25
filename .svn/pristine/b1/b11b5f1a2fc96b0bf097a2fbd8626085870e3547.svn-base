@@ -1,0 +1,216 @@
+//
+//  StepSettingVC.swift
+//  Remind
+//
+//  Created by gg on 19/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepSettingVC: BaseBackViewController {
+    @IBOutlet weak var tableView: UITableView!
+    
+    //数据
+    var stepsSetting: StepsSetting?
+    
+    
+    //选择器
+    var selector: GANSelector?
+    var isLocked = false 
+    
+    //MARK:- init--------------------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+        DataManager.share().getTargetStep { (codeResult, message, stepsSetting) in
+            guard codeResult == .success else{
+                return
+            }
+            
+            self.stepsSetting = stepsSetting
+            self.tableView.reloadData()
+        }
+    }
+    
+    private func createContents(){
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        guard let setting = stepsSetting else {
+            return
+        }
+        
+        //保存设置
+        DataManager.share().addTargetStep(withStepsSetting: setting) { (codeResult, message) in
+            NotificationCenter.default.post(name: updateStepSetting, object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        }
+    }
+}
+
+extension StepSettingVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        if stepsSetting == nil {
+            return 0
+        }
+        return 2        //忽略微信推送
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0{
+            return 1
+        }else if section == 1{
+            return 3
+        }else{
+            return 2
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell: UITableViewCell?
+        let identifier: String
+        if section == 0 {
+            identifier = "cell0"
+        }else if section == 1{
+            if row == 0{
+                identifier = "cell1"
+            }else{
+                identifier = "cell0"
+            }
+        }else{
+            identifier = "cell2"
+        }
+        
+        let setting = stepsSetting!
+        
+        
+        cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+        
+        if section == 0{
+            let cell0 = cell as! StepSettingCell0
+            cell0.keyLabel.text = "目标步数"
+            cell0.valueLabel.text = "\(setting.targetStep)"
+        }else if section == 1{
+            if row == 0{
+                let cell1 = cell as! StepSettingCell1
+                cell1.keyLabel.text = "提醒"
+                cell1.customSwitch.setOn(!setting.isPause, animated: true)
+                cell1.closure = {
+                    isOn in
+                    self.stepsSetting?.isPause = !isOn
+                    cell1.customSwitch.setOn(isOn, animated: true)
+                }
+            }else if row == 1{
+                let cell0 = cell as! StepSettingCell0
+                cell0.keyLabel.text = "提醒时间"
+                cell0.valueLabel.text = setting.beginTime.formatString(with: "H:mm")
+            }else{
+                let cell0 = cell as! StepSettingCell0
+                cell0.keyLabel.text = "提示音"
+                cell0.valueLabel.text = showSoundText(withEventSound: setting.ring)
+            }
+        }else if section == 2{
+            let cell2 = cell as! StepSettingCell2
+            if row == 0{
+                cell2.keyLabel.text = "同时提醒到微信"
+                cell2.closure = {
+                    isOn in
+                    self.stepsSetting?.isWeixinOpen = isOn
+                    cell2.customSwitch.setOn(isOn, animated: true)
+                }
+            }else{
+                cell2.keyLabel.text = "同时提醒到邮箱"
+                cell2.closure = {
+                    isOn in
+                    self.stepsSetting?.isEmailOpen = isOn
+                    cell2.customSwitch.setOn(isOn, animated: true)
+                }
+            }
+        }
+        return cell!
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if row != 0{
+            cell.addTopSeparator()
+        }
+        
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0{
+            isTopFlag = true
+        }
+        if row == tableView.numberOfRows(inSection: section) - 1{
+            isBottomFlag = true
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        
+        if section == 0{        //设置目标步数
+            edit(withSelectorType: .targetStep, withDefultValue: stepsSetting?.targetStep)
+        }else if section == 1{  //
+            if row == 0{        //提醒
+                //在回调中处理完了
+            }else if row == 1{  //提醒时间
+                edit(withSelectorType: .time(withHasZero: true), withDefultValue: stepsSetting?.beginTime ?? Date())
+            }else{              //提示音
+                editSound()
+            }
+        }else{
+            if row == 0{        //提醒到微信
+                
+            }else{              //提醒到邮箱
+                
+            }
+        }
+    }
+    
+    //MARK:- 跳转到提示音选择
+    private func editSound(){
+        if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+            soundVC.sound = stepsSetting?.ring
+            soundVC.selectClosure = {
+                selectedSoundIndex in
+                if selectedSoundIndex == 0{
+                    self.stepsSetting?.ring = "boy"
+                }else if selectedSoundIndex == 1{
+                    self.stepsSetting?.ring = "girl"
+                }else{
+                    self.stepsSetting?.ring = soundList[selectedSoundIndex]
+                }
+            }
+            navigationController?.show(soundVC, sender: nil)
+        }
+    }
+    
+    //MARK:- 显示提示音
+    private func showSoundText(withEventSound eventSound: String) -> String{
+        var soundText: String
+        if eventSound == "boy"{
+            soundText = "男声"
+        }else if eventSound == "girl"{
+            soundText = "女声"
+        }else{
+            soundText = eventSound
+        }
+        return soundText
+    }
+}
+

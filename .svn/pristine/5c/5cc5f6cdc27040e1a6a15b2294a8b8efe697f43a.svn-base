@@ -1,0 +1,180 @@
+//
+//  AloneStockSettingCell.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/22.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol  AloneStockSettingCellDelegate : class {
+    func switchValueChange(_ ison:Bool)
+}
+class AloneStockSettingCell: UITableViewCell {
+    weak var delegate : AloneStockSettingCellDelegate?
+    fileprivate lazy var title : UILabel = {
+       let label = UILabel.init()
+       label.font = UIFont.init(withNormalFontSize: 14)
+       label.textColor = UIColor.word
+       return label
+    }()
+    fileprivate lazy var content : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.subWord
+        return label
+    }()
+    fileprivate lazy var separated : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var swith : CustomSwitch = {
+        let tempSwith = CustomSwitch.init()
+        tempSwith.tintColor = UIColor.confirm
+        tempSwith.shadowColor = UIColor.clear
+        tempSwith.inactiveColor = UIColor.subSubWord
+        tempSwith.addTarget(self, action: #selector(AloneStockSettingCell.switchValueChange), for: .valueChanged)
+        return tempSwith
+    }()
+    fileprivate lazy var backView : UIView = {
+        let tempView = UIView.init()
+        tempView.backgroundColor = UIColor.white
+        return tempView
+    }()
+    var tempTitle = [String]()
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.selectionStyle = .none
+        self.backgroundColor = UIColor.bgColor
+        backView.frame = CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 48)
+        self.addSubview(backView)
+        backView.addSubview(title)
+        backView.addSubview(content)
+        backView.addSubview(swith)
+        backView.addSubview(separated)
+        title.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.top.bottom.equalTo(0)
+        }
+        content.snp.makeConstraints { (make) in
+            make.right.equalTo(-15)
+            make.top.bottom.equalTo(0)
+            make.width.lessThanOrEqualTo(keyDeviceWidth-20-80)
+        }
+        swith.snp.makeConstraints { (make) in
+            make.width.equalTo(32)
+            make.height.equalTo(20)
+            make.right.equalTo(-15)
+            make.centerY.equalToSuperview()
+        }
+        separated.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.right.bottom.equalTo(0)
+            make.height.equalTo(kLineHeight)
+        }
+    }
+    func configView(_ Frist:Bool,_ Last:Bool,_ indexPath:IndexPath,_ select:Int,_ eventSound:String,_ eventDate:Date,_ eventBeginningModel:BeginningModel,_ status:Bool,_ changeRate:String){
+        if Frist {
+            backView.drawTopRectView()
+        }
+        if Last{
+            backView.drawRectView()
+            separated.isHidden = true
+        }else{
+            separated.isHidden = false
+        }
+        if Frist && Last{
+            backView.drawFourRectView()
+        }
+        if indexPath.row == 0{
+            swith.isHidden = false
+        }else{
+            swith.isHidden = true
+        }
+        swith.on = status
+        var tempTitleArr = [String]()
+        if select == 0{
+            tempTitleArr = ["开盘提醒","预提醒","提示音"]
+        }else if select == 1{
+            tempTitleArr = ["收盘提醒","预提醒","提示音"]
+        }else{
+            tempTitleArr = ["涨跌提醒","涨跌幅度","提示音"]
+        }
+        title.text = tempTitleArr[indexPath.row]
+       
+        
+        switch indexPath.row{
+        case 0:
+            content.text = ""
+            break
+        case 1:
+            if select == 2{
+                content.text = changeRate + "%"
+            }else{
+                
+                var value = eventBeginningModel.list.isEmpty ? "无预提醒" : ""
+                let sortedEventBeginningList = eventBeginningModel.list.sorted(by: { (arg0, arg1) -> Bool in
+                    
+                    let (cycle0, value0) = arg0
+                    let (cycle1, value1) = arg1
+                    if cycle0.rawValue < cycle1.rawValue{
+                        return true
+                    }else if cycle0.rawValue > cycle1.rawValue{
+                        return false
+                    }else{
+                        if value0 < value1{
+                            return true
+                        }
+                    }
+                    return false
+                })
+                for (index, tuple) in sortedEventBeginningList.enumerated(){
+                    if index != 0{
+                        value += ","
+                    }
+                    value += "\(tuple.1)"
+                    
+                    let prefixValue: String
+                    switch tuple.0{
+                    case .minute:
+                        prefixValue = "分钟"
+                    case .hour:
+                        prefixValue = "小时"
+                    case .day:
+                        prefixValue = "天"
+                    case .week:
+                        prefixValue = "周"
+                    case .month:
+                        prefixValue = "月"
+                    case .year:
+                        prefixValue = "年"
+                    default:
+                        prefixValue = ""
+                    }
+                    value += prefixValue
+                }
+                
+                content.text = value
+            }
+            
+        case 2:
+            content.text = eventSound
+        default:
+            break
+            
+        }
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    @objc func switchValueChange(){
+        delegate?.switchValueChange(swith.on)
+    }
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+
+}

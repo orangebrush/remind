@@ -1,0 +1,20 @@
+//
+//  SettingCell.swift
+//  Remind
+//
+//  Created by gg on 21/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class SettingCell: UITableViewCell {
+    
+    @IBOutlet weak var label: UILabel!
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        label.font = .normal
+        label.textColor = .word
+    }
+}

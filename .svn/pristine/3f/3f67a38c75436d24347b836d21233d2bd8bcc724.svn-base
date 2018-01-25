@@ -1,0 +1,155 @@
+//
+//  StockViewController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/17.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class StockViewController: BasedViewController , UITableViewDelegate,UITableViewDataSource{
+    var stockSetting : StockSetting?
+    fileprivate lazy var mainTableView : UITableView = {
+       let table = UITableView.init(frame: CGRect.zero, style: .plain)
+        table.delegate = self
+        table.dataSource = self
+        table.separatorStyle = .none
+        table.backgroundColor = UIColor.bgColor
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.title = "股票行情设置"
+        self.automaticallyAdjustsScrollViewInsets = false
+        mainTableView.frame = CGRect.init(x: 0, y: (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth, height: (keyDeviceHeight - (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height))
+        mainTableView.register(commonSettingTableViewCell.self, forCellReuseIdentifier: "commonSettingTableViewCell")
+        self.view.addSubview(mainTableView)
+        self.getMainSetting()
+    }
+    func getMainSetting(){
+        DataManager.share().getStockSetting { (result, message, stock) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.stockSetting = stock
+            self.mainTableView.reloadData()
+        }
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        backButtonTitle = "首页"
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0 {
+            return 1
+        }else{
+            return 3
+        }
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "commonSettingTableViewCell")as!commonSettingTableViewCell
+        if stockSetting != nil{
+            
+            var tempTitle = ["首页显示个数","开盘提醒","收盘提醒","涨跌提醒"]
+            var title = ""
+            if self.stockSetting?.remarkList != nil{
+                for remak in (self.stockSetting?.remarkList)!{
+                    if remak.isSelected{
+                        title = remak.name
+                    }
+                }
+            }
+            var tempContent = [title+"个","","",""]
+            cell.configView(tempTitle[indexPath.row+indexPath.section], tempContent[indexPath.row+indexPath.section], tableView.numberOfRows(inSection: indexPath.section) == indexPath.row+1, indexPath.row == 0)
+        }
+        return cell
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let tempView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 10))
+        tempView.backgroundColor = UIColor.clear
+        return tempView
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 0{
+            var arr = [String]()
+            var selectIndex = 0
+            for i in 0 ..< (self.stockSetting?.remarkList.count ?? 0){
+                arr.append(self.stockSetting?.remarkList[i].name ?? "")
+                if self.stockSetting?.remarkList[i].isSelected == true{
+                    selectIndex = i
+                }
+                
+            }
+            let view = PlayCountPickView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+            view.delegate = self
+            view.congfigView(arr, selectIndex)
+            view.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+            UIApplication.shared.keyWindow?.addSubview(view)
+            
+        }
+        
+        if indexPath.section == 1{
+            let vc = StockSettingViewController()
+            vc.selectIndex = indexPath.row
+            self.navigationController?.show(vc, sender: nil)
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return UIView()
+    }
+}
+extension StockViewController : closeBtnClick{
+    func closeBtnClick(_ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+    }
+    
+    func cellClick(_ indexPath: IndexPath, _ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+        guard var remarkList = self.stockSetting?.remarkList else {
+            return
+        }
+        for (index,var item) in remarkList.enumerated(){
+            item.isSelected = false
+            if item.id == remarkList[indexPath.row].id{
+                item.isSelected = true
+                self.stockSetting?.selectedId = item.id
+                remarkList[index] = item
+            }
+        }
+        self.stockSetting?.remarkList = remarkList
+        DataManager.share().saveStockSetting(withStockSetting: self.stockSetting!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+              }
+            self.mainTableView.reloadData()
+        }
+        
+    }
+}

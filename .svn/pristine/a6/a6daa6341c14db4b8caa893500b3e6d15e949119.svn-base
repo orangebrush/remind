@@ -1,0 +1,255 @@
+//
+//  ShareViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/13.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class ShareViewController: UIViewController {
+
+    static let shareInstance = ShareViewController()
+    
+    var nameArr = ["微信好友", "朋友圈","新浪微博","QQ好友", "QQ空间"]
+    var pictureArr = ["share_icon_wechat", "share_icon_circle", "share_icon_weibo", "share_icon_qq", "share_icon_qqspace"]
+    
+    var contentView: UIView = UIView()
+    
+    var textLabel: UILabel = UILabel()
+    
+    var bgView: UIView = UIView()
+    
+    
+    var text: String?
+    var tDescription: String?
+    var url: String = ""
+    var previewImageUrl: String?
+    var previewImageData: Data?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        self.view.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        
+        let tapGesture = UITapGestureRecognizer.init(target: self, action: #selector(closeClick))
+        self.view.addGestureRecognizer(tapGesture)
+        
+        contentView.frame = CGRect.init(x: 10, y: keyDeviceHeight - 200, width: keyDeviceWidth - 20, height: 190)
+        contentView.layer.cornerRadius = 6
+        contentView.clipsToBounds = true
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        self.view.addSubview(contentView)
+        
+        textLabel.frame = CGRect.init(x: 15, y: 0, width: contentView.width, height: 36)
+        textLabel.textColor = UIColor.subWord
+        textLabel.font = UIFont.content
+        textLabel.textAlignment = .left
+        textLabel.text = "推荐米橙生活给好友"
+        contentView.addSubview(textLabel)
+        
+        
+        
+        
+        bgView.frame = CGRect.init(x: 0, y: 36, width: contentView.width, height: 154)
+        bgView.backgroundColor = UIColor.white
+        bgView.layer.cornerRadius = 6
+        bgView.clipsToBounds = true
+        contentView.addSubview(bgView)
+        
+        let leftX: CGFloat = 10
+        let imageWidth: CGFloat = 34
+        let btnHeight: CGFloat = 70
+        let paddingY_image_title: CGFloat = 9
+        let btnWidth = (bgView.width-leftX*2)/CGFloat(nameArr.count)
+        
+        for i in 0..<nameArr.count {
+            let btn = UIButton(type: .custom)
+            btn.frame = CGRect(x: leftX+CGFloat(i)*btnWidth, y: 20, width: btnWidth, height: btnHeight)
+            btn.setImage(UIImage(named: pictureArr[i]), for: .normal)
+            btn.setTitle(nameArr[i], for: .normal)
+            btn.titleLabel?.font = UIFont.content
+            btn.setTitleColor(UIColor.subSubWord, for: .normal)
+            btn.tag = 100 + i
+            btn.contentHorizontalAlignment = .left
+            btn.contentVerticalAlignment = .top
+            btn.imageEdgeInsets = UIEdgeInsetsMake(10, (btnWidth-imageWidth)/2, 0, 0)
+            let titleWidth = (nameArr[i] as NSString).getWidthWithFont(UIFont.content, constrainedToSize: CGSize.init(width: btnWidth, height: 28))-1
+            btn.titleEdgeInsets = UIEdgeInsetsMake(imageWidth+paddingY_image_title+10, (btnWidth-titleWidth)/2-imageWidth, 0, 0)
+            btn.addTarget(self, action: #selector(btnClick(_:)), for: .touchUpInside)
+            bgView.addSubview(btn)
+        }
+        
+        
+        let closeButton = UIButton()
+        closeButton.setImage(UIImage.init(named: "pro_connect_close-1"), for: .normal)
+        closeButton.frame = CGRect.init(x: (contentView.width - 20) / 2, y: bgView.bottom - 40, width: 20, height: 20)
+        closeButton.addTarget(self, action: #selector(closeClick), for: .touchUpInside)
+        contentView.addSubview(closeButton)
+        
+
+        // Do any additional setup after loading the view.
+    }
+    
+    @objc func btnClick(_ sender: UIButton) {
+        
+        switch sender.tag-100 {
+        case 0:
+            self.self.wxShare(WXSceneSession)
+        case 1:
+            self.wxShare(WXSceneTimeline)
+        case 2:
+            self.weiboShare()
+            
+        case 3:
+            self.qqShare(false)
+        case 4:
+            self.qqShare(true)
+        default: break
+        }
+        self.closeClick()
+    }
+    func qqShare(_ isQZone: Bool) {
+        
+        if !QQApiInterface.isQQInstalled() {
+            notif(withTitle: "你的手机尚未安装QQ")
+            return
+        }
+        
+        var newsObj: Any!
+        if let imgData = ShareViewController.shareInstance.previewImageData {
+            newsObj = QQApiNewsObject.object(with: URL(string: url), title: text, description: tDescription, previewImageData: imgData)
+        }else {
+            newsObj = QQApiNewsObject.object(with: URL(string: url), title: text, description: tDescription, previewImageURL: URL(string: previewImageUrl ?? ""))
+        }
+        if !isQZone {//分享url给好友
+            let req = SendMessageToQQReq(content: newsObj as! QQApiObject)
+            _ = QQApiInterface.send(req)
+        }else {//分享url到QQ空间
+            let req = SendMessageToQQReq(content: newsObj as! QQApiObject)
+            _ = QQApiInterface.sendReq(toQZone: req)
+        }
+        
+    }
+    
+    func wxShare(_ scene: WXScene) {
+        
+        if !WXApi.isWXAppInstalled() {
+            notif(withTitle: "你的手机尚未安装微信")
+            return
+        }
+        
+        let mediaMessage = WXMediaMessage()
+        mediaMessage.title = text
+        mediaMessage.description = tDescription
+        
+        
+        let object = WXWebpageObject()
+        object.webpageUrl = url
+        
+        mediaMessage.mediaObject = object
+        
+        let req = SendMessageToWXReq()
+        req.message = mediaMessage
+        req.bText = false
+        
+        req.scene = Int32(scene.rawValue)
+        
+        if let imgData = ShareViewController.shareInstance.previewImageData {
+            mediaMessage.thumbData = imgData
+        }
+        
+        let isSucceed = WXApi.send(req)
+        if isSucceed {
+            print("Succeed")
+        }else {
+            notif(withTitle: "你的微信客户端分享,发生未知错误\n检查一下,再分享")
+        }
+    }
+    
+    func weiboShare() {
+        if !WeiboSDK.isWeiboAppInstalled(){
+            notif(withTitle: "你的手机尚未安装微博")
+            return
+        }
+        let messageObj = WBMessageObject.message() as! WBMessageObject
+        let object = WBWebpageObject.object() as! WBWebpageObject
+        object.title = text ?? ""
+        object.objectID = url
+        object.description = tDescription
+        
+        if let imgData = ShareViewController.shareInstance.previewImageData {
+            object.thumbnailData = imgData
+        }
+        
+        object.webpageUrl = url
+        messageObj.mediaObject = object
+        
+        let req = WBSendMessageToWeiboRequest.request(withMessage: messageObj) as! WBBaseRequest
+        WeiboSDK.send(req)
+    }
+    @objc func closeClick() {
+        UIView.animate(withDuration: 0.3, animations: {
+            ShareViewController.shareInstance.view.alpha = 0
+            ShareViewController.shareInstance.contentView.frame.origin = CGPoint(x: ShareViewController.shareInstance.contentView.x, y: view_size.height)
+        }) { (com) in
+            self.willMove(toParentViewController: nil)
+            self.view.removeFromSuperview()
+            self.removeFromParentViewController()
+        }
+    }
+    
+    class func showShareView(_ vc: UIViewController, title: String?, tDescription: String?, url: String, previewImageUrl: String? = nil, previewImageData: Data? = nil) {
+        
+        ShareViewController.shareInstance.text = title
+        ShareViewController.shareInstance.tDescription = tDescription
+        ShareViewController.shareInstance.url = url
+        ShareViewController.shareInstance.previewImageUrl = previewImageUrl
+        ShareViewController.shareInstance.previewImageData = previewImageData
+        
+        
+        if let tabbarVC = vc.tabBarController{
+            tabbarVC.addChildViewController(ShareViewController.shareInstance)
+            tabbarVC.view.addSubview(ShareViewController.shareInstance.view)
+        }else{
+            vc.navigationController?.addChildViewController(ShareViewController.shareInstance)
+            vc.navigationController?.view.addSubview(ShareViewController.shareInstance.view)
+        }
+        
+        let xHeight: CGFloat = isIphoneX ? 34 : 0
+        let oldFrameOrigin = CGPoint(x: 10, y: keyDeviceHeight - 200 - xHeight)
+        
+        ShareViewController.shareInstance.view.alpha = 0
+        ShareViewController.shareInstance.contentView.frame.origin = CGPoint(x: oldFrameOrigin.x, y: view_size.height)
+        UIView.animate(withDuration: 0.3, animations: {
+            ShareViewController.shareInstance.view.alpha = 1
+            ShareViewController.shareInstance.contentView.frame.origin = oldFrameOrigin
+        })
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}
+
+class QQRespObject: NSObject, QQApiInterfaceDelegate {
+    static let shareInstance = QQRespObject()
+    func onReq(_ req: QQBaseReq!) {
+        
+    }
+    
+    func isOnlineResponse(_ response: [AnyHashable : Any]!) {
+        
+    }
+    
+    func onResp(_ resp: QQBaseResp!) {
+        if resp.result == "0" {
+            UIApplication.shared.delegate?.window??.rootViewController?.notif(withTitle: "分享成功")
+            
+        }else {
+            UIApplication.shared.delegate?.window??.rootViewController?.notif(withTitle: "分享取消")
+        }
+    }
+}

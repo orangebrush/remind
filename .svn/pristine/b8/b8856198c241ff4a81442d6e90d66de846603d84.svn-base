@@ -1,0 +1,139 @@
+//
+//  festivalViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/22.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class festivalViewController: BasedViewController {
+    var festivalType : FestivalType?
+    var dataArr = [FestivalModel]()
+    fileprivate lazy var mianTableView : UITableView = {
+       let tabelView = UITableView.init(frame: .zero, style: .plain)
+        tabelView.separatorColor = UIColor.separator
+        tabelView.delegate = self
+        tabelView.dataSource = self
+        tabelView.backgroundColor = UIColor.clear
+        return tabelView
+    }()
+    fileprivate lazy var cancelBtn : UIBarButtonItem = {
+        let btn = UIBarButtonItem.init(title: "取消", style: .plain, target: self, action: #selector(festivalViewController.cancelClick))
+        btn.setTitleTextAttributes([NSAttributedStringKey.font:UIFont.normal,NSAttributedStringKey.foregroundColor:UIColor.subSubWord], for: .normal)
+        return btn
+    }()
+    fileprivate lazy var rightBtn : UIBarButtonItem = {
+        let btn = UIBarButtonItem.init(title: "确定", style: .plain, target: self, action: #selector(festivalViewController.confrimBtnClick))
+        btn.setTitleTextAttributes([NSAttributedStringKey.font:UIFont.normal,NSAttributedStringKey.foregroundColor:UIColor.confirm], for: .normal)
+        return btn
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        mianTableView.frame = CGRect.init(x: 10, y: (navigation_height ?? 64)!+UIApplication.shared.statusBarFrame.size.height+15, width: keyDeviceWidth-20, height: keyDeviceHeight-(navigation_height ?? 64)-UIApplication.shared.statusBarFrame.size.height-15)
+        mianTableView.register(festivalDetailTableViewCell.self, forCellReuseIdentifier: "festivalDetailTableViewCell")
+        self.view.addSubview(mianTableView)
+        self.automaticallyAdjustsScrollViewInsets = false
+        mianTableView.clipsToBounds = true
+        self.updateBackground()
+        self.getMainData()
+        self.navigationItem.leftBarButtonItem = cancelBtn
+        self.navigationItem.rightBarButtonItem = rightBtn
+        
+     }
+    //MARK:- 取消按钮点击
+  @objc func cancelClick(){
+        self.navigationController?.popViewController(animated: true)
+    }
+    //MARK:- 确定按钮点击
+  @objc  func confrimBtnClick(){
+    var intArr = [Int]()
+    for item in self.dataArr{
+        if item.selected{
+            intArr.append(item.id)
+        }
+     }
+    DataManager.share().setSelectedFestival(withFestivalType: self.festivalType!.rawValue, withFestivalIdList: intArr) { (result, message) in
+        if result == .failure{
+            self.notif(withTitle: message)
+            return
+        }
+         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "festivalValueChange"), object: nil, userInfo: nil)
+        self.navigationController?.popViewController(animated: true)
+     }
+    }
+    //MARK:- 获取所有的数据
+    func getMainData(){
+        DataManager.share().getFestivalList(byFestivalType: self.festivalType!.rawValue) { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.dataArr = list
+            self.mianTableView.reloadData()
+        }
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}
+extension festivalViewController : UITableViewDelegate,UITableViewDataSource{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.dataArr.count+1
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+       let cell = tableView.dequeueReusableCell(withIdentifier: "festivalDetailTableViewCell")as!festivalDetailTableViewCell
+        
+        if indexPath.row == 0{
+            var selectAll = true
+            for model in dataArr{
+                if model.selected == false{
+                    selectAll = false
+                }
+            }
+             cell.configView(nil, indexPath, false, selectAll)
+        }else{
+             cell.configView(dataArr[indexPath.row-1], indexPath, false, nil)
+        }
+       
+        
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 50
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.row == 0{
+            var selectAll = true
+            for model in dataArr{
+                if model.selected == false{
+                    selectAll = false
+                }
+            }
+            
+            for i in 0..<self.dataArr.count{
+                var item = self.dataArr[i]
+                if selectAll == true{
+                    item.selected = false
+                }else{
+                    item.selected = true
+                }
+                self.dataArr[i] = item
+               
+            }
+            self.mianTableView.reloadData()
+        }else{
+            var item = self.dataArr[indexPath.row-1]
+            item.selected = !item.selected
+            self.dataArr[indexPath.row-1] = item
+            self.mianTableView.reloadData()
+        }
+       
+    }
+    
+}

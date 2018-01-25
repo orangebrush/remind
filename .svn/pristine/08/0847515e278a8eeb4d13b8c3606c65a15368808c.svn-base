@@ -1,0 +1,140 @@
+//
+//  weathCardSettingViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class weathCardSettingViewController: BasedViewController {
+    //临时存储
+    var isLocked = false
+    var selector: GANSelector?
+    var eventDate = Date()
+    var eventSound = "boy"
+    var weatherSetting : WeatherSetting?
+    lazy var tableView : UITableView = {
+        let table = UITableView.init(frame: .zero, style: .grouped)
+        table.delegate = self
+        table.dataSource = self
+        table.backgroundColor = UIColor.clear
+        table.separatorStyle = .none
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        let navHeight = (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height
+        tableView.frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight)
+        tableView.register(weatherSettingTableViewCell.self, forCellReuseIdentifier: "weatherSettingTableViewCell")
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.view.addSubview(tableView)
+        self.title = "卡片设置"
+        self.updateBackground()
+        self.getMianData()
+        
+        
+    }
+   
+   override func backToPrevious(){
+        self.navigationController?.popViewController(animated: true)
+        guard self.weatherSetting != nil else {
+            return
+        }
+        self.weatherSetting?.date = self.eventDate
+        self.weatherSetting?.ring = self.eventSound
+        DataManager.share().setWeatherSetting(withWeatherSetting: weatherSetting!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            
+        }
+    }
+    
+    //MARK:-获取页面内的数据
+    func getMianData(){
+        DataManager.share().getWeatherSetting { (result, message, weathSetting) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.weatherSetting = weathSetting
+            self.eventDate = self.weatherSetting?.date ?? Date()
+            self.eventSound = self.weatherSetting?.ring ?? "boy"
+            self.tableView.reloadData()
+        }
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+}
+extension weathCardSettingViewController : UITableViewDelegate,UITableViewDataSource,weatherSettingTableViewCellDelegate{
+    func switchValueChange(_ ison: Bool) {
+        if self.weatherSetting == nil{
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.switchValueChange_weather), object: nil, userInfo: ["code":0])
+            return
+        }
+        var setting = self.weatherSetting!
+        setting.isPause = ison
+        DataManager.share().setWeatherSetting(withWeatherSetting: setting) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                self.tableView.reloadRows(at: [IndexPath.init(row: 0, section: 1)], with: .none)
+                return
+            }
+            self.weatherSetting?.isPause = ison
+            self.tableView.reloadRows(at: [IndexPath.init(row: 0, section: 1)], with: .none)
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return section == 0 ? 1 : 3
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 50
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "weatherSettingTableViewCell")as!weatherSettingTableViewCell
+        
+        cell.configView(indexPath, tableView.numberOfRows(inSection: indexPath.section)-1==indexPath.row, self.weatherSetting, eventDate, eventSound)
+        cell.delegate = self
+        return cell
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 0{
+            let vc = cityManngerTableViewController()
+            self.navigationController?.pushViewController(vc, animated: true)
+        }else{
+            if indexPath.row == 1{
+                edit(withSelectorType: .time, withDefultValue: eventDate)
+            }else if indexPath.row == 2{
+                //edit(withSelectorType: .sound, withDefultValue: eventSound)
+                if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+                    soundVC.isPublicEvent = true
+                    soundVC.selectClosure = {
+                        selectedSoundIndex in
+                        if selectedSoundIndex == 0{
+                            self.eventSound = "boy"
+                        }else if selectedSoundIndex == 1{
+                            self.eventSound = "girl"
+                        }else{
+                            self.eventSound = soundList[selectedSoundIndex]
+                        }
+                    }
+                    navigationController?.show(soundVC, sender: nil)
+                }
+            }
+        }
+        
+        
+    }
+    
+}

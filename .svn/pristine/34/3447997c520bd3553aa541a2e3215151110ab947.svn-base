@@ -1,0 +1,237 @@
+//
+//  ContactWXViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/12.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class ContactWXViewController: BasedViewController, UITextFieldDelegate {
+    
+    var scrollView : UIScrollView = UIScrollView()
+    
+    var bgView : UIView = UIView()
+    
+    let statusBarHight = UIApplication.shared.statusBarFrame.height
+    
+    
+    var notContactView : UIView = UIView()
+    
+    var contactedView : UIView = UIView()
+    
+    var textField: UITextField = UITextField()
+    
+    var bindButton = UIButton()
+    
+    var keyboardHeight: CGFloat = 0
+    
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        backButtonTitle = "我"
+        automaticallyAdjustsScrollViewInsets = false
+        self.view.backgroundColor = UIColor.separator
+        
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        let navigationBarHeight = (navigationController?.navigationBar.height)!
+        view.addSubview(scrollView)
+        
+        scrollView.snp.makeConstraints { (make) in
+            make.left.right.bottom.top.equalToSuperview()
+        }
+        let contentView: UIView = UIView()
+        scrollView.addSubview(contentView)
+        contentView.snp.makeConstraints({ (make) in
+            make.top.left.bottom.right.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().offset(0.5)
+        })
+        
+        scrollView.addSubview(bgView)
+        bgView.backgroundColor = UIColor.white
+        bgView.layer.cornerRadius = 6
+        bgView.clipsToBounds = true
+        bgView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(navigationBarHeight + statusBarHight + 12)
+            make.bottom.equalToSuperview().offset(-20  - (isIphoneX ? 34 : 0))
+            make.right.equalToSuperview().offset(-10)
+        }
+        
+        bgView.addSubview(notContactView)
+        notContactView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        setupdateNotContactView()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notif:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        
+    }
+    func setupdateNotContactView() {
+        let topLabel = UILabel()
+        topLabel.textColor = UIColor.word
+        topLabel.font = UIFont.normal
+        topLabel.numberOfLines = 0
+        notContactView.addSubview(topLabel)
+        topLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        topLabel.text = "关联微信后，你可以选择将“重要事件”的提醒同时发送到微信中。"
+        
+        
+        let lineView = UIView()
+        lineView.backgroundColor = UIColor.separator
+        notContactView.addSubview(lineView)
+        lineView.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.top.equalTo(topLabel.snp.bottom).offset(26)
+            make.height.equalTo(kLineHeight)
+        }
+        
+        
+        let middleLabel = UILabel()
+        middleLabel.textColor = UIColor.word
+        middleLabel.font = UIFont.normal
+        middleLabel.numberOfLines = 0
+        notContactView.addSubview(middleLabel)
+        middleLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(lineView.snp.bottom).offset(21)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        middleLabel.text = "1、在微信中搜索并关注“米橙提醒”公众号；"
+        
+        
+        let imageView = UIImageView()
+        imageView.image = UIImage.init(named: "pro_connect_shot1")
+        notContactView.addSubview(imageView)
+        imageView.layer.cornerRadius = 4
+        imageView.clipsToBounds = true
+        imageView.snp.makeConstraints { (make) in
+            make.top.equalTo(middleLabel.snp.bottom).offset(9)
+            make.height.equalTo(94)
+            make.width.equalTo(275)
+            make.centerX.equalToSuperview()
+        }
+        
+        
+        let bottomLabel = UILabel()
+        bottomLabel.textColor = UIColor.word
+        bottomLabel.font = UIFont.normal
+        bottomLabel.numberOfLines = 0
+        notContactView.addSubview(bottomLabel)
+        bottomLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(imageView.snp.bottom).offset(20)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        bottomLabel.text = "2、在公众号内点“获取验证码”，再返回此界面输入验证码以完成关联。"
+        
+        
+        textField.textColor = UIColor.word
+        textField.placeholder = "请输入验证码"
+        textField.font = UIFont.normal
+        notContactView.addSubview(textField)
+        textField.keyboardType = .numberPad
+        textField.delegate = self
+        textField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        textField.snp.makeConstraints { (make) in
+            make.top.equalTo(bottomLabel.snp.bottom).offset(12)
+            make.width.equalTo(250)
+            make.height.equalTo(48)
+            make.centerX.equalToSuperview()
+        }
+        
+        let bottomlineView = UIView()
+        notContactView.addSubview(bottomlineView)
+        bottomlineView.backgroundColor = UIColor.highlightedColor
+        bottomlineView.snp.makeConstraints { (make) in
+            make.width.equalTo(250)
+            make.centerX.equalToSuperview()
+            make.height.equalTo(1)
+            make.bottom.equalTo(textField)
+        }
+        
+        
+        notContactView.addSubview(bindButton)
+        bindButton.setTitleColor(UIColor.white, for: .normal)
+        bindButton.backgroundColor = UIColor.orange
+        bindButton.layer.cornerRadius = 6
+        bindButton.clipsToBounds = true
+        bindButton.titleLabel?.font = UIFont.navTitle
+        bindButton.setTitle("立即关联", for: .normal)
+        bindButton.addTarget(self, action: #selector(bindButtonClick), for: .touchUpInside)
+        bindButton.snp.makeConstraints { (make) in
+            make.top.equalTo(bottomlineView.snp.bottom).offset(40)
+            make.height.equalTo(44)
+            make.width.equalTo(250)
+            make.centerX.equalToSuperview()
+        }
+        let titleColor = UIColor.white.withAlphaComponent(0.4)
+        bindButton.setTitleColor(titleColor, for: .disabled)
+        bindButton.isEnabled = false
+        
+        
+    }
+    @objc func bindButtonClick() {
+        
+    }
+    
+    @objc func editingChanged(textField: UITextField) {
+        if textField.text?.count == 6 {
+            let titleColor = UIColor.white
+            bindButton.setTitleColor(titleColor, for: .normal)
+            bindButton.isEnabled = true
+        }else {
+            let titleColor = UIColor.white.withAlphaComponent(0.4)
+            bindButton.setTitleColor(titleColor, for: .disabled)
+            bindButton.isEnabled = false
+        }
+        
+    }
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        scrollView.contentOffset.y = scrollView.contentSize.height - scrollView.bounds.size.height
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        
+        if string == "\n" || string == " "{
+            return false
+        }
+        
+        
+        var existedLength = 0
+        if let text = textField.text{
+            existedLength = Int(text.count)         //textView.text?.lengthOfBytes(using: .utf8)
+        }
+        let selectedLength = range.length           //range.length
+        let replaceLength = Int(string.count)       //text.lengthOfBytes(using: .utf8)
+        
+        if existedLength - selectedLength + replaceLength > 6 {
+            return false
+        }
+        
+        return true
+    }
+    
+    
+    //键盘弹出
+    @objc func keyboardWillShow(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let keyboardBounds = (userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+        let duration = (userInfo![UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue
+        
+        keyboardHeight = keyboardBounds.size.height
+    }
+}

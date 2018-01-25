@@ -1,0 +1,108 @@
+//
+//  StepLogVC.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepLogVC: BasedViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    fileprivate var page = 0
+    fileprivate let pageSize = 50
+    
+    fileprivate var isLocked = false
+    fileprivate var stepModelList = [StepModel]()
+    
+    //MARK:- init-------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+        navigationItem.title = "历史记录"
+        
+        view.backgroundColor = .separator
+    }
+    
+    private func createContents(){
+        updateData()
+    }
+    
+    //MARK:- 更新数据
+    func updateData(){
+        guard !isLocked else{
+            self.notif(withTitle: "请稍后刷新")
+            return
+        }
+        isLocked = true
+        DataManager.share().getStepLogList(withPage: page, withPageSize: pageSize) { (codeResult, message, stepModelList) in
+            self.isLocked = false
+            guard codeResult == .success else{
+                return
+            }
+            
+            self.page += 1
+            self.stepModelList += stepModelList
+            
+            self.tableView.reloadData()
+        }
+    }
+}
+
+
+extension StepLogVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return stepModelList.count
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 16
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = indexPath.row
+        let stepModel = stepModelList[row]
+        
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! StepCell2
+        cell.keyLabel.text = stepModel.date.formatString(with: "M月d日")
+        cell.valueLabel.text = "\(stepModel.step)"
+        
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0 {
+            isTopFlag = true
+        }else if row == stepModelList.count - 1{
+            isBottomFlag = true
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+        return cell
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let offsetY = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+
+        //判断是否有足够内容
+        guard contentHeight > view_size.height else {
+            return
+        }
+        
+        //稍微设大点 上滑刷新
+        if offsetY + contentHeight < 40 {
+            updateData()
+        }
+    }
+}

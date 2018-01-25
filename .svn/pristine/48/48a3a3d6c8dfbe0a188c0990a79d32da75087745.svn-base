@@ -1,0 +1,117 @@
+//
+//  Me_RootViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/11.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+class MineItem {
+    var iconName :String
+    var name :String
+    var info :String
+    var vc :String
+    var radiusType: cornerRadiusType
+    var isShowsSeparatorLine: Bool
+    
+    init(name:String , info :String, icon :String, vc: String, radiusType: cornerRadiusType = .none, isShowsSeparatorLine: Bool = true) {
+        self.name = name
+        self.info = info
+        self.iconName = icon
+        self.vc = vc
+        self.radiusType = radiusType
+        self.isShowsSeparatorLine = isShowsSeparatorLine
+    }
+}
+class Me_RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    var tableView = UITableView()
+    var dataSource  = [[MineItem]]()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.setNavigationBarStyle()
+        self.navigationItem.title = "我"
+        let item = BarButtonItem(imageName: "navbar_icon_set", tSelector: #selector(Me_RootViewController.settingClick))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+        
+        let bindWXItem    = MineItem.init(name: "关联微信", info: "", icon: "melist_related_wechat", vc: "", radiusType: .top)
+        let bindEmailItem = MineItem.init(name: "关联邮箱", info: "", icon: "melist_related_mail", vc: "", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        
+        let feedItem = MineItem.init(name: "帮助于反馈", info: "", icon: "melist_related_help", vc: "", radiusType: .top)
+        let shareItem = MineItem.init(name: "分享给我们", info: "", icon: "melist_related_share", vc: "")
+        let aboutItem = MineItem.init(name: "关于我们", info: "", icon: "melist_related_about", vc: "")
+        let praiseItem = MineItem.init(name: "给个好评", info: "", icon: "melist_related_star", vc: "", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        dataSource = [[bindWXItem, bindEmailItem], [feedItem, shareItem, aboutItem, praiseItem]]
+        
+        self.creatContent()
+
+        // Do any additional setup after loading the view.
+    }
+    func creatContent() {
+        automaticallyAdjustsScrollViewInsets = false
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = .clear
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(MeDefaultTableViewCell.self, forCellReuseIdentifier: "meDefaultTableViewCell")
+        view.addSubview(tableView)
+        
+        tableView.snp.makeConstraints { (make) in
+            make.top.right.bottom.left.equalToSuperview()
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.updateBackground()
+    }
+    // MARK 设置
+    @objc func settingClick() {
+        
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 46
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+        let headeView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 46))
+        headeView.backgroundColor = .clear
+        let bgView = UIView.init(frame: CGRect.init(x: 10, y: 10, width: keyDeviceWidth - 20, height: 36))
+        bgView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        bgView.drawTopRectView()
+        headeView.addSubview(bgView)
+        
+        let textLabel = UILabel.init(frame: CGRect.init(x: 15, y: 0, width: bgView.width - 30, height: 36))
+        bgView.addSubview(textLabel)
+        textLabel.textColor = UIColor.subWord
+        textLabel.font = UIFont.content
+        if section == 0 {
+            let str = "关联账号（可选择将事件同时提醒到微信和邮箱）"
+            let attributedString = NSMutableAttributedString.init(string: str)
+            attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.subSubWord, range: NSMakeRange(4, str.count - 5))
+            textLabel.attributedText = attributedString
+        }else {
+            textLabel.text = "更多"
+        }
+        return headeView
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return dataSource.count
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48 + kLineHeight
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return dataSource[section].count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: MeDefaultTableViewCell = tableView.dequeueReusableCell(withIdentifier: "meDefaultTableViewCell", for: indexPath) as! MeDefaultTableViewCell
+        let item = dataSource[indexPath.section][indexPath.row]
+        cell.setItem(item)
+        return cell
+    }
+}

@@ -1,0 +1,41 @@
+//
+//  Int32+extension.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/5.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import Foundation
+extension Int32{
+    func intervalDayText() -> String{
+        let str: String
+        if self == 0{
+            str = "今天"
+        }else if self == 1{
+            str = "明天"
+        }else if self == 2{
+            str = "后天"
+        }else{
+            str = "\(self)天后"
+        }
+        return str
+    }
+    
+    
+    func birthdayDayText() -> String{
+        let str: String
+        if self == 0{
+            str = "今天生日"
+        }else if self == 1{
+            str = "明天生日"
+        }else if self == 2{
+            str = "后天生日"
+        }else{
+            str = "\(self)天后生日"
+        }
+        return str
+    }
+    
+}
+

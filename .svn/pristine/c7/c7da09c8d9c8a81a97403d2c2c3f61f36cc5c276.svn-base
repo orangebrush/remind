@@ -1,0 +1,182 @@
+//
+//  NotifManager.swift
+//  RemindData
+//
+//  Created by gg on 19/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+public final class NotifManager: NSObject{
+    //MARK:- class init *****************************************************************************************************
+    struct singleton{
+        static var instance = NotifManager()
+    }
+    public class func share() -> NotifManager{
+        return singleton.instance
+    }
+    
+    ///判断是否可添加提醒
+    public func canAddLocalNotification() -> Bool{
+        return getAllLocalNotification().count < 64
+    }
+    
+    ///发送推送（传入每日提醒）
+    public func addLocalNotification(withEventClient eventClient: EventClient){
+            //先删除
+        self.deleteNotification(withEventClientType: Int(eventClient.type), withEventClientId: Int(eventClient.id))
+        guard let timesList = eventClient.timesList else {
+            return
+        }
+        
+        for element in timesList{
+            guard let times = element as? EventClientTimes else{
+                return
+            }
+            
+            DispatchQueue.global().async {
+                var hour = Int(times.hour)
+                var minute = Int(times.minute)
+                var second = 0
+                
+                //整点报时不偏移
+                if eventClient.type != 1{
+                    //偏移4s
+                    var secondCount = 0 //记录偏移次数
+                    self.isOverlapNotif(withOutCurrentEventClientList: [eventClient], currentEventClientTimesHour: &hour, currentEventClientTimesMinute: &minute, currentEventClientTimesSecond: &second, bySecondCount: &secondCount, byEventType: eventClient.type)
+                    
+                }
+                
+                
+                
+                let formatter = DateFormatter()
+                formatter.dateFormat = "H:m:s"
+                let date = formatter.date(from: "\(hour):\(minute):\(second)")
+                print("notif hour:\(hour) minute:\(minute) second:\(second) date: \(String(describing: date))------------------------")
+                guard let fireDate = date else{
+                    return
+                }
+                
+                //推送内容
+                let alertBody: String?
+                switch eventClient.type{
+                case 1:     //整点报时
+                    alertBody = nil//"现在时间\(times.hour)点整"
+                case 2:     //喝水
+                    alertBody = "该喝水啦，再忙也不要忘记喝水哟~"
+                case 3:
+                    alertBody = "该吃药啦，按时吃药，健康马上到～"
+                case 4:
+                    alertBody = "该活动活动啦，让全身关节都活动一下吧~"
+                case 5:
+                    alertBody = "该闭目养神啦，让眼睛休息一下吧~"
+                case 6:
+                    alertBody = "休息一下吧，别太累咯~"
+                case 7:
+                    alertBody = "该跟TA聊聊了~"
+                default:
+                    alertBody = eventClient.name
+                }
+                
+                DispatchQueue.main.async {
+                    let localNotification = UILocalNotification()
+                    localNotification.repeatInterval = .day
+                    localNotification.fireDate = fireDate
+                    localNotification.timeZone = TimeZone.current
+                    //localNotification.applicationIconBadgeNumber = 0
+                    localNotification.alertBody = alertBody
+                    let soundName = self.getSoundName(withEventClient: eventClient, withEventClientTimes: times)
+                    localNotification.soundName = soundName
+                    localNotification.alertAction = "滑动查看"
+                    localNotification.hasAction = eventClient.type != 1
+                    localNotification.userInfo = ["type": eventClient.type, "id": eventClient.id, "content-available": 1, "mutable-content": 1]
+                    
+                    UIApplication.shared.scheduleLocalNotification(localNotification)
+                }
+            }
+        }
+    }
+    
+    //MARK:- 获取除当前eventclient外，是否存在同一时间提醒的每日提醒
+    func isOverlapNotif(withOutCurrentEventClientList currentEventClientList: [EventClient], currentEventClientTimesHour curTimesHour: inout Int, currentEventClientTimesMinute curTimesMinute: inout Int, currentEventClientTimesSecond curTimesSecond: inout Int, bySecondCount secondCount: inout Int, byEventType eventType: Int32){
+        //获取所有每日提醒
+        let allOriginEventClientList = DataHandler.share().getAllEventClients()
+        let allEventClientList = allOriginEventClientList.filter{$0.status == 0 && $0.type < eventType}
+        let listWithCurrentList = allEventClientList.filter{!currentEventClientList.map({$0.id}).contains($0.id)}
+        for eventClient in listWithCurrentList{
+            guard let timesList = eventClient.timesList else{
+                continue
+            }
+            
+            for eventClientTimes in timesList{
+                guard let times = eventClientTimes as? EventClientTimes else{
+                    continue
+                }
+                
+                if times.hour == curTimesHour && times.minute == curTimesMinute {
+                    secondCount += 1
+                    curTimesSecond += 4 * secondCount         //4s一个周期
+                    if curTimesSecond > 60{
+                        curTimesSecond = curTimesSecond % 60
+                        curTimesMinute += 1
+                        if curTimesMinute > 60{
+                            curTimesMinute = curTimesMinute % 60
+                            curTimesHour += 1
+                            if curTimesHour > 24{
+                                curTimesHour = curTimesHour % 24
+                            }
+                        }
+                    }
+                    let newList = currentEventClientList + [eventClient]
+                    isOverlapNotif(withOutCurrentEventClientList: newList, currentEventClientTimesHour: &curTimesHour, currentEventClientTimesMinute: &curTimesMinute, currentEventClientTimesSecond: &curTimesSecond, bySecondCount: &secondCount, byEventType: eventClient.type)
+                    return
+                }
+            }
+        }
+    }
+    
+    //MARK:- 获取提示音
+    func getSoundName(withEventClient eventClient: EventClient, withEventClientTimes eventClientTimes: EventClientTimes) -> String{
+        let result: String
+        let sound = eventClient.ringId ?? "girl"
+        if sound == "boy" || sound == "girl"{
+            switch eventClient.type {
+            case 1:         //整点报时
+                result = "\(eventClientTimes.hour)clock"
+            case 8:         //自定义
+                result = ""
+            default:
+                result = "b_\(eventClient.type)"
+            }
+            return "newSounds.bundle/" + result + "_" + sound  + ".mp3"
+        }
+        return "newSounds.bundle/" + sound + ".mp3"
+    }
+    
+    ///获取所有推送
+    public func getAllLocalNotification() -> [UILocalNotification]{
+        return UIApplication.shared.scheduledLocalNotifications ?? []
+    }    
+    
+    ///取消推送（传入每日提醒）
+    public func deleteNotification(withEventClientType eventClientType: Int, withEventClientId eventClientId: Int){
+        for localNotification in getAllLocalNotification(){
+            if let userInfo = localNotification.userInfo{
+                guard let type = userInfo["type"] as? Int32, let id = userInfo["id"] as? Int32 else{
+                    continue
+                }
+                
+                guard type == eventClientType, id == eventClientId else{
+                    continue
+                }
+                
+                UIApplication.shared.cancelLocalNotification(localNotification)
+            }
+        }
+    }
+    
+    ///取消所有推送
+    public func deleteAllLocalNotifications(){
+        UIApplication.shared.cancelAllLocalNotifications()
+    }
+}

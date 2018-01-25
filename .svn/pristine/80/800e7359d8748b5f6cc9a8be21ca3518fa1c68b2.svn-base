@@ -1,0 +1,40 @@
+//
+//  TabBar+Extension.swift
+//  Remind
+//
+//  Created by gg on 21/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+//模糊视图
+private var tabBlurView = { () -> UIVisualEffectView in
+    let blur = UIBlurEffect(style: UIBlurEffectStyle.extraLight)
+    let effectView: UIVisualEffectView = UIVisualEffectView(effect: blur)
+    effectView.tag = 111
+    effectView.alpha = 1 //0.99
+    effectView.frame = CGRect(x: 0, y: -1, width: view_size.width, height: 50 + 40)
+    return effectView
+}()
+
+private var tabView = { () -> UIView in
+    let view = UIView(frame: CGRect(x: 0, y: -1, width: view_size.width, height: 50))
+    view.backgroundColor = .white
+    view.addSubview(tabBlurView)
+    return view
+}()
+
+extension UITabBarController{
+    
+    open override func awakeFromNib() {
+        super.awakeFromNib()
+        
+        //设置title
+        tabBar.tintColor = UIColor.confirm
+        tabBar.shadowImage = UIImage()
+        
+        tabBar.backgroundImage = UIImage()
+        
+        tabBar.insertSubview(tabBlurView, at: 0)
+    }
+}

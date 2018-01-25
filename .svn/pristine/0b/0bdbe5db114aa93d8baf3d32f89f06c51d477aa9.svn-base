@@ -1,0 +1,27 @@
+//
+//  DispatchQueue+Extension.swift
+//  Remind
+//
+//  Created by gg on 28/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+extension DispatchQueue{
+    private static var _onceTracker = [String]()
+    
+    public class func once(token: String, closure: ()->()){
+        objc_sync_enter(self)
+        
+        defer {
+            objc_sync_exit(self)
+        }
+        
+        if _onceTracker.contains(token){
+            return
+        }
+        
+        _onceTracker.append(token)
+        closure()
+    }
+}

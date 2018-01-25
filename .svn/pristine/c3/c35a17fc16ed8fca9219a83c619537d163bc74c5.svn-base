@@ -1,0 +1,43 @@
+//
+//  CustomPageController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CustomPageController: UIPageControl {
+
+    /*
+    // Only override draw() if you perform custom drawing.
+    // An empty implementation adversely affects performance during animation.
+    override func draw(_ rect: CGRect) {
+        // Drawing code
+    }
+    */
+    var dotwidth : CGFloat = 6
+    var margin : CGFloat = 3
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let mariginx = dotwidth + margin
+        let newWidth = CGFloat(self.subviews.count)*mariginx
+        self.frame = CGRect.init(x: self.frame.origin.x, y: self.frame.origin.y, width: newWidth, height: self.frame.size.height)
+        
+        var center = self.center
+        center.x = (self.superview?.center.x)!
+        self.center = center
+        
+        for i in 0..<self.subviews.count{
+            let dot = self.subviews[i]
+            if i == self.currentPage{
+                dot.frame = CGRect.init(x: CGFloat(i)*mariginx, y: dot.frame.origin.y, width: dotwidth, height: dotwidth)
+            }else{
+                dot.frame = CGRect.init(x: CGFloat(i)*mariginx, y: dot.frame.origin.y, width: dotwidth, height: dotwidth)
+            }
+        }
+        
+    }
+
+}

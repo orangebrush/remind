@@ -1,0 +1,126 @@
+//
+//  StepLogVC.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepLogVC: BaseBackViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    
+    
+    fileprivate var page = 1
+    fileprivate let pageSize = 50
+    
+    fileprivate var isLocked = false
+    fileprivate var stepModelList = [StepModel]()
+    
+    //MARK:- init-------------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        view.backgroundColor = .separator
+        
+        tableView.rowHeight = 44
+        tableView.estimatedRowHeight = 44
+    }
+    
+    private func createContents(){
+        updateData()
+    }
+    
+    //MARK:- 更新数据
+    func updateData(){
+        guard !isLocked else{
+            self.notif(withTitle: "正在同步数据")
+            return
+        }
+        isLocked = true
+        DataManager.share().getStepLogList(withPage: page, withPageSize: pageSize) { (codeResult, message, stepModelList) in
+            self.isLocked = false
+            guard codeResult == .success else{
+                self.notif(withTitle: "获取历史步数失败")
+                return
+            }
+            
+            self.page += 1
+            self.stepModelList += stepModelList
+            
+            if self.stepModelList.isEmpty{
+                self.notif(withTitle: "无步数数据")
+            }
+            
+            self.tableView.reloadData()
+        }
+    }
+}
+
+
+extension StepLogVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return stepModelList.count
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 16
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 44
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = indexPath.row
+        let stepModel = stepModelList[row]
+        
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! StepCell2
+        cell.keyLabel.text = stepModel.date.formatString(with: "M月d日")
+        cell.valueLabel.text = "\(stepModel.step)"
+        
+        if row != 0 {
+            cell.addTopSeparator()
+        }
+        
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let row = indexPath.row
+        var isTopFlag = false
+        var isBottomFlag = false
+        if row == 0 {
+            isTopFlag = true
+        }
+        if row == stepModelList.count - 1{
+            isBottomFlag = true
+        }
+        cell.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let offsetY = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+
+        //判断是否有足够内容
+        guard contentHeight > view_size.height else {
+            return
+        }
+        
+        //稍微设大点 上滑刷新
+        if offsetY - 200 > contentHeight - view_size.height {
+            updateData()
+        }
+    }
+}

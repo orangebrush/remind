@@ -1,0 +1,129 @@
+//
+//  cityManngerTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/9.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol cityManngerDelegate : class {
+    func delebtnClick(_ section:Int)
+}
+class cityManngerTableViewCell: UITableViewCell {
+    weak var delegate : cityManngerDelegate?
+    fileprivate lazy var deleteBtn : UIButton = {
+        let btn = UIButton.init(type: .custom)
+       
+        return btn
+    }()
+    fileprivate lazy var nameLable : UILabel = {
+        let lable = UILabel.init()
+        lable.textColor = UIColor.word
+        lable.font = UIFont.normal
+        return lable
+    }()
+    fileprivate lazy var remaindLable : UILabel = {
+        let lable = UILabel.init()
+        lable.textColor = UIColor.subSubWord
+        lable.font = UIFont.content
+        return lable
+    }()
+    fileprivate lazy var cutLabel : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var iconImage : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var locationImage : UIImageView = {
+       let img = UIImageView.init()
+       img.image = #imageLiteral(resourceName: "icon_weather_location")
+       return img
+    }()
+    
+    fileprivate lazy var  mainBackView : UIView = {
+        let view = UIView.init()
+        view.alpha = 1
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.backgroundColor = UIColor.white
+        mainBackView.frame = CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 80)
+        self.addSubview(mainBackView)
+        mainBackView.addSubview(deleteBtn)
+        mainBackView.addSubview(nameLable)
+        mainBackView.addSubview(remaindLable)
+        mainBackView.addSubview(locationImage)
+        mainBackView.addSubview(cutLabel)
+        mainBackView.addSubview(iconImage)
+        deleteBtn.snp.makeConstraints { (make) in
+            make.centerY.equalToSuperview()
+            make.left.equalTo(8)
+            make.width.height.equalTo(34)
+           
+        }
+        iconImage.snp.makeConstraints { (make) in
+            make.width.height.equalTo(38)
+            make.centerY.equalToSuperview()
+            make.left.equalTo(deleteBtn.snp.right).offset(15)
+        }
+        nameLable.snp.makeConstraints { (make) in
+            make.left.equalTo(iconImage.snp.right).offset(15)
+            make.top.equalTo(21)
+            make.height.equalTo(20)
+            make.width.equalTo(100)
+        }
+        locationImage.snp.makeConstraints { (make) in
+            make.width.height.equalTo(14)
+            make.centerY.equalTo(nameLable.snp.centerY).offset(-1.5)
+            make.left.equalTo(nameLable.snp.right).offset(5)
+        }
+        remaindLable.snp.makeConstraints { (make) in
+            make.left.equalTo(nameLable)
+            make.top.equalTo(nameLable.snp.bottom)
+            make.right.equalTo(15)
+            make.height.equalTo(18)
+        }
+        cutLabel.snp.makeConstraints { (make) in
+            make.left.right.bottom.equalTo(0)
+            make.height.equalTo(kLineHeight)
+        }
+        deleteBtn.setImage(#imageLiteral(resourceName: "cardmanage_btn_lost"), for: .normal)
+        deleteBtn.addTarget(self, action: #selector(cityManngerTableViewCell.delegateBtnClick(_:)), for: .touchUpInside)
+    }
+    @objc func delegateBtnClick(_ btn:UIButton){
+        
+        delegate?.delebtnClick(btn.tag)
+    }
+    func configView(_ section:Int,_ weather:WeatherModel,_ islast:Bool){
+        if islast{
+            cutLabel.isHidden = true
+        }else{
+            cutLabel.isHidden = false
+        }
+        iconImage.kf.setImage(with: URL.init(string: "http://120.79.52.214/icon/weather/3x/"+"\(weather.imgStr)"))
+        deleteBtn.tag = section
+        nameLable.text = weather.city.name
+        nameLable.snp.updateConstraints{ (make) in
+            make.width.equalTo(weather.city.name.computationStringWidth(UIFont.init(withNormalFontSize: 14), 0, 0).0+2)
+        }
+        remaindLable.text = "\(weather.weather) \(weather.tempLow) | \(weather.tempHigh)°"
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        
+    }
+
+}

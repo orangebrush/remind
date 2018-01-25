@@ -1,0 +1,156 @@
+//
+//  LoginUser.swift
+//  Remind
+//
+//  Created by dong on 2018/1/4.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+import Foundation
+
+
+struct LoginInfo {
+    
+    let token: String
+    let username: String
+    let userId: Int
+    
+//    init?(json: JSON) {
+//        guard let token = json["token"].string, let username = json["username"].string, let userId = json["userId"].int else {
+//            return nil
+//        }
+//
+//        self.token = token
+//        self.username = username
+//        self.userId = userId
+//    }
+    
+}
+
+fileprivate let tokenKey = "token"
+fileprivate let avatarKey = "avatar"
+fileprivate let nicknameKey = "nickname"
+fileprivate let userIdKey = "userId"
+fileprivate let usernameKey = "username"
+
+fileprivate let sexKey = "sex"
+fileprivate let birthKey = "birth"
+fileprivate let mobileKey = "mobile"
+fileprivate let wxnameKey = "wxname"
+
+
+final class LoginUser {
+    static let user: LoginUser = LoginUser()
+    fileprivate let defaults = UserDefaults(suiteName: "LoginUser")!
+    fileprivate lazy var _token: String? = {
+        return defaults.string(forKey: tokenKey)
+    }()
+    
+    fileprivate lazy var _userId: String? = {
+        return defaults.string(forKey: userIdKey)
+    }()
+    
+    fileprivate lazy var _username: String? = {
+        return defaults.string(forKey: usernameKey)
+    }()
+    
+    
+    fileprivate(set) static var token: String? {
+        set {
+            LoginUser.user.defaults.set(newValue, forKey: tokenKey)
+            LoginUser.user._token = newValue
+        }
+        get {
+            return LoginUser.user._token
+        }
+    }
+    
+    fileprivate(set) var userId: String {
+        set {
+            LoginUser.user.defaults.set(newValue, forKey: userIdKey)
+            LoginUser.user._userId = newValue
+        }
+        get {
+            return LoginUser.user._userId ?? ""
+        }
+    }
+    
+    fileprivate(set) var username: String {
+        set {
+            LoginUser.user.defaults.set(newValue, forKey: usernameKey)
+            LoginUser.user._username = newValue
+        }
+        get {
+            return LoginUser.user._username ?? ""
+        }
+    }
+    
+    
+    var headface: String {
+        set {
+            defaults.set(newValue.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed), forKey: avatarKey)
+        }
+        get {
+            return defaults.string(forKey: avatarKey)?.removingPercentEncoding ?? ""
+        }
+    }
+    
+    var nickname: String{
+        set{
+            defaults.set(newValue, forKey: nicknameKey)
+        }
+        get
+        {
+            return defaults.string(forKey: nicknameKey) ?? ""
+        }
+    }
+    var sex: String{
+        set{
+            defaults.set(newValue, forKey: sexKey)
+        }
+        get
+        {
+            return defaults.string(forKey: sexKey) ?? ""
+        }
+    }
+    
+    var birthday: String{
+        set{
+            defaults.set(newValue, forKey: birthKey)
+        }
+        get
+        {
+            return defaults.string(forKey: birthKey) ?? ""
+        }
+    }
+    
+    var mobile: String{
+        set{
+            defaults.set(newValue, forKey: mobileKey)
+        }
+        get
+        {
+            return defaults.string(forKey: mobileKey) ?? ""
+        }
+    }
+    
+    var wxname: String{
+        set{
+            defaults.set(newValue, forKey: wxnameKey)
+        }
+        get
+        {
+            return defaults.string(forKey: wxnameKey) ?? ""
+        }
+    }
+    class func loginSuccess(loginInfo: LoginInfo) {
+        LoginUser.token = loginInfo.token
+        LoginUser.user.userId = String(loginInfo.userId)
+        LoginUser.user.username = loginInfo.username
+        
+//        MemberService.getMemberLevelInfo(successHandler: { (memberLevelInfo) in
+//            saveMemberLevelInfo(memberLevelInfo: memberLevelInfo)
+//        }) { (error) in
+//
+//        }
+    }
+}

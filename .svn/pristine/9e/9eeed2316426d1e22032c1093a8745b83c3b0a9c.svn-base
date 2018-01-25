@@ -1,0 +1,134 @@
+//
+//  connectWechatTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/13.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol connectWechatTableViewCellDelegate : class {
+    func  swithValueChange(_ row:Int)
+}
+class connectWechatTableViewCell: UITableViewCell {
+    weak var delegate : connectWechatTableViewCellDelegate?
+    fileprivate lazy var backView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    fileprivate lazy var iconImageView : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var titleLabel : UILabel = {
+       let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.textColor = UIColor.word
+        return label
+    }()
+    fileprivate lazy var detailLabel : UILabel = {
+        let label = UILabel.init()
+        label.font = UIFont.init(withNormalFontSize: 12)
+        label.textColor = UIColor.subSubWord
+        return label
+    }()
+    fileprivate lazy var cutLable : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var newSwitch : CustomSwitch = {
+        let swith = CustomSwitch.init()
+        swith.inactiveColor = UIColor.grayBtn
+        swith.onTintColor = UIColor.confirm
+        swith.addTarget(self, action: #selector(connectWechatTableViewCell.swithValueChange), for: .valueChanged)
+        return swith
+    }()
+    var selectRow = 0
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.selectionStyle = .none
+        self.backgroundColor = UIColor.clear
+        backView.frame = CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 60)
+        self.addSubview(backView)
+        backView.addSubview(iconImageView)
+        backView.addSubview(titleLabel)
+        backView.addSubview(detailLabel)
+        backView.addSubview(newSwitch)
+        backView.addSubview(cutLable)
+        iconImageView.snp.makeConstraints { (make) in
+            make.width.height.equalTo(28)
+            make.centerY.equalToSuperview()
+            make.left.equalTo(15)
+        }
+        titleLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(iconImageView.snp.right).offset(12)
+            make.top.equalTo(13)
+            make.right.equalTo(newSwitch.snp.left).offset(-5)
+        }
+        detailLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(titleLabel.snp.bottom)
+            make.left.right.equalTo(titleLabel)
+            make.height.equalTo(14)
+        }
+        newSwitch.snp.makeConstraints { (make) in
+            make.width.equalTo(32)
+            make.height.equalTo(20)
+            make.centerY.equalToSuperview()
+            make.right.equalTo(-15)
+        }
+        cutLable.snp.makeConstraints { (make) in
+            make.height.equalTo(kLineHeight)
+            make.right.bottom.equalTo(0)
+            make.left.equalTo(15)
+        }
+    }
+    func configView(_ indexPath:IndexPath,_ weather:WeatherSetting?,_ festival:FestivalSettingModel?){
+        backView.resetNomalView()
+        selectRow = indexPath.row
+        if indexPath.row == 0{
+            iconImageView.image = #imageLiteral(resourceName: "remind_wechat_icon")
+            titleLabel.text = "同时提醒到微信"
+            backView.drawTopRectView()
+            cutLable.isHidden = false
+        }else{
+            iconImageView.image = #imageLiteral(resourceName: "remind_mail_icon")
+            titleLabel.text = "同时提醒到邮箱"
+            backView.drawRectView()
+            cutLable.isHidden = true
+        }
+        
+        if (weather != nil){
+            if indexPath.row == 0{
+                detailLabel.text = weather!.isBindingWeixin ? weather?.wxNickName : "未绑定"
+                if weather!.isBindingWeixin{
+                    newSwitch.on = weather!.isWeixinOpen
+                }else{
+                    newSwitch.on = false
+                }
+            }else{
+                detailLabel.text = weather!.isBindingEmail ? weather?.email : "未绑定"
+                if weather!.isBindingEmail{
+                    newSwitch.on = weather!.isEmailOpen
+                }else{
+                    newSwitch.on = false
+                }
+            }
+        }
+    
+    }
+    @objc func swithValueChange(){
+        newSwitch.setOn(!newSwitch.on, animated: true)
+        delegate?.swithValueChange(selectRow)
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+
+}

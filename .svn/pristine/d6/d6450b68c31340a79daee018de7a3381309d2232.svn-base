@@ -1,0 +1,307 @@
+//
+//  StepManager.swift
+//  RemindData
+//
+//  Created by gg on 19/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+import HealthKit
+public final class StepManager: NSObject {
+    
+    private var healthStore: HKHealthStore?
+    
+    
+    //MARK:- class init *****************************************************************************************************
+    struct singleton{
+        static var instance = StepManager()
+    }
+    @discardableResult
+    public class func share() -> StepManager{
+        return singleton.instance
+    }
+    
+    public override init() {
+        super.init()
+        
+        //判断当前设备是否支持HeathKit
+        if HKHealthStore.isHealthDataAvailable() {
+            healthStore = HKHealthStore()
+        }else{
+            debugPrint("设备不支持HealthKit")
+        }
+    }
+    
+    ///请求权限
+    public func request(){
+        // 1. Set the types you want to read from HK Store
+        let healthKitTypesToRead: Set<HKObjectType> = [
+            HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)!,
+            HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.distanceWalkingRunning)!,
+            ]
+        //请求
+        healthStore?.requestAuthorization(toShare: nil, read: healthKitTypesToRead) {
+            success, error in
+            guard success else{
+                if let err = error {
+                    debugPrint("error: \(err)")
+                }
+                return
+            }
+            if self.isOpenHealthKit(){
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "openStepRemiand"), object: nil)
+            }
+            debugPrint("同意获取healthkit数据")
+        }
+    }
+    
+    public func isOpenHealthKit()->Bool{
+        return  healthStore?.authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)!) == .sharingAuthorized &&  healthStore?.authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.distanceWalkingRunning)!) == .sharingAuthorized
+    }
+    
+    
+    
+    ///获取当前步数
+    public func getStepsAndDistanceM(closure: @escaping (_ codeResult: CodeResult,_ daySteps: Int, _ distanceM: Int)->()){
+        
+        guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else{
+            closure(.failure, 0, 0)
+            return
+        }
+        
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let query = HKSampleQuery(sampleType: stepType, predicate: predicateForSamplesToday(), limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
+            DispatchQueue.main.async {
+                guard error == nil else{
+                    closure(.failure, 0, 0)
+                    return
+                }
+                
+                guard let list = results else{
+                    closure(.failure, 0, 0)
+                    return
+                }
+                
+                //统计步数
+                var totalSteps = 0
+                for sample in list{
+                    let quantity = (sample as! HKQuantitySample).quantity
+                    let step = quantity.doubleValue(for: HKUnit.count())
+                    totalSteps += Int(step)
+                }
+                
+                //获取距离
+                self.getDistanceM(closure: { (totalDistanceM) in
+                    DispatchQueue.main.async {
+                        guard let totalDist = totalDistanceM else{
+                            closure(.failure, 0, 0)
+                            return
+                        }
+                        
+                        closure(.success, totalSteps, totalDist)
+                    }
+                })
+            }
+            
+        }
+        
+        healthStore?.execute(query)
+    }
+    
+    ///获取当前距离
+    func getDistanceM(closure: @escaping (_ dayDistanceM: Int?)->()){
+        guard let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else{
+            closure(nil)
+            return
+        }
+        
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let query = HKSampleQuery(sampleType: distanceType, predicate: predicateForSamplesToday(), limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
+            guard error == nil else{
+                closure(nil)
+                return
+            }
+            
+            guard let list = results else{
+                closure(nil)
+                return
+            }
+            
+            var totalMeter = 0
+            for sample in list{
+                let quantity = (sample as! HKQuantitySample).quantity
+                let meter = quantity.doubleValue(for: HKUnit.meter())
+                totalMeter += Int(meter)
+            }
+            
+            closure(totalMeter)
+        }
+        
+        healthStore?.execute(query)
+    }
+    
+
+    
+    
+    
+    
+    
+    
+    //获取多日——————————————————————————————————————————————————————————————————————————————————
+    ///获取多日步数距离列表
+    public func getStepsListAndDistanceMList(byLastDays lastdays: Int, closure: @escaping (_ codeResult: CodeResult,_ dayStepsDistanceMList: [(Date, Int, Int)])->()){
+        
+        guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else{
+            closure(.failure, [])
+            return
+        }
+        
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let predicate = predicateForSamples(byDays: lastdays)
+        let query = HKSampleQuery(sampleType: stepType, predicate: predicate, limit: 0, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
+            guard error == nil else{
+                DispatchQueue.main.async {
+                    closure(.failure, [])
+                }
+                return
+            }
+            
+            guard let list = results else{
+                DispatchQueue.main.async {                    
+                    closure(.failure, [])
+                }
+                return
+            }
+            
+            //统计步数
+            var resultList = [(Date, Int, Int)]()
+            
+            let calendar = Calendar.current
+            var tempYear = 0
+            var tempMonth = 0
+            var tempDay = 0
+            var tempSteps = 0
+            for sample in list{
+                let quantity = (sample as! HKQuantitySample).quantity
+                let startDate = (sample as! HKQuantitySample).startDate
+                let step = quantity.doubleValue(for: HKUnit.count())
+                
+                let components = calendar.dateComponents([.year, .month, .day], from: startDate)
+                if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay{
+                    tempSteps += Int(step)
+                }else{
+                    resultList.append((startDate, tempSteps, 0))
+                    tempYear = components.year!
+                    tempMonth = components.month!
+                    tempDay = components.day!
+                    tempSteps = 0
+                }
+            }
+            
+            //获取距离
+            self.getDistanceMList(byLastdays: lastdays, closure: { (distanceMList) in
+//                guard resultList.count == distanceMList.count else{
+//                    closure(.failure, [])
+//                    return
+//                }
+                
+                for (index, element) in distanceMList.enumerated(){                    
+                    resultList[index].2 = element.1
+                }
+                
+                DispatchQueue.main.async {
+                    closure(.success, resultList)
+                }
+            })
+        }
+        
+        healthStore?.execute(query)
+    }
+    
+    ///获取多日距离
+    func getDistanceMList(byLastdays lastdays: Int, closure: @escaping (_ dayDistanceMList: [(Date, Int)])->()){
+        guard let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else{
+            closure([])
+            return
+        }
+        
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let predicate = predicateForSamples(byDays: lastdays)
+        let query = HKSampleQuery(sampleType: distanceType, predicate: predicate, limit: 0, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
+            guard error == nil else{
+                closure([])
+                return
+            }
+            
+            guard let list = results else{
+                closure([])
+                return
+            }
+            
+            var resultList = [(Date, Int)]()
+
+            let calendar = Calendar.current
+            var tempYear = 0
+            var tempMonth = 0
+            var tempDay = 0
+            var tempDistanceMs = 0
+            for sample in list{
+                let quantity = (sample as! HKQuantitySample).quantity
+                let startDate = (sample as! HKQuantitySample).startDate
+                let meter = quantity.doubleValue(for: HKUnit.meter())
+                
+                let components = calendar.dateComponents([.year, .month, .day], from: startDate)
+                if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay{
+                    tempDistanceMs += Int(meter)
+                }else{
+                    resultList.append((startDate, tempDistanceMs))
+                    tempYear = components.year!
+                    tempMonth = components.month!
+                    tempDay = components.day!
+                    tempDistanceMs = 0
+                }
+            }
+            
+            closure(resultList)
+        }
+        
+        healthStore?.execute(query)
+    }
+    
+    //MARK:- 获取今天的查找
+    private func predicateForSamplesToday() -> NSPredicate?{
+        return predicateForSamples(byDays: 1)
+    }
+    
+    //MARK:- 获取过去天数的查找
+    private func predicateForSamples(byDays day: Int) -> NSPredicate?{
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSinceNow: TimeInterval(-day + 1) * 60 * 60 * 24))
+        components.hour = 0
+        components.minute = 0
+        components.second = 0
+        
+        guard let startDate = calendar.date(from: components) else{
+            return nil
+        }
+        
+        var endComponents = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSinceNow: TimeInterval(1) * 60 * 60 * 24))
+        endComponents.hour = 0
+        endComponents.minute = 0
+        endComponents.second = 0
+        
+        guard let endDate = calendar.date(from: endComponents) else{
+            return nil
+        }
+//        guard let endDate = calendar.date(byAdding: .day, value: day, to: startDate) else{
+//            return nil
+//        }
+        
+        return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: HKQueryOptions.strictStartDate)
+    }
+}

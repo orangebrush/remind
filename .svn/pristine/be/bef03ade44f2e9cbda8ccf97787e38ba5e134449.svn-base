@@ -1,0 +1,36 @@
+//
+//  DM+Stock.swift
+//  RemindData
+//
+//  Created by gg on 03/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+extension DataManager{
+    
+    ///定时刷新股票信息 3s
+    public func updateStock(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ stockModelList: [StockModel])->()){
+        Session.session(withAction: Actions.updateStock, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let dicData = data as? [String: Any] else{
+                    closure(.failure, "股票结构解析错误", [])
+                    return
+                }
+                
+                guard let stockListData = dicData["data"] as? [[String: Any]] else{
+                    closure(.failure, "股票数组解析错误", [])
+                    return
+                }
+                
+                let stockList = self.getStockModel(fromJSON: stockListData)
+                closure(.success, message, stockList)
+            }
+        }
+    }
+}

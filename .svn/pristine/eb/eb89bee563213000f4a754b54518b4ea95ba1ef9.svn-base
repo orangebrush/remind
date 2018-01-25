@@ -1,0 +1,443 @@
+//
+//  detailHeaderView.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/19.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+/// 详情的头部视图================================================================
+protocol detailHeaderDelegate:class {
+    func switchvalueChange(_ ison:Bool)
+    func swithShowReturn()
+}
+class detailHeaderView: UIView {
+    weak var delegate : detailHeaderDelegate?
+    fileprivate lazy var nameLable : UILabel = {
+        let label = UILabel.init(frame: CGRect.zero)
+        label.font = UIFont.content
+        label.textColor = UIColor.subSubWord
+        return label
+    }()
+    
+    fileprivate lazy var button : UIButton = {
+        let btn = UIButton.init()
+        btn.setImage(#imageLiteral(resourceName: "swicth_on_ff8000"), for: .normal)
+        btn.addTarget(self, action: #selector(detailHeaderView.buttonclick(_:)), for: .touchUpInside)
+        return btn
+    }()
+    var tempEvent : EventDB!
+    fileprivate lazy var activity = UIActivityIndicatorView.init(activityIndicatorStyle: .gray)
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.addSubview(nameLable)
+        self.addSubview(button)
+        self.addSubview(activity)
+        nameLable.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.top.bottom.equalTo(0)
+            make.right.equalTo(-60)
+        }
+        button.snp.makeConstraints { (make) in
+            make.right.equalTo(-8.5)
+            make.width.equalTo(45)
+            make.height.equalTo(35)
+            make.centerY.equalToSuperview()
+        }
+        activity.snp.makeConstraints { (make) in
+            make.center.equalTo(button.snp.center)
+            make.width.height.equalTo(20)
+        }
+        activity.isHidden = true
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(detailHeaderView.updateView(_:)), name: NSNotification.Name(rawValue: String.switchValueChange), object: nil)
+    }
+    
+    
+    @objc func buttonclick(_ button:UIButton){
+        
+        if tempEvent.status == 2{
+            delegate?.swithShowReturn()
+            return
+            
+        }
+        button.isHidden = true
+        activity.isHidden = false
+        activity.startAnimating()
+        delegate?.switchvalueChange(tempEvent.status == 0 ? false : true)
+    }
+    
+    @objc func updateView(_ notif:Notification){
+        if   notif.userInfo!["code"] as! Int  == 1{
+            activity.isHidden = true
+            button.isHidden = false
+            tempEvent.status = tempEvent.status == 0 ? 1 : 0
+            button.setImage(tempEvent.status == 1 ? #imageLiteral(resourceName: "swicth_off_ff8000") : #imageLiteral(resourceName: "swicth_on_ff8000"), for: .normal)
+        }else{
+            activity.isHidden = true
+            button.isHidden = false
+        }
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    func configView(_ event:EventDB){
+        nameLable.text = event.typeName ?? ""
+        tempEvent = event
+        if event.status == 0{
+            button.setImage(#imageLiteral(resourceName: "swicth_on_ff8000"), for: .normal)
+            button.alpha = 1
+            button.isEnabled = true
+        }else if event.status == 1{
+            button.setImage(#imageLiteral(resourceName: "swicth_off_ff8000"), for: .normal)
+            button.alpha = 1
+            button.isEnabled = true
+        }else{
+            button.setImage(#imageLiteral(resourceName: "swicth_off_ff8000"), for: .normal)
+            button.alpha = 0.5
+            button.isEnabled = false
+        }
+        
+    }
+    
+    
+}
+/// 详情的尾部视图================================================================
+protocol detailFooterViewDelegate:class  {
+    func solveBtnClick()
+    func edtingBtnClick()
+}
+class detailFooterView: UIView {
+    weak var delegate : detailFooterViewDelegate?
+    
+    fileprivate lazy var cutLabel2 : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.black.withAlphaComponent(0.1)
+        return label
+    }()
+    fileprivate lazy var remainLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.backgroundColor = UIColor.confirm.withAlphaComponent(0.1)
+        label.textAlignment = .center
+        label.font = UIFont.init(withNormalFontSize: 14)
+        label.layer.cornerRadius = 4
+        label.clipsToBounds = true
+        return label
+    }()
+    fileprivate lazy var topView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        return view
+    }()
+    fileprivate lazy var solveBtn : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setTitle("标记为已办理", for: .normal)
+        btn.addTarget(self, action: #selector(detailFooterView.solveBtnlick), for: .touchUpInside)
+        btn.setTitleColor(UIColor.subWord, for: .normal)
+        btn.titleLabel?.font = UIFont.init(withNormalFontSize: 15)
+        return btn
+    }()
+    fileprivate lazy var edtingBtn : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.setTitle("编辑", for: .normal)
+        btn.addTarget(self, action: #selector(detailFooterView.edtingBtnClick), for: .touchUpInside)
+        btn.setTitleColor(UIColor.confirm, for: .normal)
+        btn.titleLabel?.font = UIFont.init(withNormalFontSize: 15)
+        return btn
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.addSubview(topView)
+        self.addSubview(solveBtn)
+        self.addSubview(edtingBtn)
+        self.addSubview(remainLabel)
+        self.addSubview(cutLabel2)
+        
+        topView.snp.makeConstraints { (make) in
+            make.left.right.top.equalTo(0)
+            make.height.equalTo(68)
+        }
+        remainLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.right.equalTo(-20)
+            make.top.equalTo(0)
+            make.height.equalTo(48)
+        }
+        cutLabel2.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+            make.width.equalTo(1)
+            make.bottom.equalTo(-14)
+            make.height.equalTo(24)
+        }
+        solveBtn.snp.makeConstraints { (make) in
+            make.left.bottom.equalTo(0)
+            make.width.equalTo(frame.size.width/2)
+            make.height.equalTo(52)
+        }
+        edtingBtn.snp.makeConstraints { (make) in
+            make.width.height.equalTo(solveBtn)
+            make.right.bottom.equalTo(0)
+        }
+    }
+    func configView(_ event:EventDB){
+        remainLabel.text = event.remindText ?? ""
+        if event.remindStatus == 0{
+            solveBtn.setTitle("标记为已办理", for: .normal)
+            solveBtn.setTitleColor(UIColor.subWord, for: .normal)
+            solveBtn.isEnabled = true
+        }else {
+            solveBtn.setTitle("标记为已办理", for: .normal)
+            solveBtn.setTitleColor(UIColor.grayBtn, for: .normal)
+            solveBtn.isEnabled = false
+        }
+        
+    }
+    @objc func solveBtnlick(){
+        delegate?.solveBtnClick()
+    }
+    @objc func edtingBtnClick(){
+        delegate?.edtingBtnClick()
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+}
+///表头视图=======================================================================
+protocol detailTableHeaderDelegate : class{
+    func detailTableHeaderClick()
+}
+class detailTableHeader: UIView {
+    weak var delegate : detailTableHeaderDelegate?
+    fileprivate lazy var nameLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.numberOfLines = 0
+        return label
+    }()
+    fileprivate lazy var timeLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.confirm
+        label.numberOfLines = 0
+        return label
+    }()
+    fileprivate lazy var afterDayLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.subSubWord
+        label.font = UIFont.content
+        label.textAlignment = .right
+        return label
+    }()
+    fileprivate lazy var  cutDayLabel: UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var brithTimeLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.confirm
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var zodiacLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.subSubWord
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var brithLabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.font = UIFont.init(withNormalFontSize: 16)
+        return label
+    }()
+    fileprivate lazy var detailImageView : UIImageView = {
+        let img = UIImageView.init(image: #imageLiteral(resourceName: "arrow_right_14"))
+        return img
+    }()
+    fileprivate lazy var cutDayLabel1 : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.separator
+        return label
+    }()
+    fileprivate lazy var btn : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.addTarget(self, action: #selector(detailTableHeader.buttonClick), for: .touchUpInside)
+        return btn
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.addSubview(nameLabel)
+        self.addSubview(timeLabel)
+        self.addSubview(afterDayLabel)
+        self.addSubview(cutDayLabel)
+        self.addSubview(cutDayLabel1)
+        self.addSubview(brithLabel)
+        self.addSubview(brithTimeLabel)
+        self.addSubview(zodiacLabel)
+        self.addSubview(detailImageView)
+        self.addSubview(btn)
+    }
+    func configView(_ event:EventDB){
+        var text =  ""
+        if event.type == Int32(1) {
+            brithTimeLabel.isHidden = false
+            brithTimeLabel.isHidden = false
+            cutDayLabel1.isHidden = false
+            zodiacLabel.isHidden = false
+            detailImageView.isHidden = false
+            nameLabel.isHidden = true
+            timeLabel.isHidden = true
+            text = "\(event.introduce ?? "")"  + " \(event.age) 周岁"
+            
+        }else{
+            nameLabel.isHidden = false
+            timeLabel.isHidden = false
+            brithTimeLabel.isHidden = true
+            brithTimeLabel.isHidden = true
+            cutDayLabel1.isHidden = true
+            zodiacLabel.isHidden = true
+            detailImageView.isHidden = true
+            text =  event.introduce ?? ""
+            
+        }
+        //判断text是否是多行
+        var height = 14
+        if self.getStrHeight(UIFont.init(withNormalFontSize: 16), text, 0).1 < 25{
+            height = height - 2
+        }
+        if self.getStrHeight(UIFont.init(withNormalFontSize: 14), (event.time ?? "1"), 0).1 < 25{
+            height = height - 2
+        }
+        
+        nameLabel.attributedText = self.getStrHeight(UIFont.init(withNormalFontSize: 16), text, 0).0
+        nameLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.right.equalTo(-20)
+            make.top.equalTo(24)
+            make.height.equalTo(self.getStrHeight(UIFont.init(withNormalFontSize: 16), text, 0).1+2)
+        }
+        var text1 = ""
+        if event.type == Int32(2){
+            if event.isLunar{
+                let beiginDate = event.beginDate
+                let hour = Int(beiginDate?.formatString(with: "HH") ?? "0")
+                let minute = Int(beiginDate?.formatString(with: "mm") ?? "0")
+                
+                
+                let tuple = transformLunarToNextGregorian(byLunarMonth: Int(event.lunarMonth), byLunarDay  : Int(event.lunarDay), byIsLeapMonth: event.isLeapMonth,withHour: hour!,withMinute: minute!)
+                let isDateFromLeap = tuple.0
+                let newBeginDate = tuple.1
+                var leapstr = ""
+                if isDateFromLeap{
+                    leapstr = "闰"
+                }
+                text1 = "\(newBeginDate.formatString(with: "M月d日"))" + " \(newBeginDate.weekdayString()) (\(leapstr)\(event.lunarDate ?? "")) \((event.beginDate ?? Date()) .formatString(with: "H:mm"))"
+            }else{
+                text1 = "\((event.beginDate ?? Date()).formatString(with: "M月d日"))" + " \((event.beginDate ?? Date()).weekdayString()) \((event.beginDate ?? Date()).formatString(with: "H:mm"))"
+            }
+        }else{
+            text1 = event.time ?? "1"
+        }
+        
+        timeLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.top.equalTo(nameLabel.snp.bottom).offset(height)
+            make.height.equalTo(self.getStrHeight(UIFont.init(withNormalFontSize: 14), text1, 0).1+2)
+            make.right.equalTo(-20)
+        }
+        timeLabel.attributedText = self.getStrHeight(UIFont.init(withNormalFontSize: 14), text1, 0).0
+        
+        cutDayLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.height.equalTo(1)
+            make.bottom.equalTo(0)
+            make.right.equalTo(-20)
+        }
+        
+        
+        
+        if event.type == 1{
+            
+            brithLabel.snp.makeConstraints({ (make) in
+                make.left.equalTo(20)
+                make.top.equalTo(26)
+                make.right.equalTo(-20)
+                make.height.equalTo(24)
+            })
+            
+            brithLabel.text = text
+            zodiacLabel.text =  "\((event.beginDate ?? Date()).formatString(with: "yyyy")) · \(event.zodiac ?? "") · \(event.constellation ?? "")"
+            let  temptext  =  "\((event.beginDate ?? Date()).formatString(with: "yyyy")) · \(event.zodiac ?? "") · \(event.constellation ?? "")"
+            zodiacLabel.snp.makeConstraints({ (make) in
+                make.left.equalTo(20)
+                make.top.equalTo(brithLabel.snp.bottom)
+                make.height.equalTo(24)
+                make.width.equalTo(temptext.computationStringWidth(UIFont.init(withNormalFontSize: 14), 3, 0).0)
+            })
+            
+            if event.isLunar{
+                let beiginDate = event.beginDate
+                let hour = Int(beiginDate?.formatString(with: "HH") ?? "0")
+                let minute = Int(beiginDate?.formatString(with: "mm") ?? "0")
+                let tuple = transformLunarToNextGregorian(byLunarMonth: Int(event.lunarMonth), byLunarDay  : Int(event.lunarDay), byIsLeapMonth: event.isLeapMonth,withHour: hour!,withMinute: minute!)
+                let isDateFromLeap = tuple.0
+                let newBeginDate = tuple.1
+                var leapstr = ""
+                if isDateFromLeap{
+                    leapstr = "闰"
+                }
+                
+                brithTimeLabel.text = "\(newBeginDate.formatString(with: "M月d日"))" + " \(newBeginDate.weekdayString()) (\(leapstr)\(leapstr)\(event.lunarDate ?? "")) \((event.beginDate ?? Date()) .formatString(with: "H:mm"))"
+            }else{
+                
+                brithTimeLabel.text = "\((event.beginDate ?? Date()).formatString(with: "M月d日"))" + " \((event.beginDate ?? Date()).weekdayString()) \((event.beginDate ?? Date()).formatString(with: "H:mm"))"
+            }
+            
+            brithTimeLabel.snp.makeConstraints({ (make) in
+                make.left.equalTo(20)
+                make.height.equalTo(22)
+                make.top.equalTo(zodiacLabel.snp.bottom).offset(13)
+            })
+            
+            detailImageView.snp.makeConstraints({ (make) in
+                make.centerY.equalTo(zodiacLabel.snp.centerY)
+                make.width.equalTo(14)
+                make.height.equalTo(14)
+                make.left.equalTo(zodiacLabel.snp.right)
+            })
+            
+            btn.snp.makeConstraints({ (make) in
+                make.left.right.equalTo(0)
+                make.top.equalTo(0)
+                make.bottom.equalTo(0)
+            })
+            
+            
+        }
+        
+    }
+    @objc func buttonClick(){
+        delegate?.detailTableHeaderClick()
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    func getStrHeight(_ font:UIFont,_ str:String,_ lineSpace:CGFloat)->(NSMutableAttributedString,CGFloat){
+        let atr = NSMutableAttributedString.init(string: str)
+        let pary = NSMutableParagraphStyle.init()
+        pary.lineSpacing = lineSpace
+        atr.addAttributes([NSAttributedStringKey.font:font,NSAttributedStringKey.paragraphStyle:pary], range: NSRange.init(location: 0, length: str.count))
+        let rect = atr.boundingRect(with: CGSize.init(width: keyDeviceWidth-60, height: 1000), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil)
+        return (atr,rect.size.height)
+        
+    }
+}
+
+
+
+
+
+

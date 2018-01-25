@@ -1,0 +1,130 @@
+//
+//  CardSettingElseViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CardSettingElseViewController: BasedViewController ,UITableViewDelegate,UITableViewDataSource{
+    var cardid : Int!
+    var cardSetList = [CardSet]()
+    fileprivate lazy var mainTableView : UITableView = {
+        let tableView = UITableView.init(frame: CGRect.zero, style: .grouped)
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        return tableView
+    }()
+    var playCountView : UIView!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.addMainview()
+    }
+    override func backToPrevious() {
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        self.navigationController?.popViewController(animated: true)
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item = BarButtonItem(imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+    }
+   
+    //MARK:- 获取页面的主要视图
+    func addMainview(){
+        mainTableView.backgroundColor = UIColor.clear
+        let navHeight = (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height
+        mainTableView.register(cardSetingTableViewCell.self, forCellReuseIdentifier: "cardSetingTableViewCell")
+        mainTableView.frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight)
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.view.addSubview(mainTableView)
+        self.getMainData()
+    }
+    //MARK:- 获取卡片设置界面数据
+    func getMainData(){
+       DataManager.share().getCardDisplayModeList(withCardId:cardid) { (result, message, cardSet) in
+        if result == .failure{
+            self.notif(withTitle: message)
+            return
+        }
+        self.cardSetList = cardSet
+        self.mainTableView.reloadData()
+        }
+    }
+ }
+extension CardSettingElseViewController : closeBtnClick{
+    func closeBtnClick(_ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+    }
+    
+    func cellClick(_ indexPath: IndexPath, _ selfview: PlayCountPickView) {
+       selfview.removeFromSuperview()
+        DataManager.share().setCardDisPlayMode(withCardId: self.cardid, withSetId: self.cardSetList[indexPath.row].id) { (result,message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            for i in 0..<self.cardSetList.count{
+                 self.cardSetList[i].isDefault = false
+            }
+            self.cardSetList[indexPath.row].isDefault = true
+            self.mainTableView.reloadData()
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+       return 1
+        
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cardSetingTableViewCell") as! cardSetingTableViewCell
+         cell.selectionStyle = .none
+        var text = ""
+        if self.cardSetList.count > 0{
+            for i in 0..<self.cardSetList.count{
+                if self.cardSetList[i].isDefault == true{
+                    text = self.cardSetList[i].remark
+                }
+            }
+        }
+       
+       cell.configView("首页显示个数", text,indexPath.row == tableView.numberOfRows(inSection: indexPath.section)-1 ? true : false)
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 50
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 15
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        return UIView()
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        var arr = [String]()
+        var selectIndex = 0
+        for i in 0..<self.cardSetList.count{
+            arr.append(self.cardSetList[i].remark)
+            if self.cardSetList[i].isDefault == true{
+                selectIndex = i
+            }
+        }
+        
+        let view = PlayCountPickView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+        view.delegate = self
+        view.congfigView(arr, selectIndex)
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        UIApplication.shared.keyWindow?.addSubview(view)
+
+    }
+}

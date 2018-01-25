@@ -1,0 +1,78 @@
+//
+//  StepVC.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+class StepVC: BasedViewController {
+    
+    fileprivate var isTargetSetOpen = false
+    
+    ///默认按周统计
+    fileprivate var currentDisplayMode: DisplayMode = .day7
+    
+    ///需绘制的数据模型列表
+    fileprivate var stepsDetailModel = StepsDetailModel(){
+        didSet{
+            
+            let ip = IndexPath(row: 1, section: 1)
+
+        }
+    }
+
+    var targetStep: Int = 8000
+    
+    var isLocked = false
+    var selector: GANSelector?
+    
+    
+    ///定时器
+    private var timer: Timer?
+    
+    //MARK:- init------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        //获取数据
+        
+        
+        //如果已打开 则关闭
+        if isTargetSetOpen {
+        
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+      
+        dismissSelector()
+        
+        timer?.invalidate()
+    }
+
+    
+    private func config(){
+        view.backgroundColor = .separator
+        
+        DataManager.share().getTargetStep { (codeResult, message, targetStep, _, _) in
+            self.targetStep = targetStep
+        }
+    }
+    
+    private func createContents(){
+        if timer == nil {
+            //timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(updateRealStepAndDistanceM), userInfo: nil, repeats: true)
+        }
+    }
+}

@@ -1,0 +1,40 @@
+//
+//  BaseBackViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/23.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class BaseBackViewController: UIViewController {
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        
+        if self.navigationController!.viewControllers.count != 1{
+            var tmpTitle = self.navigationController!.viewControllers[self.navigationController!.viewControllers.count-2].navigationItem.title ?? "提醒"
+            
+            if tmpTitle == "米橙生活"{
+                tmpTitle = "首页"
+            }
+            let curVC = self.navigationController!.viewControllers[self.navigationController!.viewControllers.count-1]
+            if !curVC.isKind(of: EventEditorVC.self) &&
+                !curVC.isKind(of: EventHomeVC.self)
+            {
+                let item = BarButtonItem(textStr: tmpTitle, imageName: "navbar_icon_back", tSelector: #selector(baseBackToPrevious))
+                curVC.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+            }
+        }
+    }
+    
+    @objc func baseBackToPrevious() {
+        if self.isKind(of: BasedViewController.self) {
+            (self as! BasedViewController).backToPrevious()
+            return
+        }
+        self.backToPrevious()
+        
+    }
+
+}

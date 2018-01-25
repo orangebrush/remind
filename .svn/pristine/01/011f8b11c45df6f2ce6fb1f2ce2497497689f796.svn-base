@@ -1,0 +1,194 @@
+//
+//  Me_RootViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/11.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+class MineItem {
+    var iconName :String
+    var name :String
+    var info :String
+    var vc :String
+    var radiusType: cornerRadiusType
+    var isShowsSeparatorLine: Bool
+    
+    init(name:String , info :String, icon :String, vc: String, radiusType: cornerRadiusType = .none, isShowsSeparatorLine: Bool = true) {
+        self.name = name
+        self.info = info
+        self.iconName = icon
+        self.vc = vc
+        self.radiusType = radiusType
+        self.isShowsSeparatorLine = isShowsSeparatorLine
+    }
+}
+class Me_RootViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    var tableView = UITableView.init(frame: CGRect.zero, style: .grouped)
+    var dataSource  = [[MineItem]]()
+    var header: MineHeaderView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.setNavigationBarStyle()
+        self.navigationItem.title = "我"
+        
+        
+        let bindWXItem    = MineItem.init(name: "关联微信", info: "", icon: "melist_related_wechat", vc: "ContactWXViewController", radiusType: .top)
+        let bindEmailItem = MineItem.init(name: "关联邮箱", info: "", icon: "melist_related_mail", vc: "CotactEmailViewController", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        
+        let feedItem = MineItem.init(name: "帮助与反馈", info: "", icon: "melist_related_help", vc: "", radiusType: .top)
+        let shareItem = MineItem.init(name: "分享给好友", info: "", icon: "melist_related_share", vc: "share")
+        
+        let version: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as! String
+        let aboutItem = MineItem.init(name: "关于我们", info: version, icon: "melist_related_about", vc: "AboutMeViewController")
+        let praiseItem = MineItem.init(name: "给个好评", info: "", icon: "melist_related_star", vc: "starVC", radiusType: .bottom, isShowsSeparatorLine: false)
+        
+        dataSource = [[bindWXItem, bindEmailItem], [feedItem, shareItem, aboutItem, praiseItem]]
+        
+        self.creatContent()
+
+        // Do any additional setup after loading the view.
+    }
+    func creatContent() {
+//        automaticallyAdjustsScrollViewInsets = false
+        tableView.separatorStyle = .none
+        tableView.separatorColor = .clear
+        tableView.backgroundColor = .clear
+        tableView.delegate = self
+        tableView.dataSource = self
+//        tableView.tableHeaderView = header
+        tableView.register(MeDefaultTableViewCell.self, forCellReuseIdentifier: "meDefaultTableViewCell")
+        view.addSubview(tableView)
+        
+        tableView.snp.makeConstraints { (make) in
+            make.top.right.bottom.left.equalToSuperview()
+        }
+        
+        header = MineHeaderView(frame: CGRect(x: 0, y: 0, width: keyDeviceWidth, height: 128))
+        refreshHeader()
+//        tableView.tableHeaderView = header
+        header.clickBlock = {
+            print("点击登录")
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.updateBackground()
+        
+        let item = BarButtonItem(imageName: "navbar_icon_set", tSelector: #selector(Me_RootViewController.settingClick))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    // MARK 设置
+    @objc func settingClick() {
+        let settingVC = SettingsViewController()
+        navigationController?.show(settingVC, sender: nil)
+        
+    }
+    func refreshHeader() {
+        header.textLabel.text = "我的资料"
+        header.imageView.image = UIImage.init(named: "melist_related_avatar_default")
+        header.nameLabel.text = "点击登录"
+        header.infoLabel.text = "登录后可备份数据到云端"
+        
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        if section == 1 {
+            return 40
+        }
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return nil
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return 48
+        }else {
+            return 48
+        }
+        
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+        let headeView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 48))
+        headeView.backgroundColor = .clear
+        var viewFrame = CGRect.init(x: 10, y: 12, width: keyDeviceWidth - 20, height: 36)
+        if section == 0 {
+            viewFrame = CGRect.init(x: 10, y: 12, width: keyDeviceWidth - 20, height: 36)
+        }
+        let bgView = UIView.init(frame: viewFrame)
+        bgView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        let radiu:CGSize = CGSize.init(width: ZXD_coner, height: ZXD_coner)
+        let corner : UIRectCorner = [UIRectCorner.topLeft,UIRectCorner.topRight]
+        let path = UIBezierPath.init(roundedRect: bgView.bounds, byRoundingCorners: corner, cornerRadii: radiu)
+        let maskLayer : CAShapeLayer = CAShapeLayer()
+        maskLayer.frame = bgView.bounds
+        maskLayer.path = path.cgPath
+        bgView.layer.mask = maskLayer
+        headeView.addSubview(bgView)
+        
+        let textLabel = UILabel.init(frame: CGRect.init(x: 15, y: 0, width: bgView.width - 30, height: 36))
+        bgView.addSubview(textLabel)
+        textLabel.textColor = UIColor.subWord
+        textLabel.font = UIFont.content
+        if section == 0 {
+            let str = "关联帐号（可选择将事件同时提醒到微信和邮箱）"
+            let attributedString = NSMutableAttributedString.init(string: str)
+            attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.subSubWord, range: NSMakeRange(4, str.count - 4))
+            textLabel.attributedText = attributedString
+        }else {
+            textLabel.text = "更多"
+        }
+        return headeView
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return dataSource.count
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48 + kLineHeight
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return dataSource[section].count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: MeDefaultTableViewCell = tableView.dequeueReusableCell(withIdentifier: "meDefaultTableViewCell", for: indexPath) as! MeDefaultTableViewCell
+        let item = dataSource[indexPath.section][indexPath.row]
+        cell.setItem(item)
+        return cell
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let item = dataSource[indexPath.section][indexPath.row]
+        if item.vc == "ContactWXViewController" {
+            let contactWX = ContactWXViewController()
+            contactWX.title = item.name
+            navigationController?.show(contactWX, sender: nil)
+        }else if item.vc == "CotactEmailViewController" {
+            let contactEmail = CotactEmailViewController()
+            contactEmail.title = item.name
+            navigationController?.show(contactEmail, sender: nil)
+        }else if item.vc == "share" {
+            let title = "米橙生活"
+            let tDescription = "我是你的生活小助手"
+            let url = "http://www.mc.cn"
+            let iconImage: UIImage = UIImage.init(named: "mc_logo_90")!
+            let share_iconData = UIImagePNGRepresentation(iconImage)
+            ShareViewController.showShareView(self, title: title, tDescription: tDescription, url: url, previewImageData: share_iconData)
+            
+        }else if item.vc == "AboutMeViewController" {
+            let aboutMe = AboutMeViewController()
+            aboutMe.title = item.name
+            aboutMe.version = item.info
+            navigationController?.show(aboutMe, sender: nil)
+        }else if item.vc == "starVC" {
+            let url = URL.init(string: "itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewSoftware?id=414478124")
+            if UIApplication.shared.canOpenURL(url!) {
+                UIApplication.shared.openURL(url!)
+            }
+        }
+    }
+}

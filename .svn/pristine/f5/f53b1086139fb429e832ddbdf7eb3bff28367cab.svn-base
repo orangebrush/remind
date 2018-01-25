@@ -1,0 +1,153 @@
+//
+//  festivalViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/22.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class festivalViewController: BasedViewController {
+    var festivalType : FestivalType?
+    var newTitle = ""
+    var dataArr = [FestivalModel]()
+    fileprivate lazy var mianTableView : UITableView = {
+       let tabelView = UITableView.init(frame: .zero, style: .plain)
+        tabelView.separatorColor = UIColor.separator
+        tabelView.delegate = self
+        tabelView.dataSource = self
+        tabelView.backgroundColor = UIColor.bgColor
+        return tabelView
+    }()
+    
+    fileprivate lazy var rightBtn : UIBarButtonItem = {
+        let btn = UIBarButtonItem.init(title: "确定", style: .plain, target: self, action: #selector(festivalViewController.confrimBtnClick))
+        btn.setTitleTextAttributes([NSAttributedStringKey.font:UIFont.init(withNormalFontSize: 16),NSAttributedStringKey.foregroundColor:UIColor.white], for: .normal)
+        return btn
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        mianTableView.frame = CGRect.init(x: 0, y: (navigation_height ?? 64)!+UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth, height: keyDeviceHeight-(navigation_height ?? 64)-UIApplication.shared.statusBarFrame.size.height-15)
+        mianTableView.register(festivalDetailTableViewCell.self, forCellReuseIdentifier: "festivalDetailTableViewCell")
+        self.view.addSubview(mianTableView)
+        self.automaticallyAdjustsScrollViewInsets = false
+        mianTableView.clipsToBounds = true
+        self.view.backgroundColor = UIColor.bgColor
+        self.getMainData()
+        self.navigationItem.rightBarButtonItem = rightBtn
+        self.title = newTitle
+        switch festivalType! {
+        case .international:
+            self.title = "世界节日"
+        case .tradition:
+            self.title = "中国节日"
+        case .solarTerms:
+            self.title = "二十四节气"
+        }
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item = BarButtonItem(imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+    }
+ 
+    //MARK:- 确定按钮点击
+    @objc  func confrimBtnClick(){
+        var intArr = [Int]()
+        for item in self.dataArr{
+            if item.selected{
+                intArr.append(item.id)
+            }
+        }
+        DataManager.share().setSelectedFestival(withFestivalType: self.festivalType!.rawValue, withFestivalIdList: intArr) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "festivalValueChange"), object: nil, userInfo: nil)
+            self.navigationController?.popViewController(animated: true)
+        }
+    }
+    //MARK:- 获取所有的数据
+    func getMainData(){
+        DataManager.share().getFestivalList(byFestivalType: self.festivalType!.rawValue) { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.dataArr = list
+            self.mianTableView.reloadData()
+        }
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}
+extension festivalViewController : UITableViewDelegate,UITableViewDataSource{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return section == 1 ? self.dataArr.count : 1
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+       let cell = tableView.dequeueReusableCell(withIdentifier: "festivalDetailTableViewCell")as!festivalDetailTableViewCell
+        
+        if indexPath.section == 0{
+            var selectAll = true
+            for model in dataArr{
+                if model.selected == false{
+                    selectAll = false
+                }
+            }
+             cell.configView(nil, indexPath, false, selectAll)
+        }else{
+             cell.configView(dataArr[indexPath.row], indexPath, indexPath.row == self.dataArr.count-1, nil)
+        }
+       
+        
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        return UIView()
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 50
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 0{
+            var selectAll = true
+            for model in dataArr{
+                if model.selected == false{
+                    selectAll = false
+                }
+            }
+            
+            for i in 0..<self.dataArr.count{
+                var item = self.dataArr[i]
+                if selectAll == true{
+                    item.selected = false
+                }else{
+                    item.selected = true
+                }
+                self.dataArr[i] = item
+               
+            }
+            self.mianTableView.reloadData()
+        }else{
+            var item = self.dataArr[indexPath.row]
+            item.selected = !item.selected
+            self.dataArr[indexPath.row] = item
+            self.mianTableView.reloadData()
+        }
+       
+    }
+    
+}

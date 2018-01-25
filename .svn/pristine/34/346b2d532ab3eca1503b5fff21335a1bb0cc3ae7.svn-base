@@ -1,0 +1,84 @@
+//
+//  StockViewController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/17.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class StockViewController: BasedViewController , UITableViewDelegate,UITableViewDataSource{
+    
+    fileprivate lazy var mainTableView : UITableView = {
+       let table = UITableView.init(frame: CGRect.zero, style: .plain)
+        table.delegate = self
+        table.dataSource = self
+        table.separatorStyle = .none
+        table.backgroundColor = UIColor.bgColor
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.title = "股票行情设置"
+        self.automaticallyAdjustsScrollViewInsets = false
+        mainTableView.frame = CGRect.init(x: 0, y: (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth, height: (keyDeviceHeight - (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height))
+        mainTableView.register(commonSettingTableViewCell.self, forCellReuseIdentifier: "commonSettingTableViewCell")
+        self.view.addSubview(mainTableView)
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        backButtonTitle = "首页"
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0 {
+            return 1
+        }else{
+            return 3
+        }
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "commonSettingTableViewCell")as!commonSettingTableViewCell
+        var tempTitle = ["首页显示数量","开盘提醒","收盘提醒","涨跌提醒"]
+        var tempContent = ["3个","","",""]
+        cell.configView(tempTitle[indexPath.row+indexPath.section], tempContent[indexPath.row+indexPath.section], tableView.numberOfRows(inSection: indexPath.section) == indexPath.row+1, indexPath.row == 0)
+        return cell
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let tempView = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 10))
+        tempView.backgroundColor = UIColor.clear
+        return tempView
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 1{
+            let vc = StockSettingViewController()
+            vc.selectIndex = indexPath.row
+            self.navigationController?.show(vc, sender: nil)
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return UIView()
+    }
+
+   
+
+}

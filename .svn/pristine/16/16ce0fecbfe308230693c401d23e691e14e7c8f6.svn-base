@@ -1,0 +1,338 @@
+//
+//  CardSettingViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/18.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CardSettingViewController: BasedViewController ,UITableViewDelegate,UITableViewDataSource{
+    var cardid : Int!
+    var festivalSettingModel : FestivalSettingModel?
+    var tempModel:FestivalSettingModel?
+    var festivalList = [FestivalTypeModel]()
+    var festivalSet : FestivalSettingFieldModel?
+    var festivalShowTypeList = [(rawValue: String, text: String)]()
+    
+    //临时存储
+    var isLocked = false
+    var selector: GANSelector?
+    var eventDate = Date()
+    var eventCount = 1
+    var eventInterval = 5
+    var eventSound = "boy"
+    var eventBeginningModel = BeginningModel(){
+        didSet{
+            //更新
+            self.mainTableView.reloadData()
+        }
+    }
+    
+    
+    lazy var mainTableView : UITableView = {
+        let tableView = UITableView.init(frame: CGRect.zero, style: .grouped)
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        return tableView
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        self.addMainview()
+        self.getMainData()
+        NotificationCenter.default.addObserver(self, selector: #selector(CardSettingViewController.valueChange), name: NSNotification.Name(rawValue: "festivalValueChange"), object: nil)
+    }
+    //MARK:- 判断是否是从上一个界面过来的
+    @objc func valueChange(){
+        self.getMainData()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        backButtonTitle = ""
+        
+    }
+    //MARK:- 获取页面的主要视图
+    func addMainview(){
+        self.title = "节日节气设置"
+        mainTableView.backgroundColor = UIColor.clear
+        let navHeight = (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height
+        mainTableView.register(cardSetingTableViewCell.self, forCellReuseIdentifier: "cardSetingTableViewCell")
+        mainTableView.register(remainSetingTableViewCell.self, forCellReuseIdentifier: "remainSetingTableViewCell")
+        mainTableView.frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: keyDeviceHeight-navHeight)
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.view.addSubview(mainTableView)
+        
+    }
+    override func backToPrevious(){
+        self.navigationController?.popViewController(animated: true)
+        guard (self.festivalSettingModel != nil) else {
+            return
+        }
+        self.festivalSettingModel?.field.time = eventDate
+        self.festivalSettingModel?.field.intervalMin = eventInterval
+        self.festivalSettingModel?.field.count = eventCount
+        self.festivalSettingModel?.field.ring = eventSound
+        self.festivalSettingModel?.field.beginningModel = self.eventBeginningModel
+        //保存设置数据
+        DataManager.share().setFestivalSetting(withFestivalSettingModel: self.festivalSettingModel!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refreshEventAll), object: nil)
+        }
+    }
+    //MARK:- 获取卡片设置界面数据
+    func getMainData(){
+        DataManager.share().getFestivaSetting { (result, message, model) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.festivalSettingModel = model
+            self.reloadMaindata(model)
+            self.mainTableView.reloadData()
+        }
+    }
+    func reloadMaindata(_ model:FestivalSettingModel){
+        self.eventCount = model.field.count
+        self.eventDate = model.field.time
+        self.eventBeginningModel = model.field.beginningModel
+        self.eventInterval = model.field.intervalMin
+        self.eventSound = model.field.ring
+        self.festivalList = model.festivalTypeList
+        self.festivalSet = model.field
+        self.festivalShowTypeList = model.festivalShowTypeList
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}
+extension CardSettingViewController {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if self.festivalSettingModel == nil{
+            return 0
+        }
+        if section == 0{
+            return 1
+        }else if section == 1 {
+            return festivalList.count
+        }else if section == 2{
+            return 5
+        }else{
+            return 2
+        }
+        
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 4
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if (self.festivalSettingModel == nil) {
+            return UITableViewCell()
+        }
+        if indexPath.section == 0{
+            let cell = tableView.dequeueReusableCell(withIdentifier: "cardSetingTableViewCell") as! cardSetingTableViewCell
+            cell.selectionStyle = .none
+            var text = ""
+            for model in self.festivalShowTypeList{
+                if model.rawValue == self.festivalSet?.showType.rawValue{
+                    text = model.text
+                }
+            }
+            cell.configView("首页显示数量", text,indexPath.row == tableView.numberOfRows(inSection: indexPath.section)-1 ? true : false)
+            return cell
+        }else if indexPath.section == 1{
+            let cell = tableView.dequeueReusableCell(withIdentifier: "cardSetingTableViewCell") as! cardSetingTableViewCell
+            cell.selectionStyle = .none
+            cell.configView(indexPath.row == 0 ? true : false, indexPath.row == tableView.numberOfRows(inSection: indexPath.section)-1 ? true : false,self.festivalList[indexPath.row])
+            return cell
+        }else{
+            
+            let cell = tableView.dequeueReusableCell(withIdentifier: "remainSetingTableViewCell") as! remainSetingTableViewCell
+            cell.configView(indexPath,self.festivalSet!, indexPath.row == tableView.numberOfRows(inSection: indexPath.section)-1 ? true : false, self.eventDate,eventCount, eventInterval,eventSound,eventBeginningModel)
+            cell.delegate = self
+            return cell
+        }
+        
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.section == 3{
+            return 60
+        }else{
+            return 50
+        }
+    
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+       return UIView()
+
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return UIView()
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 0{
+            if indexPath.row == 0{
+                var arr = [String]()
+                var selectIndex = 0
+                for i in 0..<self.festivalShowTypeList.count{
+                    arr.append(self.festivalShowTypeList[i].text)
+                    if self.festivalShowTypeList[i].rawValue == self.festivalSet?.showType.rawValue{
+                        selectIndex = i
+                    }
+                }
+                
+                let view = PlayCountPickView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+                view.delegate = self
+                view.congfigView(arr, selectIndex)
+                view.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+                UIApplication.shared.keyWindow?.addSubview(view)
+
+            }
+        }
+        
+        if indexPath.section == 1{
+            let vc = festivalViewController()
+            vc.festivalType = self.festivalList[indexPath.row].type
+            self.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        
+        if indexPath.section == 2{
+
+                if indexPath.row == 1{          //编辑提醒时间
+                    edit(withSelectorType: .time(withHasZero: true), withDefultValue: eventDate)
+                }else if indexPath.row == 2{    //编辑提醒次数
+                    edit(withSelectorType: .count, withDefultValue: (eventCount, eventInterval))
+                }else if indexPath.row == 3{    //编辑预提醒
+                    if let eventBeginningVC = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "beginning") as? EventBeginningVC{
+                        eventBeginningVC.beginningModel = eventBeginningModel
+                        navigationController?.show(eventBeginningVC, sender: nil)
+                    }
+                }else if indexPath.row == 4{    //编辑声音
+                    editSound()
+                }
+            
+        }
+        
+    }
+    
+    func editSound(){
+        if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+            soundVC.isPublicEvent = true
+            soundVC.sound = eventSound
+            soundVC.selectClosure = {
+                selectedSoundIndex in
+                self.eventSound = soundList[selectedSoundIndex]
+                self.mainTableView.reloadData()
+            }
+            navigationController?.show(soundVC, sender: nil)
+        }
+    }
+}
+extension CardSettingViewController : closeBtnClick,remainSetingTableViewCellDelegate{
+    func switchValueChange(_ indexPath: IndexPath, _ open: Bool) {
+        if self.festivalSettingModel == nil{
+            return
+        }
+        self.tempModel = self.festivalSettingModel!
+        if indexPath.section == 2{
+            tempModel?.field.isNotif = open
+            self.saveFestivalModel(indexPath)
+        }else{
+            if indexPath.row == 0{
+                if (tempModel!.field.isBindingWeixin){
+                    tempModel!.field.byWeixin = !tempModel!.field.byWeixin
+                    self.saveFestivalModel(indexPath)
+                }else{
+                    showWXBinding(closure: { (confrim, message) in
+                        wxVC?.dismissThis()
+                        if confrim{
+                            self.festivalSettingModel?.field.wxNickName = message
+                            self.festivalSettingModel?.field.isBindingWeixin = confrim
+                            self.tempModel?.field.wxNickName = message
+                            self.tempModel?.field.isBindingWeixin = confrim
+                            self.tempModel?.field.byWeixin = true
+                            self.saveFestivalModel(indexPath)
+                        }
+                    })
+                }
+            }else{
+                if (tempModel!.field.isBindingEmail){
+                    tempModel!.field.byEmail = !tempModel!.field.byEmail
+                    self.saveFestivalModel(indexPath)
+                }else{
+                    showEmailBinding(closure: { (confrim, message, message1) in
+                        emailVC?.dismissThis()
+                        if confrim{
+                            self.festivalSettingModel?.field.email = message1 ?? ""
+                            self.festivalSettingModel?.field.isBindingEmail = confrim
+                            self.tempModel?.field.email = message1 ?? ""
+                            self.tempModel?.field.isBindingEmail = confrim
+                            self.tempModel?.field.byEmail = true
+                            self.saveFestivalModel(indexPath)
+                        }
+                    })
+                }
+            }
+        }
+    }
+    
+    func saveFestivalModel(_ indexPath:IndexPath){
+        if self.tempModel == nil{
+            return
+        }
+        DataManager.share().setFestivalSetting(withFestivalSettingModel: self.tempModel!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.festivalSettingModel = self.tempModel
+            self.reloadMaindata(self.tempModel!)
+            self.mainTableView.reloadData()
+        }
+    }
+    
+    
+    
+    
+    func closeBtnClick(_ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+    }
+    
+    func cellClick(_ indexPath: IndexPath, _ selfview: PlayCountPickView) {
+        selfview.removeFromSuperview()
+        var model = self.festivalSettingModel
+        model?.field.showType = self.festivalShowTypeList[indexPath.row]
+        
+        DataManager.share().setFestivalSetting(withFestivalSettingModel: model!) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.festivalSettingModel = model
+            self.reloadMaindata(model!)
+            self.mainTableView.reloadData()
+        }
+        
+        
+    }
+    
+    
+    
+    
+    
+}

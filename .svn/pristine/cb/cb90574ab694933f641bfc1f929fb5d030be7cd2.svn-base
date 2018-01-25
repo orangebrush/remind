@@ -1,0 +1,60 @@
+//
+//  GANIgnoreHeader.swift
+//  Remind
+//
+//  Created by gg on 18/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANIgnoreHeader: UIView {
+    
+    var closure: ((Bool)->())?
+
+    var customSwitch: CustomSwitch?
+    
+    //MARK:- init-------------------------------------------------------------
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        config()
+        createContents()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func config(){
+        backgroundColor = UIColor(colorHex: 0xf4f4f4)
+    }
+    
+    private func createContents(){
+        
+        let labelFrame = CGRect(x: 34, y: 0, width: bounds.width / 2, height: bounds.height)
+        let label = UILabel(frame: labelFrame)
+        label.font = UIFont(withNormalFontSize: 15)
+        label.textColor = UIColor(colorHex: 0x666666)
+        label.text = "使用年份"
+        addSubview(label)
+        
+        customSwitch = CustomSwitch()
+        customSwitch?.origin = CGPoint(x: bounds.width - 34 - customSwitch!.frame.width, y: (bounds.height - customSwitch!.frame.height) / 2)
+        customSwitch?.addTarget(self, action: #selector(valueChange(_:)), for: .valueChanged)
+        customSwitch?.setOn(true, animated: true)
+        customSwitch?.onTintColor = UIColor.confirm
+        customSwitch?.shadowColor = UIColor.clear
+        customSwitch?.borderColor = UIColor.clear
+        addSubview(customSwitch!)
+        
+        //下分割线
+        let hFrame = CGRect(x: 0, y: bounds.height - kLineHeight, width: bounds.width, height: kLineHeight)
+        let hSep = UIView(frame: hFrame)
+        hSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(hSep)
+    }
+    
+    @objc func valueChange(_ sender: CustomSwitch){
+        closure?(sender.isOn())
+    }
+}

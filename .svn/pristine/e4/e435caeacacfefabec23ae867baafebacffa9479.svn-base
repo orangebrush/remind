@@ -1,0 +1,166 @@
+//
+//  StepVC.swift
+//  Remind
+//
+//  Created by gg on 23/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+class StepVC: BasedViewController {
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var graphicView: StepGraphicView!
+    
+    @IBOutlet weak var stepLabel: UILabel!
+    @IBOutlet weak var stepUnitLabel: UILabel!
+    @IBOutlet weak var distanceLabel: UILabel!
+    @IBOutlet weak var highestLabel: UILabel!
+    @IBOutlet weak var segment: UISegmentedControl!
+    
+    ///是否打开目标设置
+    fileprivate var isTargetSetOpen = false
+    var targetStep = 8000
+    
+    ///默认按周统计
+    fileprivate var currentDisplayMode: DisplayMode = .day7
+    
+    ///需绘制的数据模型列表
+    fileprivate var stepsDetailModel = StepsDetailModel(){
+        didSet{
+            
+            graphicView.stepsDetailModel = stepsDetailModel
+        }
+    }
+    
+    var isLocked = false
+    var selector: GANSelector?
+    
+    
+    ///定时器
+    private var timer: Timer?
+    
+    //MARK:- init------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        //获取数据
+        
+        //如果已打开 则关闭    t
+        if isTargetSetOpen {
+        
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+      
+        dismissSelector()
+        
+        timer?.invalidate()
+    }
+
+    
+    private func config(){
+        view.backgroundColor = .white
+        
+        contentView.layer.cornerRadius = .cornerRadius
+        
+        stepLabel.text = "..."
+        stepLabel.font = UIFont(withNormalFontSize: 34)
+        stepLabel.textColor = UIColor(colorHex: 0x333333)
+        
+        distanceLabel.text = "..."
+        distanceLabel.font = UIFont(withNormalFontSize: 12)
+        distanceLabel.textColor = UIColor(colorHex: 0x999999)
+        
+        highestLabel.text = "..."
+        highestLabel.font = UIFont(withNormalFontSize: 13)
+        highestLabel.textColor = UIColor(colorHex: 0x333333)
+        highestLabel.backgroundColor = UIColor(colorHex: 0xfff2e5)
+        
+        highestLabel.layer.cornerRadius = 4
+        highestLabel.clipsToBounds = true
+        
+        DataManager.share().getTargetStep { (codeResult, message, targetStep, _, _) in
+            self.targetStep = targetStep
+            
+            self.getDetailModelFrom(withBeforeDay: 7)
+        }
+    }
+    
+    private func createContents(){
+        if timer == nil {
+            timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(updateRealStepAndDistanceM), userInfo: nil, repeats: true)
+        }
+    }
+    
+    //MARK:- navigationBarItem 点击事件(设置目标步数)
+    @IBAction func navigationItemCLick(_ sender: UIBarButtonItem){
+        edit(withSelectorType: .targetStep, withDefultValue: targetStep)
+    }
+    
+    //MARK:- 切换显示
+    @IBAction func segmentedValueChange(_ sender: UISegmentedControl) {
+        let index = sender.selectedSegmentIndex
+        let day: Int
+        switch index {
+        case 0:
+            day = 7
+        case 1:
+            day = 30
+        default:
+            day = 90
+        }
+        
+        getDetailModelFrom(withBeforeDay: day)
+    }
+    
+    //MARK:- 获取最近天数据
+    private func getDetailModelFrom(withBeforeDay beforeDay: Int){
+        
+        let endDate = Date()
+        let beginDate = endDate.offset(with: -beforeDay)
+        
+        StepManager.share().getStepsListAndDistanceMList(byLastDays: beforeDay) { (codeResult, stepModelList) in
+            guard codeResult == .success else{
+                return
+            }
+            
+            self.graphicView.dateRange = beforeDay
+            self.graphicView.targetStep = self.targetStep
+            
+            
+        }
+        
+        DataManager.share().getStepsDetailLogList(withBeginDate: beginDate, withEndDate: endDate) { (codeResult, message, stepsDetailModel) in
+            guard codeResult == .success else{
+                return
+            }
+            
+            self.graphicView.dateRange = beforeDay
+            self.graphicView.stepsDetailModel = stepsDetailModel
+            
+            self.highestLabel.text = "最高记录\(stepsDetailModel.highestStep.step)步， " + stepsDetailModel.highestStep.date.formatString(with: "yyy年M月d日")
+        }
+    }
+    
+    //MARK:- 更新步数与距离
+    @objc func updateRealStepAndDistanceM(){
+        StepManager.share().getStepsAndDistanceM { (codeResult, step, distanceM) in
+            guard codeResult == .success else{
+                return
+            }
+            self.stepLabel.text = "\(step)"
+            let mileStr = String(format: "%.2f", CGFloat(distanceM) / 1000)
+            self.distanceLabel.text = "距离" + mileStr + "公里"
+        }
+    }
+}

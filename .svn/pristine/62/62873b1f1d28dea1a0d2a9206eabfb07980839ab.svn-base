@@ -1,0 +1,38 @@
+//
+//  StepGraphicView.swift
+//  Remind
+//
+//  Created by gg on 13/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepGraphicView: UIView {
+    
+    ///需绘制的数据模型列表
+    var stepsDetailModel = StepsDetailModel(){
+        didSet{
+            drawGraphic()
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    ///绘制柱状图
+    private func drawGraphic(){
+        
+    }
+}

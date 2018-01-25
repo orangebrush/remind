@@ -1,0 +1,1401 @@
+//
+//  EventEditorVC.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+///根据类型获取声音名
+func getSoundName(withEventType eventType: Int32, withEventSound eventSound: String) -> String{
+
+    let result: String
+    switch eventType {
+    case 0: //单次
+        result = ""
+    case 1:     //会议
+        result = "meeting"
+    case 2:     //生日
+        result = "birthday"
+    case 3:     //纪念日
+        result = "festival"
+    case 4:     //生活缴费
+        result = "shenghuojiaofei"
+    case 5:     //信用卡
+        result = "xinyongkahuankuan"
+    case 6:     //股指交割
+        result = "stock_delivery"
+    case 7:     //国债
+        result = "treasury_delivery"
+    default:    //问候
+        result = "greetings"
+    }
+    
+    return result + "_" + eventSound
+}
+
+class EventEditorVC: UIViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var cancelBarButtonItem: UIBarButtonItem!
+    @IBOutlet weak var saveBarButtonItem: UIBarButtonItem!
+    
+    //MARK:- 事件类型
+    var tip: Tip?
+    
+    ///避免返回的时候覆盖数据
+    var isPoping = false
+    
+    ///避免重复存储
+    private var isSaving = false
+    
+    //MARK:- 数据
+    var eventName = ""
+    var eventType = 0
+    var eventDate = Date(timeIntervalSinceNow: 60 * 10)
+    var eventHasLunar = false                            //是否带农历
+    var eventIsLunar = false                            //是否为农历
+    var eventLunarDate: LunarDate = (0,0,0,false,false,0)
+    var eventNoticeCount = 1
+    var eventInterval = 5                               //间隔分钟分钟
+    var eventBeginning = BeginningModel()
+    var eventClientTimes = Times()                      //每日提醒时间
+    var eventSound = "girl" //soundList.first ?? "boy"
+    var eventRingId = RingId.boy                        //每日提醒铃声
+    var eventFrequency = FrequencyModel(){                    //周期
+        didSet{
+            //如果周期改变清空预提醒列表
+            let oldCycle = oldValue.frequencyCycle
+            if oldCycle != eventFrequency.frequencyCycle{
+                eventBeginning.list.removeAll()
+                eventBeginning.next = nil
+            }
+        }
+    }
+    var eventWeixinNotif = false
+    var eventEmailNotif = false
+    fileprivate var eventWX = ""
+    fileprivate var eventEmail = ""
+    fileprivate var eventWXAsyn = false
+    fileprivate var eventEmailAsyn = false
+    
+    ///选择器
+    var selector: GANSelector?
+    
+    ///锁
+    var isLocked = false
+    private var isFirstInit = false
+    
+    
+    // 事件名称 行数
+    var lineNum: Int = 1
+    
+    
+    
+    
+    //传入事件模型（修改事件时赋值）
+    var event: EventDB?
+    var eventClient: EventClient?
+   
+    //完成回调
+    var completion: ((Bool)->())?
+    
+    //MARK:- init-----------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.separator
+        self.tableView.backgroundColor = UIColor.separator
+  
+        self.tableView.register(EventEditorTextTableViewCell.self, forCellReuseIdentifier: "eventEditorTextTableViewCell")
+        config()
+    }
+    
+    //MARK:- 页面传值
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let identifier = segue.identifier
+        let destination = segue.destination
+        
+        if identifier == "beginning" {                      //预提醒
+            let beginningVC = destination as? EventBeginningVC
+            beginningVC?.beginningModel = sender as? BeginningModel
+            beginningVC?.navigationItem.title = tip?.name
+        }else if identifier == "frequency"{                 //周期
+            let frequencyVC = destination as? FrequencyVC
+            if let originFrequency = sender as? FrequencyModel{
+                let copyFrequencyModel = FrequencyModel()
+                copyFrequencyModel.frequencyCycle = originFrequency.frequencyCycle
+                copyFrequencyModel.per = originFrequency.per
+                copyFrequencyModel.baseOnWeek = originFrequency.baseOnWeek
+                copyFrequencyModel.days = originFrequency.days
+                copyFrequencyModel.months = originFrequency.months
+                copyFrequencyModel.weekdays = originFrequency.weekdays
+                copyFrequencyModel.weeksTuple = originFrequency.weeksTuple
+                
+                frequencyVC?.frequency = copyFrequencyModel
+            }
+            
+            if let t = tip{
+                frequencyVC?.navigationItem.title = t.name
+                frequencyVC?.hasFrequencyNone = t.type == 0
+                frequencyVC?.beginDate = Date(timeInterval: 0, since: eventDate)
+            }else if let evt = event {
+                frequencyVC?.navigationItem.title = evt.typeName
+                frequencyVC?.hasFrequencyNone = evt.type == 0
+                frequencyVC?.beginDate = evt.beginDate ?? Date()
+            }
+        }else if identifier == "eventclienttime"{
+            let eventTimeVC = destination as? EventTimeVC
+            
+            let times = Times()
+            let newTimes = Times()
+            
+            times.list = eventClientTimes.list.filter{$0.minute == 0 || $0.minute == 30}
+            newTimes.list = eventClientTimes.list.filter{$0.minute != 0 && $0.minute != 30}
+            eventTimeVC?.times = times
+            eventTimeVC?.newTimes = newTimes
+            if let t = tip{
+                if t.isClient && t.type == 1{
+                    eventTimeVC?.isWholePoint = true
+                }
+            }else {
+                if let evtClt = eventClient{
+                    if evtClt.type == 1{
+                        eventTimeVC?.isWholePoint = true
+                    }
+                }
+            }
+            eventTimeVC?.navigationItem.title = "时间"
+        }
+    }    
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        let item1 = BarButtonItem(textStr: "取消", tSelector: #selector(cancel(_:)))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(textStr: "保存", tSelector: #selector(save(_:)))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+        
+        //避免重新初始化数据的问题，已初始化数据则直接刷新
+        guard !isFirstInit else {
+            tableView.reloadData()
+            return
+        }
+        
+        isFirstInit = true
+        createContents()
+        
+ 
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if let viewControllers = navigationController?.viewControllers{
+            if let parentVC = viewControllers[viewControllers.count - 1] as? EventHomeVC{
+                parentVC.needReloadDate = true
+            }
+        }
+    }
+    
+    private func config(){
+        
+        automaticallyAdjustsScrollViewInsets = false
+        
+//        let normalAttributes = [NSAttributedStringKey.foregroundColor: UIColor.white, NSAttributedStringKey.font: UIFont.navNormal]
+//        cancelBarButtonItem.setTitleTextAttributes(normalAttributes, for: .normal)
+//        cancelBarButtonItem.title = "取消"
+//        navigationItem.leftBarButtonItem = cancelBarButtonItem
+//
+//        let saveAttributes = [NSAttributedStringKey.foregroundColor: UIColor.confirm, NSAttributedStringKey.font: UIFont.navNormal]
+//        saveBarButtonItem.setTitleTextAttributes(saveAttributes, for: .normal)
+//        saveBarButtonItem.title = "保存"
+        
+        tableView.separatorStyle = .none
+        
+        tableView.register(EventEditorHeaderCell.self, forCellReuseIdentifier: "eventEditorHeaderCell")
+     
+    }
+    
+    private func createContents(){
+        guard !isPoping else {
+            isPoping = false
+            tableView.reloadData()
+            return
+        }
+        
+        DataManager.share().getInfo(closure: { (codeResult, message, infoModel) in
+            self.eventWX = infoModel.weixinId
+            self.eventEmail = infoModel.emailAddr
+            self.eventWXAsyn = infoModel.isWeixinBinding
+            self.eventEmailAsyn = infoModel.isEmailBinding
+            self.tableView.reloadData()
+        })
+        
+        
+        if let t = tip{
+            
+            //如果类型为周期可选，给一个周期初始值（避免存储的时候后台出问题 -_-|||）
+            if t.isCycle(){
+                let initFrequency = FrequencyModel()
+                //全局默认
+                initFrequency.per = 1
+                initFrequency.days = [1]
+                initFrequency.weekdays = [2]
+                initFrequency.months = [1]
+                initFrequency.weeksTuple = (1, 2)
+                initFrequency.baseOnWeek = false
+                
+                if t.type == 0{                             //自定义、生日、纪念日:无周期
+                    initFrequency.frequencyCycle = .none
+                }else if t.type == 4{                       //定期会议：每周一
+                    initFrequency.frequencyCycle = .week
+                    initFrequency.weekdays = [1 + 1]
+                }else if t.type == 9 || t.type == 10{       //生活缴费、信用卡还款：每月15日
+                    initFrequency.frequencyCycle = .month
+                    initFrequency.days = [15]
+                }else if t.type == 7{                       //股指交割:每个月第三个星期五
+                    initFrequency.frequencyCycle = .month
+                    initFrequency.baseOnWeek = true
+                    initFrequency.weeksTuple = (3, 5 + 1)
+                }else if t.type == 8{                       //国债交割:每年3、6、9月份第二个星期五
+                    initFrequency.frequencyCycle = .year
+                    initFrequency.baseOnWeek = true
+                    initFrequency.months = [3, 6, 9]
+                    initFrequency.weeksTuple = (2, 5 + 1)   //周日== 1。  2 3 4 5 6 7
+                }else if t.type == 9 {                      //信用卡还款:每月1日
+                    initFrequency.frequencyCycle = .month
+                    initFrequency.months = [1]
+                }else{                                      //其他:每周六
+                    initFrequency.frequencyCycle = .week
+                    initFrequency.weekdays = [6 + 1]
+                }
+                eventFrequency = initFrequency
+                
+            }
+            
+            eventType = Int(t.type)
+            
+            //添加新建每日提醒默认提醒时间
+            if t.isClient{
+                let name: String
+                let timeTuples: [TimesTuple]
+                switch t.type{
+                case 1:     //整点报时
+                    name = "整点报时"
+                    timeTuples = [(8,0),(9,0),(10,0),(11,0),(12,0),(14,0),(15,0),(16,0),(17,0),(18,0),(19,0)]
+                case 2:     //喝水
+                    name = "喝水"
+                    timeTuples = [(7,30),(9,0),(11,0),(13,30),(15,0),(16,30),(18,0),(20,0)]
+                case 3:     //吃药
+                    name = "吃药"
+                    timeTuples = [(8,0),(12,30),(19,0)]
+                case 4:     //活动一下
+                    name = "活动一下"
+                    timeTuples = [(10,0),(11,0),(15,0),(16,0),(17,0)]
+                case 5:     //闭目养神
+                    name = "闭目养神"
+                    timeTuples = [(10,30),(15,30)]
+                case 6:     //休息一下
+                    name = "休息一下"
+                    timeTuples = [(10,0),(11,0),(15,0),(16,0),(17,0)]
+                case 7:     //跟ta聊天
+                    name = "跟TA聊聊"
+                    timeTuples = [(8,30),(11,30),(17,30),(22,30)]
+                default:
+                    name = ""
+                    timeTuples = []
+                }
+                eventName = name
+                eventClientTimes.list = timeTuples
+                
+                //跟ta聊聊与自定义类型无男声女声
+                if t.type == 7 || t.type == 8{
+                    eventSound = soundList[2]
+                }
+            }else{          //添加重要事件默认预提醒
+                eventBeginning.list.removeAll()
+                eventBeginning.next = nil
+                switch t.type{
+                case 0:     //自定义
+                    break
+                case 1:     //生日
+                    eventBeginning.list = [(.week, 1), (.day, 1), (.minute, 15)]
+                    eventDate = Date(withDateStr: "1990-6-15 12:00", withFormatStr: "yyy-M-d H:m")
+                case 2:     //纪念日
+                    eventBeginning.list = [(.week, 1), (.day, 1), (.minute, 15)]
+                    eventDate = Date(timeIntervalSinceNow: 10 * 60)
+                case 4:     //定期会议
+                    eventBeginning.list = [(.minute, 15)]
+                    eventDate = Date(withDateStr: "9:00", withFormatStr: "H:m")
+                case 6:     //定期问候
+                    eventBeginning.list = [(.day, 1), (.minute, 15)]
+                    eventDate = Date(withDateStr: "18:00", withFormatStr: "H:m")
+                case 7:     //股指交割
+                    eventBeginning.list = [(.day, 1), (.minute, 15)]
+                case 8:     //国债交割
+                    eventBeginning.list = [(.week, 1), (.day, 1), (.minute, 15)]
+                case 9:     //信用卡还款
+                    eventBeginning.list = [(.day, 1), (.minute, 15)]
+                    eventDate = Date(withDateStr: "9:00", withFormatStr: "H:m")
+                case 10:    //生活缴费
+                    eventBeginning.list = [(.day, 1), (.minute, 15)]
+                    eventDate = Date(withDateStr: "9:00", withFormatStr: "H:m")
+                case 11:    //单次事件
+                    eventDate = Date(timeIntervalSinceNow: 10 * 60)
+                default:
+                    break
+                }
+            }
+            
+            //刷新ui
+            navigationItem.title = t.name
+        }else{
+            
+            //如果为修改的话，填充修改数据
+            if let evtClt = eventClient{
+                eventName = evtClt.name ?? ""
+                for element in evtClt.timesList!{
+                    if let times = element as? EventClientTimes{
+                        eventClientTimes.list.append((Int(times.hour), Int(times.minute)))
+                    }
+                }
+                eventRingId = RingId(rawValue: evtClt.ringId ?? "") ?? RingId.boy
+                eventSound = evtClt.ringId ?? "girl"
+                navigationItem.title = evtClt.name
+                eventType = Int(evtClt.type)
+            }else if let evt = event{
+                eventName = evt.introduce ?? ""
+                eventType = Int(evt.type)
+                eventIsLunar = evt.isLunar
+                eventDate = evt.beginDate ?? Date(timeIntervalSinceNow: 60 * 10)
+                eventLunarDate = transformGregorianToLunar(byDate: eventDate)
+                eventNoticeCount = Int(evt.count)
+                eventInterval = Int(evt.intercycle)
+                eventBeginning = DataManager.share().getBeginningModel(fromBeginningList: evt.beginningList, andBeginningNext: evt.beginningNext) ?? BeginningModel()
+                eventSound = evt.sound ?? "girl"
+                eventRingId = RingId(rawValue: evt.ring ?? "girl") ?? RingId.girl
+                eventFrequency = DataManager.share().getFrequencyModel(fromFrequency: evt.frequency) ?? FrequencyModel()
+                eventWeixinNotif = evt.isWeixinOpen
+                eventEmailNotif = evt.isEmailOpen
+                eventWX = evt.weixinID ?? ""
+                eventEmail = evt.emailAddr ?? ""
+                
+                navigationItem.title = evt.introduce
+            }
+            
+        }
+        
+        
+        tableView.reloadData()
+    }
+    
+    override func backToPrevious() {
+        
+        navigationController?.popViewController(animated: true)
+    }
+    
+    //MARK:- 取消
+    @objc func cancel(_ sender: Any) {
+        navigationController?.popViewController(animated: true)
+        
+        completion?(false)
+    }
+    
+    //MARK:- 判断预提醒是否合法
+    private func isBeginningLegal() -> Bool{
+        
+        if let t = tip{
+            if !t.isCycle(){
+                return true
+            }
+        }else if let evt = event {
+            if evt.type == 1 || evt.type == 2 || evt.type == 11{
+                return true
+            }
+        }
+        
+        switch eventFrequency.frequencyCycle {
+        case .none:
+            return eventBeginning.list.isEmpty
+        case .minute:
+            if eventFrequency.per < 10{
+                return eventBeginning.list.isEmpty
+            }
+        default:
+            return true
+        }
+        
+        for beginning in eventBeginning.list{
+            if beginning.0.rawValue <= eventFrequency.frequencyCycle.rawValue{
+                if beginning.1 < eventFrequency.per{
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    @objc func save(_ sender: Any) {
+        self.view.endEditing(true)
+        guard !isSaving else {
+            return
+        }
+        
+        
+        //未选择提醒时间的情况下，给予提示
+        let tempName = eventName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        guard tempName != "" else{
+            self.notif(withTitle: "需选填写事件名")
+            return
+        }
+        
+        
+        
+        let dataHandler = DataHandler.share()
+        
+        if let t = tip {
+            if t.isClient{
+                
+                //未选择提醒时间的情况下，给予提示
+                guard !eventClientTimes.list.isEmpty else{
+                    self.notif(withTitle: "需选择提示时间")
+                    return
+                }
+                
+                //判断提醒是否达到最大数
+                guard NotifManager.share().canAddLocalNotification() else{
+                    self.notif(withTitle: "已达提醒上限")
+                    return
+                }
+                
+                //添加到数据库
+                guard let eventClient = dataHandler.getEventClient(byEventClientType: Int(t.type)) else{
+                    return
+                }
+                
+                eventClient.name = eventName            //提醒名称
+                
+                //提醒时间
+                dataHandler.deleteAllEventClientTimes(withEventClientId: Int(eventClient.id))
+                dataHandler.commit()
+                
+                for time in eventClientTimes.list{
+                    if let eventClientTimes = DataHandler.share().insertEventClientTimes(withEventClientType: Int(t.type), withEventClientId: Int(eventClient.id)){
+                        eventClientTimes.hour = Int32(time.hour)
+                        eventClientTimes.minute = Int32(time.minute)
+                    }
+                }
+                eventClient.ringId = eventSound
+                eventClient.status = Int32(EventClientStatus.normal.rawValue)       //状态（开始）
+                eventClient.afterInterval = 0
+                eventClient.userTime = ""
+                
+                if DataHandler.share().commit() {
+                    //添加提醒
+                    NotifManager.share().addLocalNotification(withEventClient: eventClient)
+                    
+                    //同步到服务器
+                    DataManager.share().addEventClient(withEventClientParam: eventClient, closure: { (codeResult, message, eventClientId) in
+                        guard codeResult == .success else{
+                            return
+                        }
+                        //发送更新消息
+                        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "homeDataValueChange"), object: nil, userInfo: nil)
+                        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshClient), object: nil, userInfo: nil)
+                    })
+                    if let rootVC = navigationController?.viewControllers.first as? EventViewController{
+                        rootVC.isEventClient = true
+                    }
+                    navigationController?.popToRootViewController(animated: true)
+                }else{
+                    DataHandler.share().reset()
+                    notif(withTitle: "保存失败")
+                }
+            }else{
+                //判断生日是否大于当前日期
+                if t.type == 1{     //生日type==1
+                    if eventDate.timeIntervalSinceNow > 0 {
+                        notif(withTitle: "无法选择将来生日日期")
+                        return
+                    }
+                }else if t.type == 11 {    //自定义==0 纪念日==2
+                    if eventDate.timeIntervalSinceNow < 0 {
+                        notif(withTitle: "无法选择过去的单次事件")
+                        return
+                    }
+                }
+                
+                //判断预提醒是否合法
+                if !isBeginningLegal(){
+                    notif(withTitle: "预提醒时间范围不能小于提醒周期")
+                    return
+                }
+                
+                var eventParam = EventParam()
+                eventParam.beginningModel = eventBeginning
+                eventParam.introduce = eventName
+                eventParam.count = eventNoticeCount
+                eventParam.beginDate = eventDate
+                eventParam.hasEmailRemind = eventEmailNotif
+                eventParam.hasWeixinRemind = eventWeixinNotif
+                eventParam.type = Int(t.type)
+                eventParam.isLunar = eventIsLunar
+                eventParam.lunarYear = eventLunarDate.lunarYear
+                eventParam.lunarMonth = eventLunarDate.lunarMonth
+                eventParam.lunarDay = Int(eventLunarDate.lunarDay)
+                eventParam.isLeapMonth = eventLunarDate.isLeapMonth
+                eventParam.intercycle = eventInterval
+                eventParam.sound = eventSound //getSoundName(withEventType: t.type, withEventSound: eventSound)
+                eventParam.frequencyModel = eventFrequency
+                eventParam.param1 = eventFrequency.showTimes()
+                eventParam.param2 = eventParam.beginDate.formatString(with: "H:mm")
+                eventParam.param3 = eventNoticeCount == 1 ? "\(eventNoticeCount)次" : "\(eventNoticeCount)次，每次间隔\(eventInterval)分钟"
+                DataManager.share().addEvent(withEventParam: eventParam, closure: { (codeResult, message, eventId) in
+                    
+//                    self.saveBarButtonItem.isEnabled = false
+                    
+                    guard codeResult == .success else{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    
+                    self.notif(withTitle: message, duration: 2, closure: {
+                        //发送更新消息
+                        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "homeDataValueChange"), object: nil, userInfo: nil)
+                        NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refershEvent), object: nil, userInfo: nil)
+                        
+                        //跳转到详情页
+                        let vc = DetailViewController()
+                        vc.id = Int32(eventId)
+                        vc.backToRoot = true
+                        self.navigationController?.show(vc, sender: nil)
+                    })
+                })
+            }
+        }else{
+            if let evtClt = eventClient{        //修改
+                
+                //未选择提醒时间的情况下，给予提示
+                guard !eventClientTimes.list.isEmpty else{
+                    self.notif(withTitle: "需选择提示时间")
+                    return
+                }
+                
+                evtClt.name = eventName
+                
+                //提醒时间判断是否需要移除
+                if let oldTimes = DataManager.share().getTimes(fromEventClientTimes: evtClt.timesList){
+                    if oldTimes.encoderTimes(forServer: true) != eventClientTimes.encoderTimes(forServer: true){
+                        //dataHandler.deleteAllEventClientTimes(withEventClientId: Int(evtClt.id))
+                        for _ in oldTimes.list{
+                            dataHandler.deleteEventClientTimes(withEventClientId: Int(evtClt.id))
+                        }
+                        
+                        for time in self.eventClientTimes.list{
+                            if let eventClientTimes = dataHandler.insertEventClientTimes(withEventClientType: Int(evtClt.type), withEventClientId: Int(evtClt.id)){
+                                eventClientTimes.hour = Int32(time.hour)
+                                eventClientTimes.minute = Int32(time.minute)
+                            }
+                            dataHandler.commit()
+                        }
+                        
+                    }
+                }
+                
+                evtClt.ringId = eventSound
+                evtClt.status = Int32(EventClientStatus.normal.rawValue)       //状态（开始）
+                evtClt.afterInterval = 0
+                evtClt.userTime = ""
+                
+                //保存到本地数据库
+                if dataHandler.commit(){
+                    
+                    
+                    //重置提醒
+                    NotifManager.share().addLocalNotification(withEventClient: evtClt)
+                    
+                    //同步到服务器
+
+                    DataManager.share().updateEventClient(withEventClient: evtClt, closure: { (codeResult, message, eventClientId) in
+                        
+                    })
+                    
+                    //发送更新消息
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "homeDataValueChange"), object: nil, userInfo: nil)
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshClient), object: nil, userInfo: nil)
+                    
+                    navigationController?.popViewController(animated: true)
+                }else{
+                    dataHandler.reset()
+                    //notif(withTitle: "保存失败")
+                }
+            }else if var evt = event{         //修改
+                //判断生日是否大于当前日期
+                if evt.type == 1{     //生日type==1
+                    if eventDate.timeIntervalSinceNow > 0 {
+                        notif(withTitle: "无法选择将来生日日期")
+                        return
+                    }
+                }else if evt.type == 11 {    //自定义==0 纪念日==2
+                    if eventDate.timeIntervalSinceNow < 0 {
+                        notif(withTitle: "无法选择过去的单次事件")
+                        return
+                    }
+                }
+                
+                //判断预提醒是否合法
+                if !isBeginningLegal(){
+                    notif(withTitle: "预提醒时间范围不能小于提醒周期")
+                    return
+                }
+                
+                evt.introduce = eventName
+                evt.count = Int32(eventNoticeCount)
+                evt.beginDate = eventDate
+                evt.hasEmailRemind = eventEmailNotif
+                evt.hasWeixinRemind = eventWeixinNotif
+                evt.intercycle = Int32(eventFrequency.frequencyCycle.rawValue)
+                evt.sound = eventSound
+                evt.ring = eventSound
+                evt.interval = Double(eventInterval)
+                evt.intercycle = Int32(eventInterval)
+                evt.frequency.baseOnWeek = eventFrequency.baseOnWeek
+                evt.frequency.cycle = Int32(eventFrequency.frequencyCycle.rawValue)
+                
+                
+                evt.isLunar = eventIsLunar
+                evt.lunarYear = Int32(eventLunarDate.lunarYear)
+                evt.lunarMonth = Int32(eventLunarDate.lunarMonth)
+                evt.lunarDay = Int32(eventLunarDate.lunarDay)
+                evt.isLeapMonth = eventLunarDate.isLeapMonth
+                
+                evt.frequency.days.removeAll()
+                for day in eventFrequency.days{
+                    var frequencyDay = FrequencyDayDB()
+                    frequencyDay.day = Int32(day)
+                    evt.frequency.days.append(frequencyDay)
+                }
+                evt.frequency.months.removeAll()
+                for month in eventFrequency.months{
+                    var frequencyMonth = FrequencyMonthDB()
+                    frequencyMonth.month = Int32(month)
+                    evt.frequency.months.append(frequencyMonth)
+                }
+                evt.frequency.weekdays.removeAll()
+                for weekday in eventFrequency.weekdays{
+                    var frequencyWeekday = FrequencyWeekdayDB()
+                    frequencyWeekday.weekday = Int32(weekday)
+                    evt.frequency.weekdays.append(frequencyWeekday)
+                }
+                evt.frequency.per = Int32(eventFrequency.per)
+                evt.frequency.weeksTuple.weekday = Int32(eventFrequency.weeksTuple.1)
+                evt.frequency.weeksTuple.weekNumber = Int32(eventFrequency.weeksTuple.0)
+                
+                evt.beginningList.removeAll()
+                for (cycle, count) in eventBeginning.list{
+                    var beginning = BeginningDB()
+                    beginning.cycle = Int32(cycle.rawValue)
+                    beginning.count = Int32(count)
+                    evt.beginningList.append(beginning)
+                }
+                evt.param1 = eventFrequency.showTimes()
+                evt.param2 = evt.beginDate?.formatString(with: "H:mm")
+                evt.param3 = eventNoticeCount == 1 ? "\(eventNoticeCount)次" : "\(eventNoticeCount)次，每次间隔\(eventInterval)分钟"
+                isSaving = true
+                DataManager.share().updateEvent(withEvent: evt, closure: { (codeResult, message) in
+                    self.isSaving = false
+                    guard codeResult == .success else{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "homeDataValueChange"), object: nil, userInfo: nil)
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refrshEventWithID), object: nil, userInfo: ["eventID": evt.id])
+                    
+                    self.notif(withTitle: message, duration: 2, closure: {
+                        //self.navigationController?.popViewController(animated: true)
+                        //跳转到详情页
+                        let vc = DetailViewController()
+                        vc.id = evt.id
+                        vc.backToRoot = true
+                        self.navigationController?.show(vc, sender: nil)
+                        
+                    })
+                })
+            }
+        }
+
+        
+    }
+}
+
+
+//MARK:- tableview delegate
+extension EventEditorVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        if let t = tip{
+            if t.isClient {
+                return 2
+            }
+            return 4
+        }
+        return eventClient != nil ? 2 : 4
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        switch section {
+        case 1:
+//            if let t = tip{
+//                if !t.isClient && t.isCycle(){
+//                    if eventFrequency.frequencyCycle == .minute {
+//                        return 1
+//                    }
+//                }
+//            }else if let evt = event{
+//                if (evt.type == 1 || evt.type == 2 || evt.type == 11) && evt.frequency.cycle == 1{
+//                    return 1
+//                }
+//            }
+            return 2
+        case 2:
+            let intervalOffset = (hasCount() && eventNoticeCount > 1) ? 1 : 0
+            let beginningOffset = hasBeginningCell() ? 1 : 0
+            let countOffset = hasCount() ? 1 : 0
+            return countOffset + intervalOffset + beginningOffset + 1
+        case 3:
+            return 2
+        default:            //事件名称
+            return 1
+        }
+    }
+    
+    //MARK:- 判断是否有次数选择
+    private func hasCount() -> Bool{
+        if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+            return false
+        }
+        return true
+    }
+    
+    //MARK:- 判断预提醒是否屏蔽
+    private func hasBeginningCell() -> Bool{
+        if let t = tip{
+            if !t.isClient && t.isCycle(){
+                if eventFrequency.frequencyCycle == .minute && eventFrequency.per <= 10{
+                    return false
+                }
+            }
+        }else if let evt = event{
+            if !(evt.type == 1 || evt.type == 2 || evt.type == 11){
+                if evt.frequency.cycle == 1 && evt.frequency.per <= 10{
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    //MARK:- cell高度
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.section == 3{
+            return 60
+        }
+        if indexPath.section == 0 {
+            let textHeight = eventName.computationString(view.width - 40, UIFont.systemFont(ofSize: 14), eventName)
+            if Float(textHeight) > 25 || self.lineNum == 2 {
+                if Float(textHeight) > 48 {
+                    return 103 + 10
+                }
+                return 103
+            }
+                return 63
+        }
+        return 48
+    }
+    
+    //MARK:- header高度
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return .edge12
+        }else {
+            return .edge10
+        }
+    }
+    
+    //MARK:- footer高度
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        var row = indexPath.row
+        var cell: UITableViewCell
+        var isTopRadius = false
+        var isBottomRadius = false
+        
+        if section == 3{            //提醒到微信与邮箱
+            cell = tableView.dequeueReusableCell(withIdentifier: "cell1")!
+            let cell1 = cell as! EventEditorCell1
+            cell1.indexPath = indexPath
+            if row == 0{
+                cell1.keyLabel.text = "同时提醒到微信"
+                cell1.valueLabel.text = eventWXAsyn ? eventWX : "未绑定"
+                cell1.asynSwitch.isOn = eventWeixinNotif
+                cell1.iconImageView.image = #imageLiteral(resourceName: "remind_wechat_icon")
+                
+                isTopRadius = true
+                
+                //点击微信提醒开关
+                cell1.closure = {
+                    isOn in
+                    if self.eventWXAsyn{
+                        self.eventWeixinNotif = isOn
+                    }else{
+                        //打开绑定微信页面
+                        self.showWXBinding(closure: { (isBinded, bindedWX) in
+                            wxVC?.dismissThis()
+                            self.eventWXAsyn = isBinded
+                            self.eventWX = bindedWX
+                            cell1.valueLabel.text = isBinded ? bindedWX : "未绑定"
+                            cell1.asynSwitch.setOn(isBinded, animated: true)                            
+                        })
+                        cell1.asynSwitch.setOn(false, animated: true)
+                    }
+                }
+            }else{
+                cell1.keyLabel.text = "同时提醒到电子邮箱"
+                cell1.valueLabel.text = eventEmailAsyn ? eventEmail : "未绑定"
+                cell1.asynSwitch.isOn = eventEmailNotif
+                cell1.iconImageView.image = #imageLiteral(resourceName: "remind_mail_icon")
+                
+                isBottomRadius = true
+                
+                //点击邮箱提醒开关
+                cell1.closure = {
+                    isOn in
+                    if self.eventEmailAsyn{
+                        self.eventEmailNotif = isOn
+                        //cell1.asynSwitch.setOn(isOn, animated: true)
+                    }else{
+                        //打开邮箱绑定页面
+                        self.showEmailBinding(closure: { (isBinded, bindedEmail) in
+                            emailVC?.dismissThis()
+                            self.eventEmailAsyn = isBinded
+                            self.eventEmail = bindedEmail
+                            cell1.valueLabel.text = isBinded ? bindedEmail : "未绑定"
+                            cell1.asynSwitch.setOn(isBinded, animated: true)
+                        })
+                        cell1.asynSwitch.setOn(false, animated: true)
+                        
+                    }
+                }
+                let separatorFrame = CGRect(x: 25, y: 0, width: cell1.width - 25, height: kLineHeight)
+                let separator = UIView(frame: separatorFrame)
+                separator.backgroundColor = UIColor.separator
+                cell1.addSubview(separator)
+            }
+            
+            cell.customDraw(withTopCornerRadius: isTopRadius, withBottomCornerRadius: isBottomRadius)
+            return cell
+        }else if section == 0 {
+            cell = tableView.dequeueReusableCell(withIdentifier: "eventEditorHeaderCell", for: indexPath)
+             let cell2 = cell as! EventEditorHeaderCell
+            var isClient: Bool = false
+            if let t = tip{
+                isClient = t.isClient
+            }
+            //事件名称显示
+            cell2.textView.placeholder = (isClient || eventClient != nil) ? "请输入提醒名称（48字以内）" : "请输入事件名称（48字以内）"
+            cell2.setData(eventName)
+            cell2.isNewline = { num in
+                self.lineNum = num
+                self.tableView.beginUpdates()
+                self.tableView.endUpdates()
+            }
+            cell2.closure = { str in
+                self.eventName = str
+            }
+            return cell
+        } else{                      //其他
+            cell = tableView.dequeueReusableCell(withIdentifier: "eventEditorTextTableViewCell", for: indexPath)
+            let cell0 = cell as! EventEditorTextTableViewCell
+            
+            var leftText  = ""
+            var rightText = ""
+            var radiusType: cornerRadiusType = .none
+            var isShowsSeparatorLine: Bool = true
+            
+            if let t = tip{     //新建
+                switch section{
+                case 0:                 //事件名称显示
+                     break
+                case 1:                 //事件日期时间显示
+                    if row == 0{
+                        leftText = t.isClient ? "提醒时间" : "事件日期"
+                        
+                        if t.isClient{
+                            rightText = eventClientTimes.encoderTimes()
+                        }else{
+                            if t.isCycle(){
+                                rightText = eventFrequency.showTimes()
+                            }else{
+                                if eventIsLunar{        //农历显示
+                                    var lunarStr = ""
+                                    let lunarYear = eventLunarDate.lunarYear
+                                    lunarStr += lunarYearList[(lunarYear - 1900 + 36) % lunarYearList.count]
+                                    lunarStr += " (\(lunarYear))"
+                                    lunarStr += lunarMonthList[eventLunarDate.lunarMonth - 1]
+                                    lunarStr += ""
+                                    lunarStr += lunarDayList[Int(eventLunarDate.lunarDay - 1)]
+                                    rightText = lunarStr
+                                }else{
+                                    rightText = eventDate.isCurYear() ? eventDate.formatString(with: "M月d日") : eventDate.formatString(with: "yyy年M月d日")
+                                }
+                            }
+                        }
+                        
+                        if tableView.numberOfRows(inSection: 1) == 1{
+                            radiusType = .all
+                        }else{
+                            radiusType = .top
+                        }
+                        
+                    }else{
+                        leftText = t.isClient ? "提示音" : "提醒时间"
+                        if t.isClient{
+                             rightText = showSoundText(withEventSound: eventSound)
+                        }else{
+                            if t.isCycle() && eventFrequency.frequencyCycle == FrequencyCycle.minute {
+                                rightText = "-"
+                            }else{
+                               rightText = eventDate.formatString(with: "H:mm")
+                            }
+                        }
+                        radiusType = .bottom
+                        isShowsSeparatorLine = false
+                    }
+                default:                //事件提醒显示
+                        if hasCount(){
+                            if eventNoticeCount <= 1 && row != 0 {
+                                row += 1
+                            }
+                        }else {
+                            row += 2
+                        }
+                        
+                        if !hasBeginningCell(){
+                            row += 1
+                        }
+                        
+                        if row == 0{
+                            leftText = "提醒次数"
+                            //判断是否可编辑
+                            if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                                rightText = "-"
+                            }else{
+                                rightText = "\(eventNoticeCount)次"
+                            }
+                            radiusType = .top
+                        }else if row == 1{                //间隔时间
+                            leftText = "间隔时间"
+                            rightText = "\(eventInterval)分钟"
+                        }else if row == 2{          //预提醒
+                            leftText = "预提醒"
+                            var value = eventBeginning.list.isEmpty ? "无预提醒" : ""
+                            let sortedEventBeginningList = eventBeginning.list.sorted(by: { (arg0, arg1) -> Bool in
+                                
+                                let (cycle0, value0) = arg0
+                                let (cycle1, value1) = arg1
+                                if cycle0.rawValue < cycle1.rawValue{
+                                    return true
+                                }else if cycle0.rawValue > cycle1.rawValue{
+                                    return false
+                                }else{
+                                    if value0 < value1{
+                                        return true
+                                    }
+                                }
+                                return false
+                            })
+                            
+                            for (index, tuple) in sortedEventBeginningList.enumerated(){
+                                if index != 0{
+                                    value += ","
+                                }
+                                value += "\(tuple.1)"
+                                
+                                let prefixValue: String
+                                switch tuple.0{
+                                case .minute:
+                                    prefixValue = "分钟"
+                                case .hour:
+                                    prefixValue = "小时"
+                                 case .day:
+                                    prefixValue = "天"
+                                case .week:
+                                    prefixValue = "周"
+                                case .month:
+                                    prefixValue = "月"
+                                case .year:
+                                    prefixValue = "年"
+                                default:
+                                    prefixValue = ""
+                                }
+                                value += prefixValue
+                            }
+                            rightText = value
+                        }else if row == 3{      //提示音
+                            leftText = "提示音"
+                            rightText = showSoundText(withEventSound: eventSound)
+                            isShowsSeparatorLine = false
+                            
+                            if tableView.numberOfRows(inSection: 2) == 1{
+                                radiusType = .all
+                            }else{
+                                radiusType = .bottom
+                            }
+                        }
+                   
+                }
+            }else{      //修改
+                switch section{
+                case 0:
+                    break
+                case 1:                 //事件日期时间显示
+                    
+                    if row == 0{
+                        leftText = eventClient != nil ? "提醒时间" : "事件日期"
+                        if eventClient != nil{
+                            rightText = eventClientTimes.encoderTimes()
+                        }else if let evt = event{
+                            if evt.type == 1 || evt.type == 2 || evt.type == 11{
+                                if eventIsLunar{        //农历显示
+                                    var lunarStr = ""
+                                    let lunarYear = eventLunarDate.lunarYear
+                                    lunarStr += lunarYearList[(lunarYear - 1900 + 36) % lunarYearList.count]
+                                    lunarStr += " (\(lunarYear))"
+                                    lunarStr += lunarMonthList[eventLunarDate.lunarMonth - 1]
+                                    lunarStr += ""
+                                    lunarStr += lunarDayList[Int(eventLunarDate.lunarDay - 1)]
+                                    rightText = lunarStr
+                                }else{
+                                    rightText = eventDate.isCurYear() ? eventDate.formatString(with: "M月d日") : eventDate.formatString(with: "yyy年M月d日")
+                                }
+                            }else{
+                                rightText = eventFrequency.showTimes()
+                            }
+                        }
+                        if tableView.numberOfRows(inSection: 1) == 1{
+                            radiusType = .all
+                        }else{
+                            radiusType = .top
+                        }
+                    }else{
+                        leftText = eventClient != nil ? "提示音" : "提醒时间"
+                        
+                        if eventClient != nil{
+                            rightText = showSoundText(withEventSound: eventSound)
+                        }else if let evt = event{
+                            if (evt.type == 1 || evt.type == 2 || evt.type == 11) && evt.frequency.cycle == 1 {
+                                rightText = "-"
+                            }else{
+                                rightText = eventDate.formatString(with: "H:mm")
+                            }
+                        }
+                        radiusType = .bottom
+                        isShowsSeparatorLine = false
+                    }
+                default:                //事件提醒显示
+                    if hasCount(){
+                        if eventNoticeCount <= 1 && row != 0 {
+                            row += 1
+                        }
+                    }else {
+                        row += 2
+                    }
+                    
+                    if !hasBeginningCell() {
+                        row += 1
+                    }
+                    if row == 0{
+                        leftText = "提醒次数"
+                        //判断是否可编辑
+                        if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                            rightText = "-"
+                        }else{
+                            rightText = "\(eventNoticeCount)次"
+                        }
+                        
+                        radiusType = .top
+                    }else if row == 1{                //间隔时间
+                        leftText = "间隔时间"
+                        rightText = "\(eventInterval)分钟"
+                    }else if row == 2{          //预提醒
+                        leftText = "预提醒"
+                        var value = eventBeginning.list.isEmpty ? "无预提醒" : ""
+                        let sortedEventBeginningList = eventBeginning.list.sorted(by: { (arg0, arg1) -> Bool in
+                            
+                            let (cycle0, value0) = arg0
+                            let (cycle1, value1) = arg1
+                            if cycle0.rawValue < cycle1.rawValue{
+                                return true
+                            }else if cycle0.rawValue > cycle1.rawValue{
+                                return false
+                            }else{
+                                if value0 < value1{
+                                    return true
+                                }
+                            }
+                            return false
+                        })
+                        for (index, tuple) in sortedEventBeginningList.enumerated(){
+                            if index != 0{
+                                value += ","
+                            }
+                            value += "\(tuple.1)"
+                            
+                            let prefixValue: String
+                            switch tuple.0{
+                            case .minute:
+                                prefixValue = "分钟"
+                            case .hour:
+                                prefixValue = "小时"
+                            case .day:
+                                prefixValue = "天"
+                            case .week:
+                                prefixValue = "周"
+                            case .month:
+                                prefixValue = "月"
+                            case .year:
+                                prefixValue = "年"
+                            default:
+                                prefixValue = ""
+                            }
+                            value += prefixValue
+                        }
+                        
+                        
+                        rightText = value
+                    }else if row == 3{      //提示音
+                        
+                        leftText = "提示音"
+                        rightText = showSoundText(withEventSound: eventSound)
+                        isShowsSeparatorLine = false
+                        
+                        if tableView.numberOfRows(inSection: 2) == 1{
+                            radiusType == .all
+                        }else{
+                            radiusType = .bottom
+                        }
+                    }
+                    
+                }
+            }
+            cell0.setData([leftText, rightText], radiusType: radiusType, isShowsSeparatorLine: isShowsSeparatorLine)
+        }
+        return cell
+    }
+    
+    //MARK:- 点击cell
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        var row = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath)
+        cell?.setSelected(false, animated: false)
+        
+        if let t = tip{     //新建
+            switch section {
+            case 0:             //修改事件名称
+                break
+            //                edit(withSelectorType: .name, withDefultValue: eventName)
+            case 1:
+                if row == 0{    //修改事件日期
+                    if t.isClient{              //选择时间
+                        performSegue(withIdentifier: "eventclienttime", sender: eventClientTimes)
+                    }else{
+                        if t.isCycle() {       //选择周期
+                            performSegue(withIdentifier: "frequency", sender: eventFrequency)
+                        }else{                              //仅单次、生日、纪念日有农历切换，且选择时间
+                            edit(withSelectorType: .date(withHasLunar: true), withDefultValue: eventDate)
+                        }
+                    }
+                }else{          //修改事件时间
+                    if t.isClient{              //选择提示音
+                        editSound()
+                    }else{
+                        
+                        if t.isCycle() && eventFrequency.frequencyCycle == FrequencyCycle.minute {
+                            notif(withTitle: "该周期不支持日期选择")
+                        }else{
+                            edit(withSelectorType: .time, withDefultValue: eventDate)
+                        }
+                    }
+                }
+            case 2:
+                if hasCount(){
+                    if eventNoticeCount <= 1 && row != 0 {
+                        row += 1
+                    }
+                }else {
+                    row += 2
+                }
+                
+                if !hasBeginningCell(){
+                    row += 1
+                }
+                
+                if row == 0{    //修改提醒次数
+                    //判断是否可编辑
+                    if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                        notif(withTitle: "按时间周期状态下小于1小时无法选择次数")
+                    }else{
+                        edit(withSelectorType: .count, withDefultValue: eventNoticeCount)
+                    }
+                    return
+                }else if row == 1{        //修改间隔时间
+                    //判断是否可编辑
+                    if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                        notif(withTitle: "按时间周期状态下小于1小时无法选择间隔时间")
+                    }else{
+                        edit(withSelectorType: .interval, withDefultValue: eventInterval)
+                    }
+                }else if row == 2{  //修改预提醒
+                    performSegue(withIdentifier: "beginning", sender: eventBeginning)
+                }else if row == 3{  //修改提示音
+                    editSound()
+                }
+            default:            //switch
+                if let cell1 = cell as? EventEditorCell1{
+                    //暂不做点击响应
+                }
+            }
+        }else{          //修改
+            switch section {
+            case 0:             //修改事件名称
+                break
+            //                edit(withSelectorType: .name, withDefultValue: eventName)
+            case 1:
+                if row == 0{    //修改事件日期
+                    if eventClient != nil{              //选择时间
+                        performSegue(withIdentifier: "eventclienttime", sender: eventClientTimes)
+                    }else if let evt = event{
+                        if evt.type == 1 || evt.type == 2 || evt.type == 11  {       //无周期 仅单次、生日、纪念日有农历切换，且选择时间
+                            edit(withSelectorType: .date(withHasLunar: true), withDefultValue: eventDate)
+                        }else{                              //选择周期
+                            performSegue(withIdentifier: "frequency", sender: eventFrequency)
+                        }
+                    }
+                }else{          //修改事件时间
+                    if eventClient != nil{              //选择提示音
+                        //edit(withSelectorType: .sound, withDefultValue: eventSound)
+                        editSound()
+                    }else if let evt = event{
+                        if (evt.type == 1 || evt.type == 2 || evt.type == 11) && evt.frequency.cycle == 1 {
+                            notif(withTitle: "该周期不支持日期选择")
+                        }else{
+                            edit(withSelectorType: .time, withDefultValue: evt.beginDate ?? eventDate)
+                        }
+                    }
+                }
+            case 2:
+                
+                if hasCount(){
+                    if eventNoticeCount <= 1 && row != 0 {
+                        row += 1
+                    }
+                }else {
+                    row += 2
+                }
+                
+                if !hasBeginningCell(){
+                    row += 1
+                }
+                if row == 0{    //修改提醒次数
+                    //判断是否可编辑
+                    if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                        notif(withTitle: "按时间周期状态下小于1小时无法选择次数")
+                    }else{
+                        edit(withSelectorType: .count, withDefultValue: eventNoticeCount)
+                    }
+                    return
+                }else if row == 1{        //修改间隔时间
+                    //判断是否可编辑
+                    if eventFrequency.frequencyCycle == FrequencyCycle.minute && eventFrequency.per <= 60{
+                        notif(withTitle: "按时间周期状态下小于1小时无法选择间隔时间")
+                    }else{
+                        edit(withSelectorType: .interval, withDefultValue: eventInterval)
+                    }
+                }else if row == 2{  //修改预提醒
+                    performSegue(withIdentifier: "beginning", sender: eventBeginning)
+                }else if row == 3{  //修改提示音
+                    //edit(withSelectorType: .sound, withDefultValue: eventSound)
+                    editSound()
+                }
+            default:            //switch
+                if let cell1 = cell as? EventEditorCell1{
+                    //点击暂不做响应
+                }
+            }
+        }
+        
+    }
+    
+    //MARK:- 跳转到提示音选择
+    private func editSound(){
+        if let soundVC = UIStoryboard(name: "Sound", bundle: Bundle.main).instantiateInitialViewController() as? SoundVC{
+            soundVC.type = eventType
+            soundVC.sound = eventSound
+            if let t = tip{
+                soundVC.isClient = t.isClient
+                if t.isClient{
+                    if t.type == 7 || t.type == 8{
+                        soundVC.isPublicEvent = true
+                    }
+                }
+            }else if let evt = event{
+                soundVC.isClient = false
+            }else if let evtClt = eventClient{
+                soundVC.isClient = true
+                if evtClt.type == 7 || evtClt.type == 8{
+                    soundVC.isPublicEvent = true
+                }
+            }
+            soundVC.selectClosure = {
+                selectedSoundIndex in
+                if selectedSoundIndex == 0{
+                    self.eventSound = "boy"
+                }else if selectedSoundIndex == 1{
+                    self.eventSound = "girl"
+                }else{
+                    self.eventSound = soundList[selectedSoundIndex]
+                }
+            }
+            navigationController?.show(soundVC, sender: nil)
+        }
+    }
+    
+    //MARK:- 显示提示音
+    private func showSoundText(withEventSound eventSound: String) -> String{
+        var soundText: String
+        if eventSound == "boy"{
+            soundText = "男声"
+        }else if eventSound == "girl"{
+            soundText = "女声"
+        }else{
+            soundText = eventSound
+        }
+        return soundText
+    }
+}
+
+extension Tip{
+
+    //当类型为生日1纪念日2单次事件11，日期选择项为非周期选择
+    public func isCycle() -> Bool{
+        return !(type == 1 || type == 2 || type == 11)
+    }
+}

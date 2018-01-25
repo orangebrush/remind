@@ -1,0 +1,317 @@
+//
+//  CustomViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+var leftButton: UIButton?
+var rightButton: UIButton?
+
+//按钮初始化偏移
+var selectedButtonY: CGFloat = isIphoneX ? -34 : 0
+var originButtonY: CGFloat = isIphoneX ? -34 : 0
+
+class CustomViewController: UITabBarController,UITabBarControllerDelegate {
+    var selectIndex = 0
+    
+    private var selectedInset = UIEdgeInsets.zero
+    private var originInset = UIEdgeInsetsMake(-7, 0, 7, 0)
+
+    var profileNavigationController: UINavigationController!
+    
+    private var leftLongPress: UILongPressGestureRecognizer?
+    private var isLeftLongPressLocked = true{
+        didSet{
+            if isLeftLongPressLocked{
+                if let lp = leftLongPress{
+                    leftButton?.removeGestureRecognizer(lp)
+                    leftLongPress = nil
+                }
+            }else{
+                leftLongPress = UILongPressGestureRecognizer(target: self, action: #selector(longPressToEditEvent(_:)))
+                leftButton?.addGestureRecognizer(leftLongPress!)
+            }
+        }
+    }
+    
+    private var rightLongPress: UILongPressGestureRecognizer?
+    private var isRightLongPressLocked = true{
+        didSet{
+            if isRightLongPressLocked{
+                if let lp = rightLongPress{
+                    rightButton?.removeGestureRecognizer(lp)
+                    rightLongPress = nil
+                }
+            }else{
+                rightLongPress = UILongPressGestureRecognizer(target: self, action: #selector(longPressToEditEvent(_:)))
+                rightButton?.addGestureRecognizer(rightLongPress!)
+            }
+        }
+    }
+    
+    //MARK: init----------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.delegate = self
+        
+        var vcArr = self.viewControllers
+        
+        let myVC = Me_RootViewController()
+        profileNavigationController = UINavigationController.init(rootViewController: myVC)
+        profileNavigationController.delegate = profileNavigationController
+        vcArr?.append(profileNavigationController)
+
+        self.viewControllers = vcArr
+        let item1 = UITabBarItem.init(title: "首页", image: #imageLiteral(resourceName: "tabbar_icon_cards").withRenderingMode(.alwaysOriginal), selectedImage: #imageLiteral(resourceName: "tabbar_icon_cards_std").withRenderingMode(.alwaysOriginal))
+        item1.tag = 0
+        let item2 = UITabBarItem.init(title: "提醒", image: nil, selectedImage: nil)
+        item2.tag = 1
+        let item3 = UITabBarItem.init(title: "随手记", image: nil, selectedImage: nil)
+        item3.tag = 2
+        let item4 = UITabBarItem.init(title: "我", image: #imageLiteral(resourceName: "tabbar_icon_me").withRenderingMode(.alwaysOriginal), selectedImage: #imageLiteral(resourceName: "tabbar_icon_me_std").withRenderingMode(.alwaysOriginal))
+        item4.tag = 3
+        
+        viewControllers![0].tabBarItem = item1
+        viewControllers![1].tabBarItem = item2
+        viewControllers![2].tabBarItem = item4
+//        viewControllers![3].tabBarItem = item4
+        
+        item1.titlePositionAdjustment = UIOffsetMake(0, -3)
+        item1.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+        item2.titlePositionAdjustment = UIOffsetMake(0, -3)
+        item2.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+        item3.titlePositionAdjustment = UIOffsetMake(0, -3)
+        item3.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+        item4.titlePositionAdjustment = UIOffsetMake(0, -3)
+        item4.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+        
+        
+        let tabBarHeight = self.tabBar.height
+        
+        leftButton = UIButton(type: .custom)
+        leftButton?.frame = CGRect(x: floor(view_size.width / 3), y: view_size.height - tabBarHeight + originButtonY, width: view_size.width / 3, height: 49)
+        leftButton?.setImage(#imageLiteral(resourceName: "tabbar_icon_reminds"), for: .normal)
+        leftButton?.setImage(#imageLiteral(resourceName: "tabbar_icon_add"), for: .selected)
+        leftButton?.tag = 0
+        leftButton?.addTarget(self, action: #selector(tapRemindButton(_:)), for: .touchUpInside)
+        leftButton?.imageEdgeInsets = originInset
+        view.addSubview(leftButton!)
+        
+        rightButton = UIButton(type: .custom)
+        rightButton?.frame = CGRect(x: floor(view_size.width / 2), y: view_size.height - tabBarHeight + originButtonY, width: view_size.width / 4, height: 49)
+        rightButton?.setImage(#imageLiteral(resourceName: "tabbar_icon_notes"), for: .normal)
+        rightButton?.setImage(#imageLiteral(resourceName: "tabbar_icon_addnotes"), for: .selected)
+        rightButton?.tag = 1
+        rightButton?.addTarget(self, action: #selector(tapRemindButton(_:)), for: .touchUpInside)
+        rightButton?.imageEdgeInsets = originInset
+//        view.addSubview(rightButton!)
+        
+        selectedButtonY = 0
+        originButtonY = 0
+    }
+    
+    //MARK:- 点击提醒与随手记事件
+    @objc func tapRemindButton(_ sender: UIButton){
+        let tag = sender.tag
+        
+        //重置
+        isLeftLongPressLocked = false
+        isRightLongPressLocked = false
+        
+        guard !sender.isSelected else {
+            //show内容
+            if let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController() {
+                if let navigation = (self.viewControllers![tag + 1] as? UINavigationController){
+                    if navigation.viewControllers.count == 1{
+                        navigation.show(vc, sender: nil)
+                        leftButton?.isHidden = true
+                        rightButton?.isHidden = true
+                    }
+                }
+            }
+            return
+        }
+        animationWithView(sender)
+        
+        sender.isSelected = !sender.isSelected
+        sender.imageEdgeInsets = selectedInset
+
+        //选择对应的tabbarItem
+        selectedIndex = tag + 1
+        
+        //点击成功
+        if tag == 0{
+            self.tabBar.items![1].title = ""
+            self.tabBar.items![2].title = "随手记"
+            rightButton?.isSelected = false
+            rightButton?.imageEdgeInsets = originInset
+            
+            isLeftLongPressLocked = false
+            isRightLongPressLocked = true
+        }else{
+            self.tabBar.items![1].title = "提醒"
+            self.tabBar.items![2].title = ""
+            leftButton?.isSelected = false
+            leftButton?.imageEdgeInsets = originInset
+            
+            isLeftLongPressLocked = true
+            isRightLongPressLocked = false
+        }
+    }
+    
+    @objc func longPressToEditEvent(_ sender: UILongPressGestureRecognizer){
+        guard let button = sender.view as? UIButton else{
+            return
+        }
+        
+        if let navigation = self.selectedViewController as? UINavigationController{
+            if navigation.viewControllers.count != 1{
+                return
+            }
+        }
+        
+        
+        let tag = button.tag
+        if tag == 0{            //快速创建单次提醒
+            
+            //加锁
+            guard !isLeftLongPressLocked else {
+                return
+            }
+            isLeftLongPressLocked = true
+            
+            DataHandler.share().getSingleTip(closure: { (singleTip) in
+                if let tip = singleTip{
+                    //载入编辑页面
+                    
+                    if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                        if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                            eventEditorVC.tip = tip
+                            (self.selectedViewController as? UINavigationController)?.show(eventEditorVC, sender: nil)
+                            delay(1, task: {
+                                leftButton?.resignFirstResponder()
+                                self.isLeftLongPressLocked = false
+                            })
+                        }
+                    }
+                }
+            })
+        }else if tag == 1{      //快速录制语音
+            //加锁
+            guard !isRightLongPressLocked else {
+                return
+            }
+            isRightLongPressLocked = true
+            
+            //跳转到记录备忘录
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)                
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+}
+
+extension CustomViewController{
+    override func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+        
+        if self.selectIndex == 1&&item.tag == 1{
+            selectIndex = item.tag
+        }else{
+            selectIndex = item.tag
+        }
+        
+        //重置左按钮长按
+        isLeftLongPressLocked = false
+        isRightLongPressLocked = false
+        
+        if item.tag == 1 || item.tag == 2{
+            item.title = ""
+        }else{
+            leftButton?.isSelected = false
+            leftButton?.imageEdgeInsets = originInset
+            
+            rightButton?.isSelected = false
+            rightButton?.imageEdgeInsets = originInset
+            
+            isLeftLongPressLocked = true
+            isRightLongPressLocked = true
+        }
+        
+//        for smallItem in (self.tabBar.items)!{
+//            if (smallItem.tag == 1 || smallItem.tag == 2) && smallItem.tag != item.tag {
+//                smallItem.title = smallItem.tag == 1 ? "提醒" : "随手记"
+//                smallItem.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+//            }
+//        }
+        for smallItem in (self.tabBar.items)!{
+            if smallItem.tag == 1 && smallItem.tag != item.tag {
+                smallItem.title = "提醒"
+                smallItem.imageInsets = UIEdgeInsetsMake(-2, 0, 2, 0)
+            }
+        }
+        
+        var index:NSInteger?
+        index = self.tabBar.items?.index(of: item)
+        animationWithIndex(index!)
+        
+    }
+    
+    //动画
+    func animationWithIndex(_ index :NSInteger){
+        
+        var tabbarbuttonArray : Array<UIView?> = []
+        for tabBarButton in (self.tabBar.subviews) {
+            if tabBarButton.isKind(of: NSClassFromString("UITabBarButton")!){
+                tabbarbuttonArray.append(tabBarButton)
+            }
+        }
+        
+        tabbarbuttonArray.sort { (s1, s2) -> Bool in
+            return Float((s1?.x)!) < Float((s2?.x)!)
+        }
+
+        animationWithView(tabbarbuttonArray[index])
+    }
+    
+    //动画
+    func animationWithView(_ v: UIView?){
+        let pulse = CABasicAnimation.init(keyPath: "transform.scale")
+        pulse.timingFunction = CAMediaTimingFunction.init(name: kCAMediaTimingFunctionEaseInEaseOut)
+        pulse.duration = 0.12;
+        pulse.fromValue = NSNumber.init(value: 0.6)
+        pulse.toValue = NSNumber.init(value: 1)
+        v?.layer.add(pulse,forKey:nil)
+    }
+    
+    //MARK:- 解决两次点击同一个icon 导航栏pop到首页
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        
+        let navVC = tabBarController.selectedViewController
+        if (navVC?.isEqual(viewController))!{
+            return false
+        }
+        return true
+    }
+    
+    
+    
+    
+}

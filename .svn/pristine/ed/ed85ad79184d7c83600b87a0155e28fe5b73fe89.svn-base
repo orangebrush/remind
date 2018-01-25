@@ -1,0 +1,66 @@
+//
+//  EventBeginningCell.swift
+//  Remind
+//
+//  Created by gg on 13/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventBeginningCell: UICollectionViewCell {
+    
+    @IBOutlet weak var label: UILabel!
+    @IBOutlet weak var imageView: UIImageView!
+    
+    
+    var tuple: (FrequencyCycle, Int)?{
+        didSet{
+            guard let t = tuple else {
+                return
+            }
+            let text: String
+            switch t.0 {
+            case .none:
+                text = "无预提醒"
+            case .minute:
+                text = "\(t.1)分钟"
+            case .hour:
+                text = "\(t.1)小时"
+            case .day:
+                text = "\(t.1)天"
+            case .week:
+                text = "\(t.1)周"
+            default:
+                text = "\(t.1)月"
+            }
+            label.text = text
+        }
+    }
+    
+    override var isSelected: Bool{
+        didSet{
+            backgroundColor = isSelected ? .white : .white
+            if tuple?.0 == .none {
+                imageView.isHidden = true
+            }else{                
+                imageView.isHidden = !isSelected
+            }
+        }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        label.textColor = .word
+        label.font = .normal
+        
+        backgroundColor = .white
+        imageView.image = #imageLiteral(resourceName: "select")
+        imageView.isHidden = true
+        layer.cornerRadius = .cornerRadius
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+    }
+}

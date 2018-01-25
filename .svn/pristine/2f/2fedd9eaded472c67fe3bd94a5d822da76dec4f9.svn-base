@@ -1,0 +1,120 @@
+//
+//  AboutMeViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/13.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class AboutMeViewController: BasedViewController {
+
+    var scrollView : UIScrollView = UIScrollView()
+    
+    var bgView : UIView = UIView()
+    
+    let statusBarHight = UIApplication.shared.statusBarFrame.height
+    
+    var version: String = ""
+    
+    
+    var notContactView : UIView = UIView()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        backButtonTitle = "我"
+        automaticallyAdjustsScrollViewInsets = false
+        self.view.backgroundColor = UIColor.separator
+        
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        let navigationBarHeight = (navigationController?.navigationBar.height)!
+        view.addSubview(scrollView)
+        
+        scrollView.snp.makeConstraints { (make) in
+            make.left.right.bottom.top.equalToSuperview()
+        }
+        let contentView: UIView = UIView()
+        scrollView.addSubview(contentView)
+        contentView.snp.makeConstraints({ (make) in
+            make.top.left.bottom.right.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().offset(0.5)
+        })
+        
+        scrollView.addSubview(bgView)
+        bgView.backgroundColor = UIColor.white
+        bgView.layer.cornerRadius = 6
+        bgView.clipsToBounds = true
+        bgView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(navigationBarHeight + statusBarHight + 12)
+            make.bottom.equalToSuperview().offset(-20  - (isIphoneX ? 34 : 0))
+            make.right.equalToSuperview().offset(-10)
+        }
+        
+        
+        let imageView = UIImageView()
+        imageView.image = UIImage.init(named: "mc_logo_90")
+        bgView.addSubview(imageView)
+        imageView.snp.makeConstraints { (make) in
+            make.top.equalTo(80)
+            make.centerX.equalToSuperview()
+            make.width.height.equalTo(90)
+        }
+        
+        let nameLabel = UILabel()
+        nameLabel.text = "米橙生活"
+        nameLabel.font = UIFont.systemFont(ofSize: 16)
+        nameLabel.textColor = UIColor.word
+        nameLabel.textAlignment = .center
+        bgView.addSubview(nameLabel)
+        nameLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(imageView.snp.bottom).offset(12)
+            make.left.right.equalToSuperview()
+            make.height.equalTo(24)
+        }
+        
+        
+        let versionLabel = UILabel()
+        versionLabel.text = self.version
+        versionLabel.font = UIFont.systemFont(ofSize: 12)
+        versionLabel.textColor = UIColor.subSubWord
+        versionLabel.textAlignment = .center
+        bgView.addSubview(versionLabel)
+        versionLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(nameLabel.snp.bottom)
+            make.left.right.equalToSuperview()
+            make.height.equalTo(20)
+        }
+        
+        
+        
+        let infoLabel = UILabel()
+        infoLabel.text = "做好每件事，让你的时间井井有序"
+        infoLabel.font = UIFont.systemFont(ofSize: 16)
+        infoLabel.textColor = UIColor.word
+        infoLabel.textAlignment = .center
+        bgView.addSubview(infoLabel)
+        infoLabel.snp.makeConstraints { (make) in
+            make.top.equalTo(versionLabel.snp.bottom).offset(23)
+            make.left.right.equalToSuperview()
+            make.height.equalTo(34)
+        }
+        
+        
+        let urlLabel = UILabel()
+        urlLabel.text = "www.mc.cn"
+        urlLabel.font = UIFont.systemFont(ofSize: 12)
+        urlLabel.textColor = UIColor.subSubWord
+        urlLabel.textAlignment = .center
+        bgView.addSubview(urlLabel)
+        urlLabel.snp.makeConstraints { (make) in
+            make.bottom.equalToSuperview().offset(-20)
+            make.left.right.equalToSuperview()
+            make.height.equalTo(34)
+        }
+        
+    }
+}

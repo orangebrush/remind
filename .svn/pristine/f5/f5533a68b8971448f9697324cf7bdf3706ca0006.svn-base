@@ -1,0 +1,521 @@
+//
+//  FrequencyVC.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+class FrequencyVC: UIViewController {
+    
+    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var confirmBarButtomItem: UIBarButtonItem!
+    
+    
+    var frequency: FrequencyModel?
+    
+    ///保存是否有不重复项
+    var hasFrequencyNone = true
+    ///如果有不重复选项则使用开始时间
+    var beginDate = Date()
+    
+    ///选择器
+    var frequencySelector: FrequencySelector?    
+    ///锁
+    var isLocked = false
+    
+    //MARK:- init------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.separator
+        self.tableView.backgroundColor = UIColor.separator
+        self.title = "事件日期"
+        config()
+        createContents()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        
+        
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item1 = BarButtonItem(textStr: "返回", imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(textStr: "确定", tSelector: #selector(confirm(_:)))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    
+    private func config(){
+        
+        automaticallyAdjustsScrollViewInsets = false
+        
+        confirmBarButtomItem.tintColor = .confirm
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    @objc func confirm(_ sender: UIBarButtonItem){
+        if let viewControllers = navigationController?.viewControllers{
+            if let parentVC = viewControllers[viewControllers.count - 2] as? EventEditorVC{
+                if let fre = frequency{
+                    
+                    //如果存在'无重复'选项 则赋值日期 (时间除外)
+                    if hasFrequencyNone{
+                        let parentBeginDate = parentVC.eventDate
+                        let calendar = Calendar.current
+                        var parentComponents = calendar.dateComponents([.year, .month, .day, .hour, .month], from: parentBeginDate)
+                        var newComponents = calendar.dateComponents([.year, .month, .day], from: beginDate)
+                        parentComponents.year = newComponents.year ?? 2020
+                        parentComponents.month = newComponents.month ?? 1
+                        parentComponents.day = newComponents.day ?? 1
+                        parentVC.eventDate = calendar.date(from: parentComponents) ?? parentBeginDate
+                        
+                    }
+                    
+                    //判断选择值是否合法
+                    if fre.frequencyCycle == .year{
+                        if fre.months.isEmpty{
+                            self.notif(withTitle: "需选择一个月份")
+                            return
+                        }else if !fre.baseOnWeek{
+                            if fre.days.isEmpty{
+                                self.notif(withTitle: "需选择日期")
+                                return
+                            }
+                        }
+                    }else if fre.frequencyCycle == .month{
+                        if !fre.baseOnWeek{
+                            if fre.days.isEmpty{
+                                self.notif(withTitle: "需选择日期")
+                                return
+                            }
+                        }
+                    }else if fre.frequencyCycle == .week{
+                        if fre.weekdays.isEmpty{
+                            self.notif(withTitle: "需选择星期数")
+                            return
+                        }
+                    }
+                    
+                    parentVC.eventFrequency = fre
+                    
+                }
+            }
+        }
+        
+        navigationController?.popViewController(animated: true)
+    }
+}
+
+//MARK:- tableview delegate
+extension FrequencyVC: UITableViewDelegate, UITableViewDataSource{
+    func numberOfSections(in tableView: UITableView) -> Int {
+        guard let fre = frequency else{
+            return 0
+        }
+        switch fre.frequencyCycle {
+        case .week:
+            return 2
+        case .month:
+            return 3
+        case .year:
+            return 4
+        default:
+            return 1
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        guard let fre = frequency else{
+            return 0
+        }
+        if fre.frequencyCycle == .month && section == 1 {
+            return 2
+        }
+        if fre.frequencyCycle == .year && section == 2 {
+            return 2
+        }
+        return section == 0 ? 2 : 1
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let section = indexPath.section
+        
+        guard let fre = frequency else{
+            return 0
+        }
+
+        if section == 0{
+            return 48
+        }else if section == 1{
+            switch fre.frequencyCycle{
+            case .week:
+                let edge = CGFloat.edge10 * 2
+                return 48 * 7 + defaultLineHeight * 6
+            case .month:
+                return 48
+            case .year:
+                let edge = CGFloat.edge10 * 2
+                return 48 * 3 + defaultLineHeight * 2
+            default:
+                return 0
+            }
+        }else if section == 2{
+            switch fre.frequencyCycle{
+            case .month:
+                return fre.baseOnWeek ? 200 + .edge10 * 2 : 48 * 7 + 4 * 8 + .edge10 * 2        //每行为5个cell just 5*7>31
+            case .year:
+                return 48
+            default:
+                return 0
+            }
+        }else{
+            return fre.baseOnWeek ? 200 + .edge10 * 2 : 48 * 7 + 4 * 8 + .edge10 * 2        //每行为5个cell just 5*7>31
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return .edge12
+        }
+        return .edge10
+    }
+    
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = indexPath.section
+        let row = indexPath.row
+        var cell: UITableViewCell?
+        var identifier = ""
+        let fre = frequency!
+        
+        if section == 0 {
+            identifier = "cell\(row)"
+            cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+            let baseCell = cell as! FrequencyCell
+            
+            if row == 0{                                                //分别显示周期选择
+                baseCell.keyLabel.text = "周期"
+                var index = fre.frequencyCycle.rawValue
+                if index > 1{
+                    index -= 1
+                }else if index < 0{
+                    index = 0
+                }
+                baseCell.valueLabel.text = frequencyCycleList[index]
+                
+                cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: false, byForceDraw: false)
+            }else{                                                      //分别显示周期数
+                baseCell.keyLabel.text = "每"
+                if fre.frequencyCycle == .none{
+                    baseCell.keyLabel.text = "日期"
+                    baseCell.valueLabel.text = beginDate.formatString(with: "yyyy-MM-dd")
+                }else if fre.frequencyCycle == .minute{
+                    let per = fre.per
+                    let hour = per / 60
+                    let minute = per % 60
+                    let hourStr = hour > 0 ? "\(hour)小时" : ""
+                    let minuteStr = minute > 0 ? "\(minute)分钟" : ""
+                    baseCell.valueLabel.text = hourStr + minuteStr
+                }else{
+                    let unitTitles = ["","","个小时","天","个星期","个月","年"]
+                    baseCell.valueLabel.text = "\(fre.per)" + unitTitles[fre.frequencyCycle.rawValue]
+                }
+                
+                //手动添加分割线
+                let separatorFrame = CGRect(x: .edge16, y: 0, width: view_size.width - .edge10 * 2 - .edge10, height: 1)
+                let separatorLine = UIView(frame: separatorFrame)
+                separatorLine.backgroundColor = UIColor.separator
+                cell?.addSubview(separatorLine)
+                
+                cell?.customDraw(withTopCornerRadius: false, withBottomCornerRadius: true, byForceDraw: false)
+            }
+        }else if section == 1{      //第二行 (week month year)
+            if case FrequencyCycle.week = fre.frequencyCycle{           //week                  选择星期
+                identifier = "cell_collection"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let collectionCell = cell as! FrequencyCollectionCell
+                collectionCell.frequency = fre
+                collectionCell.closure = {
+                    _, indexList in
+                    self.frequency?.weekdays = indexList
+                }
+                collectionCell.collectionView.reloadData()
+                cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true, byForceDraw: false)
+            }else if case FrequencyCycle.month = fre.frequencyCycle{    //month                 选择日期或星期
+                identifier = "cell2"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let baseCell = cell as? FrequencyImageCell
+                if row == 0 {
+                    baseCell?.keyLabel.text = "日期"
+                    baseCell?.rightImageView.isHidden = fre.baseOnWeek ? true : false
+                    cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: false, byForceDraw: false)
+                }else {
+                     baseCell?.keyLabel.text = "星期"
+                     baseCell?.rightImageView.isHidden = fre.baseOnWeek ? false : true
+                    
+                    //手动添加分割线
+                    let separatorFrame = CGRect(x: .edge16, y: 0, width: view_size.width - .edge10 * 2 - .edge10, height: 1)
+                    let separatorLine = UIView(frame: separatorFrame)
+                    separatorLine.backgroundColor = UIColor.separator
+                    cell?.addSubview(separatorLine)
+                    cell?.customDraw(withTopCornerRadius: false, withBottomCornerRadius: true, byForceDraw: false)
+                }
+                
+            }else{                                                      //year                  选择月份
+                identifier = "cell_collection"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let collectionCell = cell as! FrequencyCollectionCell
+                collectionCell.frequency = fre
+                collectionCell.isMonth = true
+                collectionCell.closure = {                                                      //月份回调
+                    _, indexList in
+                    self.frequency?.months = indexList
+                }
+                collectionCell.collectionView.reloadData()
+                cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true, byForceDraw: false)
+            }
+        }else if section == 2{      //第三行 (month year)
+            if case FrequencyCycle.month = fre.frequencyCycle{          //month
+                if fre.baseOnWeek{
+                    identifier = "cell_picker"
+                    cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                    let pickerCell = cell as! FrequencyPickerCell
+                    pickerCell.frequency = fre
+                    pickerCell.weekydayTuple = fre.weeksTuple
+                    pickerCell.closure = {
+                        tuple in
+                        self.frequency?.weeksTuple = tuple
+                    }
+                }else{
+                    identifier = "cell_collection"
+                    cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                    let collectionCell = cell as! FrequencyCollectionCell
+                    collectionCell.frequency = fre
+                    collectionCell.closure = {
+                        _, indexList in
+                        self.frequency?.days = indexList
+                    }
+                    collectionCell.collectionView.reloadData()
+                    cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true, byForceDraw: false)
+                }
+            }else{                                                      //year                  选择日期或星期
+                identifier = "cell2"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let baseCell = cell as? FrequencyImageCell
+                if row == 0 {
+                    baseCell?.keyLabel.text = "日期"
+                    baseCell?.rightImageView.isHidden = fre.baseOnWeek ? true : false
+                    cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: false, byForceDraw: false)
+                }else {
+                    baseCell?.keyLabel.text = "星期"
+                    baseCell?.rightImageView.isHidden = fre.baseOnWeek ? false : true
+                    
+                    
+                    //手动添加分割线
+//                    let separatorFrame = CGRect(x: .edge16, y: 0, width: view_size.width - .edge10 * 2 - .edge10, height: 1)
+//                    let separatorLine = UIView(frame: separatorFrame)
+//                    separatorLine.backgroundColor = UIColor.separator
+//                    cell?.addSubview(separatorLine)
+                    cell?.customDraw(withTopCornerRadius: false, withBottomCornerRadius: true, byForceDraw: false)
+                }
+                
+                if row == 1{
+                    cell?.addTopSeparator()
+                }
+            }
+        }else if section == 3{      //第四行 (year)
+            if fre.baseOnWeek{                                          //base On week
+                identifier = "cell_picker"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let pickerCell = cell as! FrequencyPickerCell
+                pickerCell.frequency = fre
+                pickerCell.weekydayTuple = fre.weeksTuple
+                pickerCell.closure = {
+                    tuple in
+                    self.frequency?.weeksTuple = tuple
+                }
+            }else{                                                      //base On month
+                identifier = "cell_collection"
+                cell = tableView.dequeueReusableCell(withIdentifier: identifier)
+                let collectionCell = cell as! FrequencyCollectionCell
+                collectionCell.isMonth = false
+                collectionCell.frequency = fre
+                collectionCell.closure = {
+                    isMonth, indexList in
+                    self.frequency?.days = indexList
+                }
+                collectionCell.collectionView.reloadData()
+            }
+            cell?.customDraw(withTopCornerRadius: true, withBottomCornerRadius: true, byForceDraw: false)
+        }
+        
+        return cell!
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        let fre = frequency!
+        var isTopFlag = false
+        var isBottomFlag = false
+        let cell = tableView.cellForRow(at: indexPath)
+        
+        if section == 0{
+            if row == 0{
+                isTopFlag = true
+            }
+            if row == 1{
+                isBottomFlag = true
+            }
+        }else if section == 1{
+            if fre.frequencyCycle == .week{
+                isTopFlag = true
+                isBottomFlag = true
+            }else if fre.frequencyCycle == .month{
+                if row == 0{
+                    isTopFlag = true
+                }
+                if row == 1{
+                    isBottomFlag = true
+                }
+            }else if fre.frequencyCycle == .year{
+                isTopFlag = true
+                isBottomFlag = true
+            }
+        }else if section == 2{
+            if fre.frequencyCycle == .month{
+                isTopFlag = true
+                isBottomFlag = true
+            }else{
+                if row == 0{
+                    isTopFlag = true
+                }
+                if row == 1{
+                    isBottomFlag = true
+                }
+            }
+        }else{
+            isTopFlag = true
+            isBottomFlag = true
+        }
+        
+        cell?.customDraw(withTopCornerRadius: isTopFlag, withBottomCornerRadius: isBottomFlag)
+    }
+    
+    //点击调用自定义编辑器
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let section = indexPath.section
+        let row = indexPath.row
+        let cell = tableView.cellForRow(at: indexPath)
+        cell?.setSelected(false, animated: true)
+
+        let fre = frequency!
+        
+        if section == 0 {
+            if row == 0{
+//                let frequencyCycleList = ["单次事件", "按时间重复", "按天重复", "按星期重复", "按月重复", "按年重复"]
+                
+                FrequencyIntervalSeletorView.show(window: view.window!, text: "周期", seleteIndex: fre.frequencyCycle.rawValue, titles: frequencyCycleList, { (index) in
+                    if let cycle = FrequencyCycle(rawValue: index){
+                        fre.frequencyCycle = cycle
+                        self.frequency?.per = 1
+//                        let firstIndexPath = IndexPath(row: 0, section: 0)
+//                        self.tableView.scrollToRow(at: firstIndexPath, at: .bottom, animated: false)
+                        
+                        self.tableView.reloadData()
+//                        self.tableView.beginUpdates()
+//                        self.tableView.endUpdates()
+                     }
+                })
+                
+                //分别显示周期选择
+//                edit(withFrequencySelectorType: .cycle(hasNone: hasFrequencyNone), withDefultValue: fre.frequencyCycle)
+//
+//                let needIndexPath = IndexPath(row: 0, section: 1)
+//                let needCell = tableView.cellForRow(at: needIndexPath)
+//                needCell?.setNeedsDisplay()
+            }else{                                                      //分别显示周期数
+                if hasFrequencyNone && fre.frequencyCycle == .none{ //自定义情况下显示
+                    edit(withFrequencySelectorType: .date, withDefultValue: beginDate)
+                }else{
+                    var maxCount: Int = 0
+                    var defultValue: Any?
+                    
+                    switch fre.frequencyCycle{
+                    case.none:
+                        edit(withFrequencySelectorType: .date, withDefultValue: beginDate)
+                        return
+                    case .minute:
+                        maxCount = 0
+                        
+                        //转换分钟数为时间类型
+                        let hour = fre.per / 60
+                        let minute = fre.per % 60
+                        let minuteDate = Date(withDateStr: "\(hour):\(minute)", withFormatStr: "H:m")
+                        defultValue = minuteDate
+                    case .day:
+                        maxCount = 99
+                    case .week:
+                        maxCount = 52
+                    case .month:
+                        maxCount = 24
+                    case .year:
+                        maxCount = 5
+                    default:
+                        maxCount = 99
+                    }
+                    
+                    var list = [Int]()
+                    for i in 0..<maxCount{
+                        list.append(i + 1)
+                    }
+                    
+                    edit(withFrequencySelectorType: .interval((fre.frequencyCycle, list)), withDefultValue: defultValue)
+                }
+            }
+        }else if section == 1{      //第二行 (week month year)
+            if case FrequencyCycle.month = fre.frequencyCycle{          //month                 选择日期或星期
+                if row == 0 {
+                    fre.baseOnWeek = false
+                }else {
+                    fre.baseOnWeek = true
+                }
+                let dayCellIndexPath = IndexPath(row: 0, section: section)
+                let weekdayCellIndexPath = IndexPath(row: 1, section: section)
+                let dayCell = tableView.cellForRow(at: dayCellIndexPath) as? FrequencyImageCell
+                let weekdayCell = tableView.cellForRow(at: weekdayCellIndexPath) as? FrequencyImageCell
+                dayCell?.rightImageView.isHidden = row != 0
+                weekdayCell?.rightImageView.isHidden = row != 1
+
+                self.tableView.reloadSections([2], with: .automatic)
+                tableView.beginUpdates()
+                tableView.endUpdates()
+                //                edit(withFrequencySelectorType: .baseOnWeek, withDefultValue: fre.baseOnWeek)
+                
+                
+            }
+        }else if section == 2{      //第三行 (month year)
+            if case FrequencyCycle.year = fre.frequencyCycle{          //year
+                
+                if row == 0 {
+                    fre.baseOnWeek = false
+                }else {
+                    fre.baseOnWeek = true
+                }
+                self.tableView.reloadSections([2,3], with: .none)
+//                edit(withFrequencySelectorType: .baseOnWeek, withDefultValue: fre.baseOnWeek)
+            }
+        }
+    }
+}

@@ -1,0 +1,272 @@
+//
+//  EventEditorCell.swift
+//  Remind
+//
+//  Created by gg on 11/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class EventEditorCell0: UITableViewCell {
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    
+    var indexPath: IndexPath?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        valueLabel.font = .content
+        valueLabel.textColor = .subWord
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+    }
+}
+
+class EventEditorCell1: UITableViewCell {
+    
+    @IBOutlet weak var iconImageView: UIImageView!
+    @IBOutlet weak var keyLabel: UILabel!
+    @IBOutlet weak var valueLabel: UILabel!
+    @IBOutlet weak var asynSwitch: UISwitch!
+    
+    var indexPath: IndexPath?
+    
+    var closure: ((Bool)->())?
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        keyLabel.font = .normal
+        keyLabel.textColor = .word
+        
+        valueLabel.font = .content
+        valueLabel.textColor = UIColor.subSubWord
+        asynSwitch.layer.transform = CATransform3DScale(CATransform3DIdentity, 0.8, 0.8, 1)
+        
+
+        asynSwitch.backgroundColor = UIColor.clear
+
+    }
+    
+    @IBAction func valueChanged(_ sender: UISwitch) {        
+        closure?(sender.isOn)
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+        if let row = indexPath?.row{
+            customDraw(withTopCornerRadius: row == 0, withBottomCornerRadius: row == 1)
+        }
+    }
+}
+
+class EventEditorHeaderCell: UITableViewCell, UITextViewDelegate {
+    
+    var containerView = UIView()
+    var textView: UIPlaceHolderTextView = UIPlaceHolderTextView()
+    var label: UILabel = UILabel()
+    var lineView: UIView = UIView()
+    
+    var closure: ((String)->())?
+    
+    var isNewline: ((Int)->())?
+    
+    var lineNum: Int = 1
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.selectionStyle = .none
+        self.backgroundColor = UIColor.clear
+        self.contentView.backgroundColor = UIColor.clear
+        containerView.backgroundColor = UIColor.white
+        containerView.layer.cornerRadius = 6
+        containerView.clipsToBounds = true
+        contentView.addSubview(containerView)
+        
+        containerView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.right.equalTo(-10)
+            make.top.equalToSuperview()
+            make.height.equalTo(63)
+        }
+        containerView.addSubview(textView)
+        textView.textColor = .word
+        textView.contentInset = UIEdgeInsets.init(top: 0, left: 0, bottom: 0, right: 0)
+        textView.isScrollEnabled = false
+        textView.placeholder = "请输入事件名称（48字以内）"
+        textView.textContainerInset = UIEdgeInsets.init(top: 0, left: 0, bottom: 0, right: 0)
+        textView.snp.makeConstraints { (make) in
+            make.left.equalTo(11)
+            make.right.equalToSuperview().offset(-11)
+            make.top.equalTo(20)
+            make.height.equalTo(20)
+        }
+        
+        
+        containerView.addSubview(lineView)
+        lineView.backgroundColor = UIColor.separator
+        lineView.snp.makeConstraints { (make) in
+            make.left.equalTo(15)
+            make.right.equalToSuperview().offset(-15)
+            make.top.equalTo(textView.snp.bottom).offset(8)
+            make.height.equalTo(1)
+        }
+        containerView.addSubview(label)
+        label.text = ""
+        label.font = UIFont.systemFont(ofSize: 12)
+        label.textColor = UIColor.subSubWord
+        label.snp.makeConstraints { (make) in
+            make.top.equalTo(lineView.snp.bottom)
+            make.right.equalToSuperview().offset(-15)
+            make.height.equalTo(34)
+        }
+        
+        
+        
+        
+       
+        textView.delegate = self
+        
+    }
+    
+    func setData(_ str: String) {
+        textView.text = str
+        self.textViewDidChange(textView)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+//        let textHeight = textView.text.computationString(textView.width, textView.font!, textView.text)
+//        if Float(textHeight) > 25 {
+//            if Float(textHeight) > 48 {
+//                containerView.snp.updateConstraints { (make) in
+//                    make.height.equalTo(103 + 10)
+//                }
+//                textView.snp.updateConstraints({ (make) in
+//                    make.height.equalTo(50 + 10)
+//                })
+//
+//            }else {
+//                containerView.snp.updateConstraints { (make) in
+//                    make.height.equalTo(103)
+//                }
+//                textView.snp.updateConstraints({ (make) in
+//                    make.height.equalTo(40)
+//                })
+//            }
+//
+//            label.text = "已输入\(textView.text.count > 48 ? 48 : textView.text.count)/48个字"
+//
+//        }else {
+//            containerView.snp.updateConstraints { (make) in
+//                make.height.equalTo(63)
+//            }
+//            textView.snp.updateConstraints({ (make) in
+//                make.height.equalTo(20)
+//            })
+//            label.text = ""
+//
+//        }
+        super.layoutSubviews()
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        
+    }
+    func textViewShouldEndEditing(_ textView: UITextView) -> Bool {
+        self.closure?(textView.text)
+        return true
+    }
+    
+    func textViewDidChange(_ textView: UITextView) {
+        let paraph = NSMutableParagraphStyle()
+        paraph.lineSpacing = 3
+        let attributes: NSDictionary = [NSAttributedStringKey.font:UIFont.systemFont(ofSize: 14),
+                          NSAttributedStringKey.paragraphStyle: paraph]
+        textView.typingAttributes = attributes as! [String : Any]
+        
+        let newSize = textView.sizeThatFits(CGSize.init(width: textView.width, height: CGFloat(MAXFLOAT)))
+        if Float(newSize.height) > 40 {
+            label.text = "已输入\(textView.text.count > 48 ? 48 : textView.text.count)/48个字"
+  
+            self.isNewline?(3)
+            containerView.snp.updateConstraints { (make) in
+                make.height.equalTo(123)
+            }
+            textView.snp.updateConstraints({ (make) in
+                make.height.equalTo(60)
+            })
+            
+            
+        }else if Float(newSize.height) > 20 {
+            label.text = "已输入\(textView.text.count > 48 ? 48 : textView.text.count)/48个字"
+            self.isNewline?(2)
+            containerView.snp.updateConstraints { (make) in
+                make.height.equalTo(103)
+            }
+            textView.snp.updateConstraints({ (make) in
+                make.height.equalTo(40)
+            })
+            
+        }else {
+            label.text = ""
+            self.isNewline?(1)
+            containerView.snp.updateConstraints { (make) in
+                make.height.equalTo(63)
+            }
+            textView.snp.updateConstraints({ (make) in
+                make.height.equalTo(20)
+            })
+            
+            
+        }
+//        if Float(textHeight) > 25 {
+//
+//            if self.lineNum != 2 {
+//                self.isNewline?(2)
+//            }
+//            self.lineNum = 2
+//
+//        }else {
+//
+//
+//            if self.lineNum != 1 {
+//                self.isNewline?(1)
+//            }
+//            self.lineNum = 1
+//
+//        }
+        //        if textView.text.count > 0 {
+        //            label.text = "已输入\(textView.text.count)/48个字"
+        //
+        //        }else {
+        //            label.text = ""
+        //        }
+        
+    }
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" || text == " "{
+            return false
+        }
+        let existedLength = Int(textView.text.count) //textView.text?.lengthOfBytes(using: .utf8)
+        let selectedLength = range.length //range.length
+        let replaceLength = Int(text.count) //text.lengthOfBytes(using: .utf8)
+        
+        if existedLength - selectedLength + replaceLength > maxEventNameCount {
+            return false
+        }
+        
+        return true
+    }
+}

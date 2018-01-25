@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:test/RemindTest/RemindTest.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:sdk/RemindData/RemindData.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:app/Remind/Remind.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:app/Remind/Pods/Pods.xcodeproj">
+   </FileRef>
+</Workspace>

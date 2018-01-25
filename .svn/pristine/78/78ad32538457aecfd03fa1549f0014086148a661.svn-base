@@ -1,0 +1,870 @@
+//
+//  HomeTableViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+import CoreLocation
+import MapKit
+import AdSupport
+import HealthKit
+class HomeTableViewController: UITableViewController ,MKMapViewDelegate,CLLocationManagerDelegate{
+    var cardArr = [Card]()
+    var bridthList = [BirthdayModel]()
+    var festivalList = [FestivalModel]()
+    var weatherlList = [WeatherModel]()
+    var EventList = [EventModel]()
+    var stockList = [StockModel]()
+    var Clientllist = [EventClientModel]()
+    var holidayList = [HolidayModel]()
+    var stepModel : StepModel?
+    var selectSection = 0
+    var stepCount = 0
+    var distanceCount = 0
+    //保存获取到的本地位置
+    var currLocation : CLLocation!
+    //用于定位服务管理类，它能够给我们提供位置信息和高度信息，也可以监控设备进入或离开某个区域，还可以获得设备的运行方向
+    var locationManager : CLLocationManager!
+    var mapView : MKMapView!
+    var status = CLLocationManager.authorizationStatus()
+    var authorizeView : Authority?
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.navigationItem.title = "米橙生活"
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = UIColor.clear
+        
+        tableView.register(stockTableViewCell.self, forCellReuseIdentifier: "stockTableViewCell")
+        tableView.register(festivalTableViewCell.self, forCellReuseIdentifier: "festivalTableViewCell")
+        tableView.register(EventTableViewCell.self, forCellReuseIdentifier: "EventTableViewCell")
+        tableView.register(LocalEventTableViewCell.self, forCellReuseIdentifier: "LocalEventTableViewCell")
+        tableView.register(WeatherTableViewCell.self, forCellReuseIdentifier: "WeatherTableViewCell")
+        tableView.register(stepTableViewCell.self, forCellReuseIdentifier: "stepTableViewCell")
+        tableView.register(homeEdtingTableViewCell.self, forCellReuseIdentifier: "homeEdtingTableViewCell")
+        tableView.register(emptyTableViewCell.self, forCellReuseIdentifier: "emptyTableViewCell")
+        tableView.register(holidayTableViewCell.self, forCellReuseIdentifier: "holidayTableViewCell")
+        
+        self.addTableHeaderView(false,0)
+
+        
+        
+        let header : CKCylinderReversibleHeader = CKCylinderReversibleHeader.init(pad: 0) {
+            self.getHomeData()
+        }
+        header.cylinderColor = UIColor.subSubWord
+        tableView.mj_header = header
+       
+        self.getHomeData()
+        
+        
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(HomeTableViewController.applicationAction), name: Notification.Name.UIApplicationDidBecomeActive, object: nil)
+        //添加监听事件
+        NotificationCenter.default.addObserver(self, selector: #selector(HomeTableViewController.homeDataViewChange), name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+        //注册设备
+        let dataManage = DataManager.share()
+        dataManage.register { (codeResult, message, idfa) in
+//            self.notif(withTitle: message, duration: 0.8, closure: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+
+        }
+        if (UserDefaults.standard.object(forKey: "isFrist") != nil){
+            if (UserDefaults.standard.object(forKey: "isFrist") as! Bool) == false{
+                self.addSteps()
+                return
+            }
+        }
+        
+        authorizeView = Authority.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+        authorizeView?.delegate = self
+        UIApplication.shared.keyWindow?.addSubview(authorizeView!)
+       
+    }
+    //MARK:- 上传近三十天的步数数据
+    func addSteps(){
+        //上传过去30天数据
+        if !HomeTableViewController.today.isToday(){
+            StepManager.share().getStepsListAndDistanceMList(byLastDays: 30) { (codeResult, stepsAndDistanceMList) in
+                var stepModelList = [StepModel]()
+                for stepsAndDistanceM in stepsAndDistanceMList{
+                    var stepModel = StepModel()
+                    stepModel.date = stepsAndDistanceM.0
+                    stepModel.step = stepsAndDistanceM.1
+                    stepModel.distanceM = stepsAndDistanceM.2
+                    stepModelList.append(stepModel)
+                }
+                
+                DataManager.share().addSteps(withStepModelList: stepModelList, closure: { (codeResult, message) in
+                    
+                })
+            }
+        }else{
+            HomeTableViewController.today = Date()
+        }
+    }
+    
+    
+    @objc func homeDataViewChange(){
+        self.getHomeData()
+    }
+    
+    
+    //MARK:- app进入前台
+    @objc func applicationAction(){
+       // if status != CLLocationManager.authorizationStatus(){
+            switch CLLocationManager.authorizationStatus(){
+            case .authorizedWhenInUse,.authorizedAlways:
+                self.addMapView()
+                status = CLLocationManager.authorizationStatus()
+                break
+            default:
+                break
+            }
+       // }
+        
+      
+        if isOpenHealth(){
+            self.openStepRemiand()
+        }
+    }
+    
+    //MARK:- 判断是否开启通知
+    func isOpenHealth()->Bool{
+       return HKHealthStore().authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)!) == .sharingAuthorized
+    }
+    
+    //MARK:- 检查是否开启定位系统
+//    func addLocation(){
+//        if UserDefaults.standard.object(forKey: "showLocationAlert") == nil{
+//            UserDefaults.standard.set(false, forKey: "showLocationAlert")
+//        }
+//        if CLLocationManager.authorizationStatus() != .denied{
+//            if CLLocationManager.authorizationStatus() == .notDetermined{
+//
+//                if UserDefaults.standard.object(forKey: "showLocationAlert") as! Bool == true{
+//                    return
+//                }
+//                UserDefaults.standard.set(true, forKey: "showLocationAlert")
+//                self.alert(withTitle: "我们需要获取您的位置，为您推送您所在城市的天气", closure: { (confrim) in
+//                    if(confrim){
+//                        self.addMapView()
+//                    }
+//                })
+//            }else{
+//                self.addMapView()
+//            }
+//        }else{
+//
+//            if UserDefaults.standard.object(forKey: "showLocationAlert") as! Bool == true{
+//                return
+//            }
+//            UserDefaults.standard.set(true, forKey: "showLocationAlert")
+//            self.alert(withTitle: "我们需要获取您的位置，为您推送您所在城市的天气", closure: { (confrim) in
+//                if(confrim){
+//                    if CLLocationManager.locationServicesEnabled(){
+//                        if let url = URL.init(string: UIApplicationOpenSettingsURLString){
+//                            if UIApplication.shared.canOpenURL(url){
+//                                UIApplication.shared.openURL(url)
+//                            }
+//                        }
+//                    }else{
+//                        if let url = URL.init(string: "App-prefs:root=LOCATION_SERVICES"){
+//                            if UIApplication.shared.canOpenURL(url){
+//                                UIApplication.shared.openURL(url)
+//                            }
+//                        }
+//                    }
+//
+//                }
+//            })
+//        }
+//   }
+    
+    //MARK: 检查 iOS10以上版本 是否限制广告跟踪
+    func showIdfaAlertView() {
+        if !ASIdentifierManager.shared().isAdvertisingTrackingEnabled
+            && ((UIDevice.current.systemVersion as NSString).floatValue) >= 10.0 {
+            
+            self.alert(withTitle: "请关闭“限制广告跟踪”功能\n“设置->隐私->广告->限制广告跟踪”", closure: { (confirm) in
+                if (confirm) {
+                    let privacy = "App-Prefs:root=Privacy"
+                    let ad = "App-Prefs:root=Privacy&path=ADVERTISING"
+                    if UIApplication.shared.canOpenURL(URL.init(string: ad)!){
+                        UIApplication.shared.openURL(URL.init(string: ad)!)
+                    }else{
+                        if UIApplication.shared.canOpenURL(URL.init(string: privacy)!){
+                            UIApplication.shared.openURL(URL.init(string: privacy)!)
+                        }
+                    }
+                }
+
+            })
+
+        }
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.updateBackground()
+       
+        let item1 = BarButtonItem(imageName: "navbar_icon_skin", tSelector: #selector(HomeTableViewController.manngerBackColor))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        let item = BarButtonItem(imageName: "navbar_icon_cardsmge", tSelector: #selector(HomeTableViewController.manngerCar))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewDidDisappear(true)
+        
+    }
+    
+    //MARK:- 添加头部文件
+    func addTableHeaderView(_ hasNew:Bool,_ num:Int){
+        
+        let headerView = tableHeader.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: hasNew ? 58 : 12))
+        headerView.delegate = self
+        headerView.configView(hasNew,num)
+        tableView.tableHeaderView = headerView
+        
+        let footerView =  UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 30))  //tableFooter.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 71))
+        //footerView.delegate = self
+        tableView.tableFooterView = footerView
+    }
+    
+    //记录当天日期
+    static var today: Date = Date()
+    
+    //MARK:- 获取首页数据 ============================================================================================
+    func getHomeData(){
+        DataManager.share().getCards { (result, message, cardList,tabinfo) in
+            if result == .failure{
+                self.notif(withTitle: message, closure: nil)
+                self.endReflesh(false)
+                if message == "该用户不存在" {
+                    self.showIdfaAlertView()
+                }
+                return
+            }
+            
+            self.addTableHeaderView(tabinfo.newTabFlag,tabinfo.num)
+            
+            self.cardArr = cardList.sorted(by: { (a, b) -> Bool in
+                if  a.sort<b.sort{
+                    return true
+                }else{
+                    return false
+                }
+            })
+            for card in cardList{
+                switch card.type!{
+                case .birthday( _,let birthday):
+                    self.bridthList = birthday
+                    break
+                case .weather(_,let weather):
+                    self.weatherlList = weather
+                    break
+                case .festival(_,let festival):
+                    self.festivalList = festival
+                    break
+                case .event(_ ,let event):
+                    self.EventList = event
+                    break
+                case .stock(_ ,let stock):
+                    self.stockList = stock
+                    break
+                case .step(_,let step):
+                    self.stepModel = step
+                    
+                    if (UserDefaults.standard.object(forKey: "isFrist") == nil){
+                        break
+                    }
+                    
+                    StepManager.share().getStepsAndDistanceM { (result, step, distance) in
+                        
+                        self.stepCount = step
+                        self.distanceCount = distance
+                        
+                    }
+                    
+                    //保存过往30天步数数据(最好判断当天是否以上传过)
+                    self.addSteps()
+                    break
+                case .eventClient(_, let client):
+                    self.Clientllist = client
+                    break
+                case .holiday(_, let holiday):
+                    self.holidayList = holiday
+                    break
+                }
+            }
+            self.endReflesh(true)
+            self.tableView.reloadData()
+            
+        }
+    }
+    func endReflesh(_ reload:Bool){
+        if tableView.mj_header.isRefreshing{
+            tableView.mj_header.endRefreshing()
+        }
+    }
+    @objc func manngerCar(){
+        let vc = CardMangerViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    @objc func manngerBackColor(){
+        let nav = UINavigationController.init(rootViewController: StyleViewController())
+        self.navigationController?.present(nav, animated: true, completion: nil)
+        
+//        LoginViewController.show(self, successHandler: { isLogin in
+//
+//        })
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+    
+    // MARK: - Table view data source
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        return cardArr.count
+    }
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        let card = cardArr[section]
+        var empty = false
+        switch  card.type!{
+        case .birthday(_, _):
+            if self.bridthList.count == 0{
+                empty = true
+            }
+        case .weather(_, _):
+            if weatherlList.count == 0 {
+                empty = true
+            }
+        case .festival(_, _):
+            if festivalList.count == 0 {
+                empty = true
+            }
+        case .event(_, _):
+            if EventList.count == 0 {
+                empty = true
+            }
+        case .stock(_, _):
+            if stockList.count == 0 {
+                empty = true
+            }
+        case .eventClient(_, _):
+            if Clientllist.count == 0 {
+                empty = true
+            }
+        default:
+            break
+        }
+        if empty{
+            return 1
+        }
+        
+        
+        switch card.type! {
+        case .weather( _):
+            return 1
+        case .festival( _):
+            return festivalList.count
+            
+        case .birthday( _):
+            return bridthList.count
+        case .event( _):
+            return EventList.count
+        case .stock( _):
+            return stockList.count
+        case .eventClient(_, _):
+            return Clientllist.count
+        case .step(_, _):
+            return 1
+        case .holiday(_, _):
+            return holidayList.count
+        }
+        
+        
+    }
+    //MARK:- 返回的cell ========================================================================
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        let card = cardArr[indexPath.section]
+        
+        var empty = false
+        var text = ""
+        switch  card.type!{
+        case .birthday(_, _):
+            if self.bridthList.count == 0{
+                text = "添加生日事件"
+                empty = true
+            }
+        case .weather(_, _):
+            if weatherlList.count == 0 {
+                text = "添加城市"
+                empty = true
+            }
+        case .festival(_, _):
+            if festivalList.count == 0 {
+                text = "添加节日节气"
+                empty = true
+            }
+        case .event(_, _):
+            if EventList.count == 0 {
+                text = "添加重要事件"
+                empty = true
+            }
+        case .stock(_, _):
+            if stockList.count == 0 {
+                text = "添加关注的股票"
+                empty = true
+            }
+        case .eventClient(_, _):
+            if Clientllist.count == 0 {
+                text = "添加每日提醒"
+                empty = true
+            }
+//        case .step(_,_):
+//            if HKHealthStore().authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)!) != .sharingAuthorized &&  HKHealthStore().authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.distanceWalkingRunning)!) != .sharingAuthorized{
+//                text = "请开启“访问健康数据”的权限"
+//                empty = true
+//            }
+        default:
+            break
+        }
+        
+        if empty {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "emptyTableViewCell") as? emptyTableViewCell
+            cell?.configView(text)
+            return cell!
+        }
+        
+        let indexRow = indexPath.row
+        let isFrist = indexPath.row == 0
+        
+        switch card.type! {
+        case .weather( _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "WeatherTableViewCell") as? WeatherTableViewCell
+            cell?.congigCell(false, true,weatherlList)
+            cell?.delegate = self
+            return cell!
+        case .festival( _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "festivalTableViewCell") as? festivalTableViewCell
+            cell?.configCell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)),self.festivalList[indexRow], isfrist: isFrist)
+            return cell!
+        case .birthday( _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "EventTableViewCell") as? EventTableViewCell
+            cell?.configCell(nil, bridthList[indexRow], nil, (indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)), isFrist)
+            return cell!
+        case .event( _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "EventTableViewCell") as? EventTableViewCell
+            cell?.configCell(EventList[indexRow], nil, nil, (indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)), isFrist)
+            return cell!
+        case .stock( _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "stockTableViewCell") as? stockTableViewCell
+            cell?.configcell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)), isFrist, stockList[indexRow])
+            return cell!
+        case .eventClient(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "LocalEventTableViewCell")as!LocalEventTableViewCell
+            cell.configCell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)),Clientllist[indexRow], isFrist)
+            return cell
+        case .step(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "stepTableViewCell")as!stepTableViewCell
+            cell.configCell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)), self.stepModel!, self.stepCount, self.distanceCount)
+            return cell
+        case .holiday(_, _):
+            let cell = tableView.dequeueReusableCell(withIdentifier: "holidayTableViewCell")as!holidayTableViewCell
+            cell.configCell((indexPath.row == (tableView.numberOfRows(inSection: indexPath.section)-1)),self.holidayList[indexRow], isfrist: isFrist)
+            return cell
+        }
+        
+    }
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let card = cardArr[indexPath.section]
+        switch card.type! {
+        case .weather(_, _):
+            if weatherlList.count == 0{
+                return 64
+            }
+            return 88
+        case .festival(_, _):
+            if festivalList.count == 0{
+                return 64
+            }
+            if indexPath.row == 0{
+              return CGFloat(420)/CGFloat(1065)*(keyDeviceWidth-20)
+            }else{
+               return 52
+            }
+        default:
+            return 64
+        }
+    }
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let hf = UITableViewHeaderFooterView.init()
+        
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+        let view1 = HomeSectionView.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+        view1.delegate = self
+        view1.configView(section, cardArr[section].type?.name() ?? "",cardArr[section].cardId)
+        hf.backgroundView = view
+        hf.addSubview(view1)
+        return hf
+    }
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 36
+    }
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        let selecIndex = indexPath.row
+        
+        
+        let  card = self.cardArr[indexPath.section]
+        switch card.type! {
+        case .festival(_, _):
+            if self.festivalList.count == 0{
+                
+                return
+            }
+            let vc = festivalDetailViewController()
+            vc.festival = self.festivalList[selecIndex]
+            self.navigationController?.show(vc, sender: nil)
+            break
+        case .weather(_, _):
+            if weatherlList.count == 0{
+                let vc = addCityViewController()
+                self.navigationController?.pushViewController(vc, animated: true)
+            }
+            break
+        case .birthday(_, _):
+            if self.bridthList.count == 0{
+                if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                    if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                        //获取类型
+                        let tip = DataHandler.share().getTip(byTipType: 1, withTipName: "", withIsClient: false, withSort: 0)
+                        eventEditorVC.tip = tip
+                        navigationController?.show(eventEditorVC, sender: nil)
+                    }
+                }
+                return
+            }
+            let vc = DetailViewController()
+            vc.id = Int32(self.bridthList[selecIndex].id)
+            self.navigationController?.pushViewController(vc, animated: true)
+            break
+        case .event(_, _):
+            if self.EventList.count == 0{
+                let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+                self.navigationController?.pushViewController(vc!, animated: true)
+                return
+            }
+            let vc = DetailViewController()
+            vc.id = Int32(self.EventList[selecIndex].id)
+            self.navigationController?.pushViewController(vc, animated: true)
+            break
+        case .stock(_, _):
+            if self.stockList.count == 0{
+                let vc =  CommonWebViewController.init(URL.init(string: Urls.host + "stock/index?uid=\(MemberManager.share().member?.uuid ?? "")")!)
+                vc.name = "股票"
+                navigationController?.show(vc, sender: nil)
+                return
+            }
+            let vc =  CommonWebViewController.init(URL.init(string: Urls.host + "stock/index?uid=\(MemberManager.share().member?.uuid ?? "")#quote?code=\(stockList[selecIndex].prefix).\(stockList[selecIndex].prodCode)")!)
+            vc.name = "股票详情"
+            navigationController?.show(vc, sender: nil)
+            break
+        case .step(_, _):
+            if let stepVC = UIStoryboard(name: "Step", bundle: Bundle.main).instantiateInitialViewController(){
+                navigationController?.show(stepVC, sender: nil)
+            }
+            break
+        case .eventClient(_, _):
+            if self.Clientllist.count == 0{
+                let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+                self.navigationController?.pushViewController(vc!, animated: true)
+                return
+            }
+            if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                //根视图
+                let eventClientModel = self.Clientllist[selecIndex]
+                let id = eventClientModel.id
+                let type = eventClientModel.type
+                DataHandler.share().executeEventClient(byEventClientType: type, byEventClientId: id, closure: { (eventClient) in
+                    if let evtClt = eventClient{
+                        if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                            eventEditorVC.eventClient = evtClt
+                            self.navigationController?.show(eventEditorVC, sender: nil)
+                        }else{
+                            self.notif(withTitle: "获取每日提醒失败")
+                        }
+                    }
+                })
+            }
+            break
+        case .holiday(_, _):
+            
+              break
+        }
+        
+        
+        
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 10
+    }
+    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 10))
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    
+}
+//MARK:- 区头按钮点击
+extension HomeTableViewController:HeaderEdtingBtnClickDelegate,WeatherTableViewCellDelegate,homeEdtingViewDegate{
+    func edtingBtnClick(_ row: Int) {
+        let card = cardArr[selectSection]
+        if row == 0{
+            switch card.type!{
+            case .step(_, _):
+                if let stepVC = UIStoryboard(name: "Step", bundle: Bundle.main).instantiateInitialViewController(){
+                    navigationController?.show(stepVC, sender: nil)
+                }
+                break
+            case .stock(_, _ ):
+                let vc =  CommonWebViewController.init(URL.init(string: Urls.host + "stock/index?uid=\(MemberManager.share().member?.uuid ?? "")")!)
+                vc.name = "股票"
+                navigationController?.show(vc, sender: nil)
+                
+                break
+            default:
+                let vc = HomeAllTableViewController.init(style: .grouped)
+                vc.type = card.type
+                vc.cardId = card.cardId
+                self.navigationController?.pushViewController(vc, animated: true)
+                break
+            }
+            
+        }
+        if row == 1{
+            switch card.type!{
+            case .weather(_, _):
+                let vc = cityManngerTableViewController()
+                self.navigationController?.pushViewController(vc, animated: true)
+                break
+            case .birthday(_, _):
+                
+                if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+                    if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                        //获取类型
+                        let tip = DataHandler.share().getTip(byTipType: 1, withTipName: "", withIsClient: false, withSort: 0)
+                        eventEditorVC.tip = tip
+                        navigationController?.show(eventEditorVC, sender: nil)
+                    }
+                }
+                break
+                
+            case .event(_, _):
+                let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+                self.navigationController?.pushViewController(vc!, animated: true)
+                break
+            case .festival(_, _):
+                self.goSetting( false, selectSection)
+                break
+            case .eventClient(_, _):
+                let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController()
+                self.navigationController?.pushViewController(vc!, animated: true)
+                break
+            case .stock(_, _):
+                let vc =  CommonWebViewController.init(URL.init(string: Urls.host + "stock/index?uid=\(MemberManager.share().member?.uuid ?? "")#search")!)
+                vc.name = "添加股票"
+                navigationController?.show(vc, sender: nil)
+                break
+                
+            default:
+                break
+                
+            }
+            
+        }
+        if row == 2{
+            switch card.type!{
+            case .birthday(_, _):
+                self.goSetting(true, selectSection)
+            case .event(_, _):
+                self.goSetting(true, selectSection)
+            case .weather(_, _):
+                let vc = weathCardSettingViewController()
+                self.navigationController?.pushViewController(vc, animated: true)
+            case .eventClient(_, _):
+                self.goSetting(true, selectSection)
+            default:
+                break
+            }
+            
+        }
+    }
+    
+    
+    
+    func weatherCellclick(_ model: WeatherModel) {
+        let webVC = WebViewController.init(URL.init(string: "http://120.79.52.214/appwall_remind/restfull/weather/info?cityid=\(model.city.id)&uid=\(MemberManager.share().member?.uuid ?? "")")!)
+        webVC.city = model.city
+        
+        self.navigationController?.pushViewController(webVC, animated: true)
+    }
+    
+    
+  
+    //MARK:- 跳转至设置界面
+    func goSetting(_ iselese:Bool,_ section:Int){
+        if iselese{
+            let vc = CardSettingElseViewController()
+            vc.cardid = cardArr[section].cardId
+            self.navigationController?.show(vc, sender: nil)
+        }else{
+            let vc = CardSettingViewController()
+            vc.cardid = cardArr[section].cardId
+            self.navigationController?.show(vc, sender: nil)
+        }
+    }
+    
+    
+    func headerBtnClick(_ section: Int) {
+        let view = HomeEdtingView.init(frame:CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: UIScreen.main.bounds.height))
+        view.delegate = self
+        selectSection = section
+        let view1 = tableView.headerView(forSection: section)
+        view.configView(self.cardArr[section], (view1?.frame.origin.y)!-tableView.contentOffset.y, true, false)
+        UIApplication.shared.keyWindow?.addSubview(view)
+        }
+}
+//MARK:- 表头表尾点击
+extension HomeTableViewController:tableHeadrClickDelegate,tableFooterClickDelegate{
+    func tableFooterClick() {
+        let vc = CardMangerViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    func tableHeadClick() {
+        let vc = CardMangerViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    
+}
+
+
+//MARK:- 添加定位  上传位置
+extension HomeTableViewController{
+    //MARK:- 添加定位的回掉
+    func addMapView(){
+        mapView = MKMapView()
+        mapView.frame = CGRect.init(x: 0, y: 0, width: 0, height: 0)
+        mapView.isZoomEnabled = true
+        mapView.showsUserLocation = true
+        mapView.isScrollEnabled = true
+        mapView.delegate = self
+        //将地图设置为标准模式
+        mapView.mapType = MKMapType.standard
+        self.view .addSubview(mapView)
+        locationManager = CLLocationManager.init()
+        locationManager.delegate = self
+        locationManager.requestAlwaysAuthorization()
+        //设备使用电池供电时最高的精度
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        //精确到1000米,距离过滤器，定义了设备移动后获得位置信息的最小距离
+        locationManager.distanceFilter = 50.0
+        locationManager.startUpdatingLocation()
+    }
+    
+    //MARK:- 定位的回掉
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        currLocation = locations.last
+        self.openLoctionRemaind()
+        self.LonLatToCity()
+    }
+    ///将经纬度转换为城市名
+    func LonLatToCity() {
+        let geocoder: CLGeocoder = CLGeocoder()
+        
+        geocoder.reverseGeocodeLocation(currLocation, completionHandler: { ( placemark, error) -> Void in
+            if (error == nil) {//转换成功，解析获取到的各个信息
+                let array = placemark
+                let mark = array?.first
+                var city: NSString =   mark?.addressDictionary!["City"] as? NSString ?? ""
+                let subLocality: NSString =   mark?.addressDictionary!["SubLocality"] as? NSString ?? ""
+                let province: NSString =   mark?.addressDictionary!["State"] as? NSString ?? ""
+                //去掉“市”和“省”字眼
+                city = city.replacingOccurrences(of: "市", with:"") as NSString
+                
+                DataManager.share().setLocationCity(withCityLocation: self.currLocation.coordinate, withName: subLocality, withCity :city ,withProvince: province  ,closure: { (result, message) in
+                    
+                })
+            }else {
+                //转换失败
+            }
+            
+        })
+    }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        debugPrint("定位失败")
+       }
+}
+extension HomeTableViewController:AuthorityDelegate{
+    func deleteButtonClick() {
+        UserDefaults.standard.set(false, forKey: "isFrist")
+    }
+    func openRemainClick(tag: Int) {
+        if tag == 1{
+            
+            NotificationCenter.default.addObserver(self, selector: #selector(HomeTableViewController.openNoticeRemaind), name: NSNotification.Name(rawValue: "openNoticeRemaind"), object: nil)
+            if (UserDefaults.standard.object(forKey: "remindFrist") == nil){
+                (UIApplication.shared.delegate as? AppDelegate)?.setNotificationSetting()
+            }else{
+                let settingUrl = URL.init(string: UIApplicationOpenSettingsURLString)
+                if UIApplication.shared.canOpenURL(settingUrl!){
+                    UIApplication.shared.openURL(settingUrl!)
+                }
+            }
+        }
+        if tag == 2{
+            if UserDefaults.standard.object(forKey: "locationFrist") == nil{
+                self.addMapView()
+            }else{
+                let settingUrl = URL.init(string: UIApplicationOpenSettingsURLString)
+                if UIApplication.shared.canOpenURL(settingUrl!){
+                    UIApplication.shared.openURL(settingUrl!)
+                }
+            }
+         }
+        if tag == 3{
+            NotificationCenter.default.addObserver(self, selector: #selector(HomeTableViewController.openStepRemiand), name: NSNotification.Name(rawValue: "openStepRemiand"), object: nil)
+            if UserDefaults.standard.object(forKey: "healthFrist") == nil{
+                StepManager.share().request()
+            }else{
+                let settingUrl = URL.init(string: UIApplicationOpenSettingsURLString)
+                if UIApplication.shared.canOpenURL(settingUrl!){
+                    UIApplication.shared.openURL(settingUrl!)
+                }
+            }
+            
+        }
+    }
+    @objc func openStepRemiand(){
+        authorizeView?.buttonValueShouldChange(3)
+        UserDefaults.standard.set(false, forKey: "healthFrist")
+    }
+    @objc func openNoticeRemaind(){
+        authorizeView?.buttonValueShouldChange(1)
+        UserDefaults.standard.set(false, forKey: "remindFrist")
+    }
+    func openLoctionRemaind(){
+        authorizeView?.buttonValueShouldChange(2)
+        UserDefaults.standard.set(false, forKey: "locationFrist")
+    }
+}
+
+

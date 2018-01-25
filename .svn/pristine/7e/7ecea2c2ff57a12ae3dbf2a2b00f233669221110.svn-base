@@ -1,0 +1,724 @@
+//
+//  GANSubLunarPicker.swift
+//  Remind
+//
+//  Created by gg on 17/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANLunarPicker: UIPickerView {
+    let animated = false
+    
+    ///最小日期（必须）
+    var minDate: Date!
+    ///最大日期（必须）
+    var maxDate: Date!
+    
+    
+    
+    var isShow = false{
+        didSet{
+            isHidden = !isShow
+        }
+    }
+    
+    ///是否隐藏年份
+    var isIgnoreYear = false{
+        didSet{
+            
+            yearLabel.isHidden = isIgnoreYear
+            
+            reloadAllComponents()
+            initSelectedDate()
+        }
+    }
+    
+    ///农历日期
+    var lunarDate: LunarDate?{
+        didSet{
+            
+            initSelectedDate()
+        }
+    }
+    
+    var solarDate: Date?{
+        didSet{
+            
+            guard let sDate = solarDate else {
+                return
+            }
+            lunarDate = transformGregorianToLunar(byDate: sDate)
+        }
+    }
+    
+    ///选择回调
+    var selectedClosure: ((LunarDate)->())?
+    
+    //private---------------------------------------------------------------------------
+    private lazy var componentWidth: CGFloat! = {
+        return self.frame.width / 3
+    }()
+    private let componentHeight: CGFloat = 52
+    private lazy var yearLabel: UILabel! = {
+        let frame = CGRect(x: componentWidth * 0.6, y: (self.frame.height - componentHeight) / 2 + (17 - 9) / 4, width: 21, height: componentHeight)
+        let label = UILabel(frame: frame)
+        label.backgroundColor = .clear
+        label.font = UIFont(withNormalFontSize: 9)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.text = "年"
+        return label
+    }()
+    
+    //MARK:- init------------------------------------------------------------------------------------------------------------
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        config()
+        createContents()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+    }
+    
+    private func config(){
+        backgroundColor = .clear
+        delegate = self
+        dataSource = self
+    }
+    
+    private func createContents(){
+
+        addSubview(yearLabel)
+    }
+    
+    //MARK:- 初始化选择日期
+    private func initSelectedDate(){
+        guard let lDate = lunarDate else{
+            return
+        }
+        
+        //刷新控件
+        if isIgnoreYear{
+            reloadComponent(0)
+            selectRow(lDate.lunarMonth - 1, inComponent: 0, animated: animated)
+            reloadComponent(1)
+            if lDate.lunarDay > 1{
+                selectRow(Int(lDate.lunarDay) - 1, inComponent: 1, animated: animated)
+            }
+        }else{
+            let minLunar = transformGregorianToLunar(byDate: minDate)
+            let maxLunar = transformGregorianToLunar(byDate: maxDate)
+            
+            var tempLunarDate = lDate
+            
+            if lDate < minLunar{
+                tempLunarDate = minLunar
+                //return
+            }else if lDate > maxLunar{
+                tempLunarDate = maxLunar
+                //return
+            }
+            
+            
+            var row0 = selectedRow(inComponent: 0)
+            let row1 = selectedRow(inComponent: 1)
+            let row2 = selectedRow(inComponent: 2)
+            
+            row0 = tempLunarDate.lunarYear - minLunar.lunarYear
+            
+            reloadComponent(0)
+            var rowYearIndex = tempLunarDate.lunarYear - minLunar.lunarYear
+            if rowYearIndex < 0{
+                rowYearIndex = 0
+            }
+            selectRow(rowYearIndex, inComponent: 0, animated: true)
+            //yearLabel.text = lunarYearList[(lDate.lunarYear - 1900 + 36) % lunarYearList.count] //date?.formatString(with: "yyyy")
+            
+            
+            reloadComponent(1)
+            if tempLunarDate.isLeapYear{                        //带闰年
+
+                if row0 == 0{                                                   //最小日期 月份
+                    var offset = 0
+                    if tempLunarDate.lunarMonth > minLunar.lunarMonth{
+                        if minLunar.lunarMonth == minLunar.leapMonth{
+                            if minLunar.isLeapMonth{
+                                offset = tempLunarDate.lunarMonth - minLunar.lunarMonth
+                            }else {
+                                offset = tempLunarDate.lunarMonth - minLunar.lunarMonth + 1
+                            }
+                        }else if minLunar.lunarMonth > minLunar.leapMonth{
+                            offset = tempLunarDate.lunarMonth - minLunar.lunarMonth
+                        }else{
+                            if tempLunarDate.lunarMonth > minLunar.leapMonth{
+                                offset = tempLunarDate.lunarMonth - minLunar.lunarMonth + 1
+                            }else if tempLunarDate.lunarMonth == minLunar.leapMonth{
+                                if tempLunarDate.isLeapMonth{
+                                    offset = tempLunarDate.lunarMonth - minLunar.lunarMonth + 1
+                                }else{
+                                    offset = tempLunarDate.lunarMonth - minLunar.lunarMonth
+                                }
+                            }else{
+                                offset = tempLunarDate.lunarMonth - minLunar.lunarMonth
+                            }
+                        }
+                    }else if tempLunarDate.lunarMonth == minLunar.lunarMonth{
+                        if minLunar.isLeapMonth{                    //最小日期为闰月
+                            offset = 0
+                        }else{                                      //最小日期为非闰月
+                            if tempLunarDate.isLeapMonth{
+                                offset = 1
+                            }else{
+                                offset = 0
+                            }
+                        }
+                    }else{
+                        if minLunar.lunarMonth == minLunar.leapMonth{
+                            if tempLunarDate.isLeapMonth{
+                                offset = minLunar.lunarMonth - 1 + 1
+                            }else{
+                                offset = minLunar.lunarMonth - 1
+                            }
+                        }else if minLunar.lunarMonth < minLunar.leapMonth{
+                            offset = minLunar.lunarMonth - 1
+                        }else{
+                            offset = minLunar.lunarMonth - 1 + 1
+                        }
+                    }
+                    selectRow(offset, inComponent: 1, animated: animated)
+                }else if row0 == maxLunar.lunarYear - minLunar.lunarYear{          //最大日期 月份
+                    var offset = 0
+                    if tempLunarDate.lunarMonth > maxLunar.lunarMonth{
+                        if maxLunar.lunarMonth == maxLunar.leapMonth{
+                            if maxLunar.isLeapMonth{
+                                offset = maxLunar.lunarMonth - 1 + 1
+                            }else{
+                                offset = maxLunar.lunarMonth - 1
+                            }
+                        }else if maxLunar.lunarMonth > maxLunar.leapMonth{
+                            offset = maxLunar.lunarMonth - 1 + 1
+                        }else{
+                            offset = maxLunar.lunarMonth - 1
+                        }
+                    }else if tempLunarDate.lunarMonth == maxLunar.lunarMonth{
+                        if maxLunar.lunarMonth == maxLunar.leapMonth{
+                            if maxLunar.isLeapMonth{                    //最大日期为闰月
+                                if tempLunarDate.isLeapMonth{
+                                    offset = maxLunar.lunarMonth - 1 + 1
+                                }else{
+                                    offset = maxLunar.lunarMonth - 1
+                                }
+                            }else{                                      //最大日期为非闰月
+                                
+                                offset = maxLunar.lunarMonth - 1
+                            }
+                        }else if maxLunar.lunarMonth > maxLunar.leapMonth{
+                            offset = maxLunar.lunarMonth - 1 + 1
+                        }else{
+                            offset = maxLunar.lunarMonth - 1
+                        }
+                    }else{
+                        if tempLunarDate.lunarMonth == tempLunarDate.leapMonth{
+                            if tempLunarDate.isLeapMonth{
+                                offset = 1
+                            }else{
+                                offset = 0
+                            }
+                        }else if tempLunarDate.lunarMonth < tempLunarDate.leapMonth{
+                            offset = 0
+                        }else{
+                            offset = 1
+                        }
+                    }
+                    selectRow(offset, inComponent: 1, animated: animated)
+                }else{                                                          //正常情况
+                    var offset = 0
+                    if tempLunarDate.lunarMonth == tempLunarDate.leapMonth{
+                        if tempLunarDate.isLeapMonth{
+                            offset = 1
+                        }else{
+                            offset = 0
+                        }
+                    }else if tempLunarDate.lunarMonth < tempLunarDate.leapMonth{
+                        offset = 0
+                    }else{
+                        offset = 1
+                    }
+                    selectRow(tempLunarDate.lunarMonth - 1 + offset, inComponent: 1, animated: animated)
+                }
+            }else{                                      //无闰年
+                
+                if row0 == 0{                                                   //最小日期 月份
+                    var offset = 0
+                    if tempLunarDate.lunarMonth > minLunar.lunarMonth{
+                        offset = tempLunarDate.lunarMonth - minLunar.lunarMonth
+                    }else{
+                        offset = 0
+                    }
+                    selectRow(offset, inComponent: 1, animated: animated)
+                }else if row0 == tempLunarDate.lunarYear - minLunar.lunarYear{          //最大日期 月份
+                    var offset = 0
+                    if tempLunarDate.lunarMonth < maxLunar.lunarMonth{
+                        offset = tempLunarDate.lunarMonth - 1
+                    }else {
+                        offset = maxLunar.lunarMonth - 1
+                        
+                    }
+                    selectRow(offset, inComponent: 1, animated: animated)
+                }else{                                                          //正常情况
+                    let offset = tempLunarDate.lunarMonth - 1
+                    selectRow(offset, inComponent: 1, animated: animated)
+                }
+            }
+            reloadComponent(2)
+            if tempLunarDate.lunarDay >= 1{
+                var offset = 0
+                if row0 == 0 && row1 == 0{
+                    offset += Int(minLunar.lunarDay) - 1
+                }
+                selectRow(Int(tempLunarDate.lunarDay) - 1 - offset, inComponent: 2, animated: animated)
+            }
+        }
+    }
+    
+    //MARK:- 获取当前选择的农历日期
+    func getCurLunarDate() -> LunarDate? {
+        if isIgnoreYear{
+            let lunarMonthIndex = selectedRow(inComponent: 0)
+            let lunarDayIndex = selectedRow(inComponent: 1)
+            
+            let lunarMonth = lunarMonthIndex + 1
+            let lunarDay = lunarDayIndex + 1
+            
+            let oldYear = lunarDate?.lunarYear ?? 2000
+            return (lunarYear: oldYear,
+                    lunarMonth: lunarMonth,
+                    lunarDay: Int64(lunarDay),
+                    isLeapYear: false,
+                    isLeapMonth: false,
+                    leapMonth: 0)
+        }else{
+            let row0 = selectedRow(inComponent: 0)
+            let row1 = selectedRow(inComponent: 1)
+            let row2 = selectedRow(inComponent: 2)
+            
+            let minLunar = transformGregorianToLunar(byDate: minDate)
+            let maxLunar = transformGregorianToLunar(byDate: maxDate)
+            
+            let lunarYearIndex = row0 + minLunar.lunarYear - 1900
+            let lunarMonthIndex = row1
+            let lunarDayIndex = row2
+            
+            let lunarDay: Int64
+            if row0 == 0 && row1 == 0{
+                lunarDay = Int64(lunarDayIndex) + Int64(minLunar.lunarDay)
+            }else{
+                lunarDay = Int64(lunarDayIndex) + 1
+            }
+            
+            let lunarDateData = lunarDateDataList[lunarYearIndex]
+            let leafMonth = lunarDateData & 0xf
+            let hasLeaf = lunarDateData & 0xf > 0
+            var isLeapMonth = false
+            var lunarMonth: Int
+            if hasLeaf{     //有闰月
+                if row0 == 0{               //最小 月份
+                    if minLunar.lunarMonth > minLunar.leapMonth{
+                        lunarMonth = lunarMonthIndex + minLunar.lunarMonth
+                    }else if minLunar.lunarMonth == minLunar.leapMonth{
+                        if minLunar.isLeapMonth{
+                            lunarMonth = lunarMonthIndex + minLunar.lunarMonth - 1
+                            if lunarMonthIndex == 0{
+                                isLeapMonth = true
+                            }
+                        }else{
+                            if lunarMonthIndex == 1{
+                                isLeapMonth = true
+                            }
+                            lunarMonth = lunarMonthIndex + minLunar.lunarMonth
+                        }
+                    }else{          //最小月份 小于 最小闰月月份
+                        if lunarMonthIndex + minLunar.lunarMonth == minLunar.leapMonth{
+                            lunarMonth = lunarMonthIndex + minLunar.lunarMonth
+                        }else if lunarMonthIndex + minLunar.lunarMonth > minLunar.leapMonth{
+                            lunarMonth = lunarMonthIndex + minLunar.lunarMonth - 1
+                            if lunarDayIndex + minLunar.lunarMonth - 1 == minLunar.leapMonth{
+                                isLeapMonth = true
+                            }
+                        }else{
+                            lunarMonth = lunarMonthIndex + minLunar.lunarMonth
+                        }
+                    }
+                }else if row0 == maxLunar.lunarYear - minLunar.lunarYear{                      //最大 月份
+                    
+                    if maxLunar.lunarMonth < maxLunar.leapMonth{
+                        lunarMonth = lunarMonthIndex + 1
+                    }else if maxLunar.lunarMonth == maxLunar.leapMonth{
+                        lunarMonth = lunarMonthIndex + 1
+                        if maxLunar.isLeapMonth{
+                            if lunarMonthIndex + 1 == maxLunar.lunarMonth + 1{
+                                isLeapMonth = true
+                                lunarMonth = lunarMonthIndex
+                            }
+                        }
+                    }else{          //最大月份 大于 最大闰月月份
+                        if lunarMonthIndex + 1 == maxLunar.leapMonth{
+                            lunarMonth = lunarMonthIndex + 1
+                        }else if lunarMonthIndex + 1 > maxLunar.leapMonth{
+                            lunarMonth = lunarMonthIndex
+                            if lunarMonthIndex + 1 == maxLunar.leapMonth + 1{
+                                isLeapMonth = true
+                            }
+                        }else{
+                            lunarMonth = lunarMonthIndex + 1
+                        }
+                    }
+                }else{                          //正常情况
+                    if lunarMonthIndex + 1 > Int(leafMonth){
+                        lunarMonth = lunarMonthIndex
+                        if lunarMonthIndex + 1 == Int(leafMonth) + 1{
+                            isLeapMonth = true
+                        }
+                    }else{
+                        lunarMonth = lunarMonthIndex + 1
+                    }
+                }
+            }else{          //无闰月
+                if row0 == 0{               //最小 月份
+                    lunarMonth = lunarMonthIndex + minLunar.lunarMonth
+                }else if row0 == maxLunar.lunarYear - minLunar.lunarYear{                      //最大 月份
+                    lunarMonth = lunarMonthIndex + 1
+                }else{                          //正常情况
+                    lunarMonth = lunarMonthIndex + 1
+                }
+            }
+            
+            return (lunarYear: lunarYearIndex + 1900,
+                    lunarMonth: lunarMonth,
+                    lunarDay: lunarDay,
+                    isLeapYear: hasLeaf,
+                    isLeapMonth: isLeapMonth,
+                    leapMonth: Int(leafMonth))
+        }
+    }
+}
+
+//MARK:- pickerview delegate
+extension GANLunarPicker: UIPickerViewDelegate, UIPickerViewDataSource{
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        if isIgnoreYear  {
+            return 2
+        }
+        return 3
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return componentHeight
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+        if isIgnoreYear {
+            return frame.width / 2
+        }
+        return frame.width / 3
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        //判断是否隐藏年份
+        if isIgnoreYear {
+            if component == 0{  //隐藏年份的情况下，忽略闰月
+                return 12
+            }else{
+                return 30
+            }
+        }
+        
+        let minYear = calendar.component(.year, from: minDate)
+        let maxYear = calendar.component(.year, from: maxDate)
+        let minMonth = calendar.component(.month, from: minDate)
+        let maxMonth = calendar.component(.month, from: maxDate)
+        let minDay = calendar.component(.day, from: minDate)
+        let maxDay = calendar.component(.day, from: maxDate)
+        var row0 = pickerView.selectedRow(inComponent: 0)
+        
+        let lDate = lunarDate ?? (2000, 1, 1, false, false, 0)
+        let minLunar = transformGregorianToLunar(byDate: minDate)
+        let maxLunar = transformGregorianToLunar(byDate: maxDate)
+        
+        var tempLunar = lDate
+        if tempLunar > maxLunar{
+            tempLunar = maxLunar
+        }else if tempLunar < minLunar{
+            tempLunar = minLunar
+        }
+        
+        //修正(获取的row0==0不太现实 - - )
+        row0 = tempLunar.lunarYear - minLunar.lunarYear
+        
+        if component == 0{                      //农历年份
+            return labs(maxLunar.lunarYear - minLunar.lunarYear) + 1
+        }else if component == 1{                //农历月份
+            let months = tempLunar.isLeapYear ? 13 : 12
+            if row0 == 0{
+                var offset = 0
+                if minLunar.isLeapYear{
+                    if minLunar.lunarMonth > minLunar.leapMonth{
+                        offset = 1
+                    }else if minLunar.lunarMonth == minLunar.leapMonth{
+                        if minLunar.isLeapMonth{
+                            offset = 1
+                        }
+                    }
+                }
+              
+                return months - minLunar.lunarMonth + 1 - offset
+            }else if row0 == maxLunar.lunarYear - minLunar.lunarYear{
+                var offset = 0
+                if maxLunar.isLeapYear{
+                    if maxLunar.lunarMonth > maxLunar.leapMonth{
+                        offset = 1
+                    }else if maxLunar.lunarMonth == maxLunar.leapMonth{
+                        if maxLunar.isLeapMonth{
+                            offset = 1
+                        }
+                    }
+                }
+                
+                return maxLunar.lunarMonth + offset
+            }
+          
+            return months
+        }else{                                  //农历日期
+            let yearRow = pickerView.selectedRow(inComponent: 0)
+            let monthRow = pickerView.selectedRow(inComponent: 1)
+            let lunarDateData = lunarDateDataList[yearRow]
+            let leapMonth = lunarDateData & 0xf              //lunarDateData % 10
+            let hasLeap = leapMonth > 0
+            
+            //计算需屏蔽的天数
+            let row1 = pickerView.selectedRow(inComponent: 1)
+            var offsetDays = 0
+            if row0 == 0 && row1 == 0{
+                offsetDays = Int(minLunar.lunarDay) - 1
+            }else if row0 == maxLunar.lunarYear - minLunar.lunarYear {
+                if maxLunar.isLeapYear{
+                    if maxLunar.lunarMonth < maxLunar.leapMonth{
+                        if row1 == Int(maxLunar.lunarMonth) - 1{
+                            return Int(maxLunar.lunarDay)
+                        }
+                    }else if maxLunar.lunarMonth > maxLunar.leapMonth{
+                        if row1 == Int(maxLunar.lunarMonth){
+                            return Int(maxLunar.lunarDay)
+                        }
+                    }else if maxLunar.lunarMonth == maxLunar.leapMonth{
+                        if maxLunar.isLeapMonth{
+                            if row1 == Int(maxLunar.lunarMonth){
+                                return Int(maxLunar.lunarDay)
+                            }
+                        }else{
+                            if row1 == Int(maxLunar.lunarMonth) - 1{
+                                return Int(maxLunar.lunarDay)
+                            }
+                        }
+                    }
+                }else if row1 == Int(maxLunar.lunarMonth) - 1{
+                    return Int(maxLunar.lunarDay)
+                }
+            }
+            
+            //返回
+            if hasLeap && leapMonth != 0{
+                if monthRow == leapMonth {          //闰月
+                    let days = lunarDateData & 0xf0000 == 0 ? 29 : 30
+                    return days - offsetDays
+                }else if monthRow < leapMonth {
+                    let monthData = lunarDateData & (0x1 << (4 + 12 - monthRow - 1))
+                    let days = monthData == 0 ? 29 : 30
+                    return days - offsetDays
+                }else{
+                    let offset = hasLeap ? 1 : 0
+                    
+                    let days = lunarDateData & (0x1 << (4 + 12 - monthRow - 1 + offset)) == 0 ? 29 : 30
+                    return days - offsetDays
+                }
+            }else{
+                let monthData = lunarDateData & (0x1 << (4 + 12 - monthRow - 1))
+                let days = monthData == 0 ? 29 : 30
+                return days - offsetDays
+            }
+        }
+        return 0
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        pickerView.subviews[2].isHidden = true
+        pickerView.subviews[3].isHidden = true
+        
+        
+        //主cell
+        let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+        pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+        pickerLabel0?.backgroundColor = .clear
+        
+        let minYear = calendar.component(.year, from: minDate)
+        let maxYear = calendar.component(.year, from: maxDate)
+        let minMonth = calendar.component(.month, from: minDate)
+        let maxMonth = calendar.component(.month, from: maxDate)
+        let minDay = calendar.component(.day, from: minDate)
+        let maxDay = calendar.component(.day, from: maxDate)
+        var row0 = pickerView.selectedRow(inComponent: 0)
+        let row1 = pickerView.selectedRow(inComponent: 1)
+        
+        let lDate = lunarDate ?? (2000, 1, 1, false, false, 0)
+        let minLunar = transformGregorianToLunar(byDate: minDate)
+        let maxLunar = transformGregorianToLunar(byDate: maxDate)
+        
+        var tempLunar = lDate
+        if tempLunar > maxLunar{
+            tempLunar = maxLunar
+        }else if tempLunar < minLunar{
+            tempLunar = minLunar
+        }
+        
+        let yearRow = pickerView.selectedRow(inComponent: 0) + minLunar.lunarYear - 1900
+        let lunarDateData = lunarDateDataList[yearRow]
+        let leapMonth = lunarDateData & 0xf
+        let hasLeap = leapMonth > 0
+        
+        row0 = tempLunar.lunarYear - minLunar.lunarYear
+        
+        var length = 0
+        var text: String = ""
+        if isIgnoreYear{
+            if component == 0 {     //忽略年份的情况下，返回月份
+                if row < lunarMonthList.count{
+                    text = lunarMonthList[row]
+                }
+            }else{                  //忽略年份的情况下，返回日
+                if row < lunarDayList.count{
+                    text = lunarDayList[row]
+                }
+            }
+        }else{
+            switch component {
+            case 0:     //年
+                text = "\(minLunar.lunarYear + row)"
+                text += "   1"
+                length = 1
+            case 1:     //月
+                
+                if hasLeap && leapMonth != 0{
+                    if row == leapMonth {       //闰月
+                        if row0 == 0{
+                            text = "闰" + lunarMonthList[row - 1 + minLunar.lunarMonth - 1]
+                        }else{
+                            text = "闰" + lunarMonthList[row - 1]
+                        }
+                    }else if row < leapMonth {
+                        if row0 == 0{
+                            text = lunarMonthList[row + minLunar.lunarMonth - 1]
+                        }else{
+                            text = lunarMonthList[row]
+                        }
+                    }else{
+                        let offset = hasLeap ? 1 : 0
+                        if row0 == 0{
+                            text = lunarMonthList[row - offset + minLunar.lunarMonth - 1]
+                        }else{
+                            text = lunarMonthList[row - offset]
+                        }
+                    }
+                }else{
+                    if row < lunarMonthList.count{
+                        if row0 == 0{
+                            text = lunarMonthList[row + minLunar.lunarMonth - 1]
+                        }else{
+                            text = lunarMonthList[row]
+                        }
+                    }
+                }
+            default:    //日
+                let row1 = pickerView.selectedRow(inComponent: 1)
+                if row0 == 0 && row1 == 0{
+                    let index = row + Int(minLunar.lunarDay) - 1
+                    if index >= 0 && index < lunarDayList.count{                        
+                        text = lunarDayList[index]
+                    }
+                }else{
+                    if row >= 0 && row < lunarDayList.count{
+                        text = lunarDayList[row]
+                    }
+                }
+            }
+        }
+        
+        //其他小cell
+        let frame = CGRect(x: 0, y: 0, width: bounds.width / 3, height: 52)
+        let pickerLabel = UILabel(frame: frame)
+        pickerLabel.font = UIFont(withNormalFontSize: 17)
+        pickerLabel.textColor = UIColor(colorHex: 0x333333)
+        
+        pickerLabel.backgroundColor = .clear    
+        pickerLabel.textAlignment = .center
+        
+        var labelFont = UIFont(withNormalFontSize: 17)
+        if component != 0 {
+            labelFont = UIFont(withNormalFontSize: 15)
+        }
+        
+        let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: labelFont])
+        attributedString.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+        pickerLabel.attributedText = attributedString
+        
+        
+        let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: labelFont])
+        attributedString0.addAttributes([NSAttributedStringKey.foregroundColor : UIColor.clear], range: NSMakeRange(text.count - length, length))
+        pickerLabel0?.attributedText = attributedString0
+        
+        return pickerLabel
+    }
+    
+    //MARK:- 选择
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        
+        if component == 0{
+            pickerView.reloadComponent(1)
+        }else if component == 1{
+            if !isIgnoreYear{               //未忽略年份，刷新日
+                pickerView.reloadComponent(2)
+            }
+        }
+        
+        lunarDate = getCurLunarDate()
+        
+        guard let lDate = lunarDate else{
+            return
+        }
+        
+        if !isIgnoreYear{
+            let sDate = transformLunarToGregorian(byLunarDate: lDate)
+            if sDate < minDate{
+                let minLunar = transformGregorianToLunar(byDate: minDate)
+                self.lunarDate = minLunar
+                selectedClosure?(minLunar)
+                return
+            }else if sDate > maxDate{
+                let maxLunar = transformGregorianToLunar(byDate: maxDate)
+                self.lunarDate = maxLunar
+                selectedClosure?(maxLunar)
+                return
+            }
+        }
+        
+        //回调
+        self.lunarDate = lDate
+        selectedClosure?(lDate)
+    }
+}

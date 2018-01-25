@@ -1,0 +1,188 @@
+//
+//  StepGraphicView.swift
+//  Remind
+//
+//  Created by gg on 13/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class StepGraphicView: UIView {
+
+    var dateRange = 7 {
+        didSet{
+            
+        }
+    }
+    
+    var targetStep = 8000
+    
+    ///需绘制的数据模型列表
+    var stepsDetailModel = StepsDetailModel(){
+        didSet{
+            //移除所有图形
+            for subView in subviews{
+                subView.removeFromSuperview()
+            }
+            
+            if let subLayers = layer.sublayers{
+                for subLayer in subLayers{
+                    subLayer.removeFromSuperlayer()
+                }
+            }
+            
+            //绘制
+            drawGraphic()
+        }
+    }
+    
+    ///需绘制的本地数据模型
+    var stepsModelList = [(Date, Int, Int)](){
+        didSet{
+            updateGraphic()
+        }
+    }
+    
+    private func updateGraphic(){
+        //移除所有图形
+        for subView in subviews{
+            subView.removeFromSuperview()
+        }
+        
+        if let subLayers = layer.sublayers{
+            for subLayer in subLayers{
+                subLayer.removeFromSuperlayer()
+            }
+        }
+        
+        //绘制
+        drawGraphic()
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        //backgroundColor = UIColor(colorHex: 0xe6e6e6)
+    }
+    
+    private func createContents(){
+        
+    }
+    
+    ///绘制柱状图
+    private func drawGraphic(){
+        
+        let edge: CGFloat = .edge8
+        let interval: CGFloat = 4
+        let bottomHeight: CGFloat = 30
+        
+        //下分割线
+        let lowerSepFrame = CGRect(x: 0, y: bounds.height - bottomHeight, width: bounds.width, height: 0.5)
+        let lowerSep = UIView(frame: lowerSepFrame)
+        lowerSep.backgroundColor = UIColor(colorHex: 0xff8000)
+        addSubview(lowerSep)
+        
+        //绘制文字
+        var count = dateRange
+        if count != 7 {
+            count = 3
+        }
+        
+        //绘制文字
+        let labelWidth = bounds.width / CGFloat(count)
+        let labelHeight: CGFloat = bottomHeight
+        let labelY = lowerSepFrame.origin.y
+        for i in 0..<count{
+            let labelX = CGFloat(i) * labelWidth
+            let labelFrame = CGRect(x: labelX, y: labelY, width: labelWidth, height: labelHeight)
+            let label = UILabel(frame: labelFrame)
+            label.textAlignment = .center
+            label.textColor = UIColor(colorHex: 0x999999)
+            label.font = UIFont(withNormalFontSize: 9)
+            addSubview(label)
+            
+            let text: String
+            if count == 7{
+                if i == count - 1{
+                    text = "今天"
+                }else if i == count - 2{
+                    text = "昨天"
+                }else if i == count - 3{
+                    text = "前天"
+                }else{
+                    text = Date().offset(with: i - 7 + 1).formatString(with: "d日")
+                }
+            }else{
+                if i == 0{
+                    text = Date().offset(with: -dateRange).formatString(with: "d日")
+                }else if i == 1{
+                    text = Date().offset(with: -dateRange / 2).formatString(with: "d日")
+                }else {
+                    text = "今天"
+                }
+            }
+            label.text = text
+        }
+        
+        //获取数据
+        let highestValue = stepsDetailModel.highestStep.step
+        let targetValue = self.targetStep //stepsDetailModel.todayStep.targetStep
+        let maxValue = highestValue > targetValue ? CGFloat(highestValue) : CGFloat(targetValue)
+        
+        //判断是否有数据
+        guard !stepsDetailModel.log.isEmpty else {
+            return
+        }
+        
+        //绘制柱状图
+        let logWidth = (bounds.width - edge * 2) / CGFloat(stepsDetailModel.log.count) - interval
+        let logColor = UIColor(colorHex: 0xff8000)
+        for (index, log) in stepsDetailModel.log.enumerated(){
+            let logX = edge + CGFloat(index) * logWidth + interval / 2
+            let logHeight = (bounds.height - bottomHeight) * CGFloat(log.step) / maxValue
+            let logY = bounds.height - logHeight - bottomHeight
+            let logFrame = CGRect(x: logX, y: logY, width: logWidth, height: logHeight)
+            let gradient = CAGradientLayer()
+            gradient.frame = logFrame
+            gradient.colors = [logColor.cgColor, logColor.withAlphaComponent(0.3).cgColor]
+                //gradient.locations =  //[NSNumber(value: 1 - Float(logHeight) / Float(bounds.height - bottomHeight)), 1]
+            gradient.startPoint = CGPoint(x: 0, y: 1 - logHeight / (bounds.height - bottomHeight))
+            gradient.endPoint = CGPoint(x: 0, y: 1)
+            layer.addSublayer(gradient)
+        }
+        
+        //绘制目标线
+        let targetY = (1 - CGFloat(targetValue) / CGFloat(maxValue)) * (bounds.height - bottomHeight)
+        let bezier = UIBezierPath()
+        bezier.move(to: CGPoint(x: edge, y: targetY))
+        bezier.addLine(to: CGPoint(x: bounds.width - edge * 2, y: targetY))
+        bezier.close()
+        
+        let targetLayer = CAShapeLayer()
+        targetLayer.path = bezier.cgPath
+        targetLayer.strokeColor = UIColor(colorHex: 0x000000).withAlphaComponent(0.2).cgColor
+        targetLayer.lineDashPattern = [2, 2]
+        targetLayer.lineCap = kCALineCapRound
+        layer.addSublayer(targetLayer)
+        
+        //目标文字
+        let targetLabelFrame = CGRect(x: 0, y: targetY - 10, width: edge * 2, height: 21)
+        let targetLabel = UILabel(frame: targetLabelFrame)
+        targetLabel.text = "目标"
+        targetLabel.textColor = UIColor(colorHex: 0xbbbbbb)
+        targetLabel.font = UIFont(withNormalFontSize: 8)
+        addSubview(targetLabel)
+        
+        let targetNumLabelFrame = CGRect(x: bounds.width - edge, y: targetY - 10, width: edge, height: 21)
+        let targetNumLabel = UILabel(frame: targetNumLabelFrame)
+        targetNumLabel.text = "\(targetValue)"
+        targetNumLabel.textColor = UIColor(colorHex: 0xbbbbbb)
+        targetNumLabel.font = UIFont(withNormalFontSize: 8)
+        addSubview(targetNumLabel)
+    }
+}

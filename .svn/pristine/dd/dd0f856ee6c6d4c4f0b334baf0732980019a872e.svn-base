@@ -1,0 +1,237 @@
+//
+//  FeedbackViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/24.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class FeedbackViewController:  BasedViewController, UITextViewDelegate,UITextFieldDelegate, UIScrollViewDelegate{
+    let scrollView : UIScrollView = UIScrollView.init()
+    var contentTextView: UIPlaceHolderTextView = UIPlaceHolderTextView()
+    
+    var relationNamelb: UILabel = UILabel()
+    var relationTextField: UITextField = UITextField()
+    var preDate: NSDate?
+    let contentView: UIView = UIView()
+     let statusBarHight = UIApplication.shared.statusBarFrame.height
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "反馈问题"
+        setupdataScrollView()
+        setupdataContentView()
+        
+    }
+    func setupdataScrollView() {
+        automaticallyAdjustsScrollViewInsets = false
+        
+        
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        scrollView.contentSize = CGSize.init(width: scrollView.width, height: scrollView.height + 0.5)
+        scrollView.delegate = self
+        scrollView.backgroundColor = UIColor.separator
+        self.view.addSubview(scrollView)
+        scrollView.snp.makeConstraints { (make) in
+            make.left.right.bottom.top.equalToSuperview()
+            
+        }
+        
+        
+        scrollView.insertSubview(contentView, at: 0)
+        contentView.snp.makeConstraints({ (make) in
+            make.top.left.bottom.right.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().offset(0.5)
+        })
+    }
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.view.endEditing(true)
+    }
+    func setupdataContentView() {
+        let navigationBarHeight = (navigationController?.navigationBar.height)!
+        let contentTextBgView: UIView = UIView()
+        contentTextBgView.backgroundColor = .white
+        contentTextBgView.layer.cornerRadius = 3
+        
+        scrollView.addSubview(contentTextBgView)
+        
+        contentTextBgView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(navigationBarHeight + statusBarHight + 10)
+            make.right.equalToSuperview().offset(-10)
+            make.height.equalTo(160)
+        }
+        
+        contentTextView  = UIPlaceHolderTextView()
+        contentTextBgView.addSubview(contentTextView)
+        contentTextView.backgroundColor = .white
+        contentTextView.layer.cornerRadius = 3
+        contentTextView.placeholder = "请输入你要反馈的问题..."
+        contentTextView.delegate = self
+        NotificationCenter.default.addObserver(self, selector: #selector(textViewEditingChanged(_:)), name: NSNotification.Name.UITextViewTextDidChange, object: contentTextView)
+        
+        
+        contentTextView.font = UIFont.systemFont(ofSize: 15)
+        contentTextView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(5)
+            make.right.equalToSuperview().offset(-10)
+            make.bottom.equalTo(-10)
+        }
+        
+        
+        
+        let relationTextFieldBgView: UIView = UIView()
+        relationTextFieldBgView.backgroundColor = .white
+        relationTextFieldBgView.layer.cornerRadius = 3
+        scrollView.addSubview(relationTextFieldBgView)
+        
+        relationTextFieldBgView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.right.equalToSuperview().offset(-10)
+            make.top.equalTo(contentTextBgView.snp.bottom).offset(10)
+            make.height.equalTo(48)
+        }
+
+        relationTextField.placeholder = "联系方式（手机、QQ或邮箱）"
+        relationTextField.keyboardType = .asciiCapable
+        relationTextField.returnKeyType = .send
+        relationTextField.backgroundColor = .white
+        relationTextField.clearButtonMode = .whileEditing
+        relationTextField.delegate = self
+        relationTextField.layer.cornerRadius = 3
+        relationTextField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        relationTextField.clipsToBounds = true
+        relationTextField.font = UIFont.systemFont(ofSize: 15)
+        relationTextFieldBgView.addSubview(relationTextField)
+        relationTextField.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.bottom.equalToSuperview()
+            make.right.equalToSuperview().offset(-10)
+        }
+        
+        
+        let submitBtn: UIButton = UIButton.init(type: .custom)
+        
+        submitBtn.addTarget(self, action: #selector(submintBtnClick), for: .touchUpInside)
+        submitBtn.layer.cornerRadius = 3
+        submitBtn.setTitle("提交", for: .normal)
+        submitBtn.adjustsImageWhenHighlighted = false
+        submitBtn.backgroundColor = UIColor.confirm
+        submitBtn.setTitleColor(.white, for: .normal)
+        submitBtn.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+        scrollView.addSubview(submitBtn)
+        submitBtn.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(relationTextFieldBgView.snp.bottom).offset(10)
+            make.right.equalToSuperview().offset(-10)
+            make.height.equalTo(48)
+        }
+    }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    @objc func textViewEditingChanged(_ noti: Notification){
+        let textView: UITextView = noti.object as! UITextView
+        if let selectedRange = textView.markedTextRange, textView.position(from: selectedRange.start, offset: 0) != nil {
+            return
+        }
+        
+        if let text = textView.text, text.count > 150 {
+            textView.text = String(text.prefix(150))
+        }
+    }
+    @objc fileprivate func editingChanged(textField: UITextField) {
+        //有提示文字时不处理
+        if let selectedRange = textField.markedTextRange, textField.position(from: selectedRange.start, offset: 0) != nil {
+            return
+        }
+        
+        if let text = textField.text, text.count > 30 {
+            textField.text = String(text.prefix(30))
+        }
+    }
+    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        self.scrollView.setContentOffset(CGPoint.init(x: 0, y: 100), animated: true)
+        return true
+    }
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.submintBtnClick()
+        return true
+    }
+    @objc func submintBtnClick(){
+        let curDate = NSDate.init()
+        self.view.endEditing(true)
+        
+        if contentTextView.text == nil || relationTextField.text == nil || contentTextView.text.characters.count == 0 || (relationTextField.text?.characters.count)! == 0 || (contentTextView.text!.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)).characters.count == 0 || (relationTextField.text?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines))?.characters.count == 0   {
+            alert(withTitle: "反馈内容或联系方式不能为空", closure: nil)
+            return
+        }
+        if (relationTextField.text?.characters.count)! < 5 || (relationTextField.text?.characters.count)! > 30  || isIncludeChineseIn((relationTextField.text)!){
+            alert(withTitle: "请你输入有效的联系方式", closure: nil)
+            return
+        }
+        if preDate != nil && curDate.timeIntervalSince(preDate! as Date) < 10 {
+            alert(withTitle: "两次提交间隔时间不能低于10秒", closure: nil)
+            return
+        }
+        //        SVProgressHUD.show(withStatus: "反馈中...")
+//        MSGToast.show("反馈中", isloading: true, inView: self.view)
+        
+        
+//        let params:[String : String] = [ "contact":relationTextField.text!,
+//                                         "content":contentTextView.text!,
+//                                         ]
+        let version: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as! String
+        var feedBack = Feedback()
+        feedBack.content    = contentTextView.text!
+        feedBack.contactWay = relationTextField.text!
+        feedBack.appVersion = version
+        DataHandler.share().addFeedback(withFeedback: feedBack) { (codeResult, message) in
+            self.clearAllNotice()
+            if codeResult == .success {
+                self.notif(withTitle: "谢谢你的反馈")
+                self.navigationController?.popViewController(animated: true)
+                self.contentTextView.text = ""
+                self.relationTextField.text = ""
+            }else {
+                self.notif(withTitle: "请检查网络后重试")
+            }
+            
+        }
+        
+        
+//        feedBack(params, completeHandle: { (str) in
+//            MSGToast.cancel()
+//            self.navigationController?.popViewController(animated: true)
+//            //            self.showProgressHUD(self, message: "谢谢你的反馈")
+//            MSGToast.show("谢谢你的反馈", isloading: false, inView: UIApplication.shared.keyWindow!)
+//            //             SVProgressHUD.showSuccess(withStatus: "谢谢你的反馈")
+//            self.contentTextView.text = ""
+//            self.relationTextField.text = ""
+//            
+//        }) { (error) in
+//            MSGToast.cancel()
+//            self.showProgressHUD(self, message: "请检查网络后重试")
+//            //             SVProgressHUD.showError(withStatus: "反馈失败")
+//        }
+        preDate = curDate
+    }
+    
+    func isIncludeChineseIn(_ string: String) -> Bool {
+        
+        for (_, value) in string.characters.enumerated() {
+            
+            if ("\u{4E00}" <= value  && value <= "\u{9FA5}") {
+                return true
+            }
+        }
+        
+        return false
+    }
+}

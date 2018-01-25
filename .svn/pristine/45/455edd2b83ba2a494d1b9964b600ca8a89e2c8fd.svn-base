@@ -1,0 +1,101 @@
+//
+//  weatherSetting+Extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/28.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import Foundation
+extension weathCardSettingViewController{
+    //MARK:- 点击编辑
+    func edit(withSelectorType selectorType: SelectorType, withDefultValue defaultValue: Any? = nil){
+        guard !isLocked else {
+            return
+        }
+        isLocked = true
+        
+        //创建编辑器
+        switch selectorType {
+        default:
+            tableView.isUserInteractionEnabled = false
+            if let sel = selector{          //先移除
+                (navigationController as? EventEditorNavigationController)?.setEffect(flag: false)
+                UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
+                    sel.frame.origin.y = view_size.height
+                }, completion: { (completed) in
+                    self.isLocked = false
+                    guard completed else{
+                        return
+                    }
+                    self.selector = nil
+                    sel.layer.removeAllAnimations()
+                    sel.removeFromSuperview()
+                    
+                    self.addNewSelector(withSelectorType: selectorType, withDefaultValue: defaultValue)
+                })
+            }else{                          //直接推出
+                self.addNewSelector(withSelectorType: selectorType, withDefaultValue: defaultValue)
+                self.isLocked = false
+            }
+        }
+    }
+    
+    
+    //MARK:- 添加新选择器
+    private func addNewSelector(withSelectorType selectorType: SelectorType, withDefaultValue defaultValue: Any?){
+        
+        (navigationController as? EventEditorNavigationController)?.setEffect(flag: true)
+        
+        selector = GANSelector(withSelectorType: selectorType, withDefaultValue: defaultValue)
+        selector?.defaultValue = defaultValue
+        selector?.closure = {
+            confirm, selectorValueType in
+            self.tableView.isUserInteractionEnabled = true
+            (self.navigationController as? EventEditorNavigationController)?.setEffect(flag: false)
+            self.setSelectorBackground(flag: false)
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
+                self.selector?.frame.origin.y = view_size.height
+            }, completion: { (completed) in
+                guard completed else{
+                    return
+                }
+                self.selector?.removeFromSuperview()
+            })
+            
+            //处理数据
+            guard confirm, let selValueType = selectorValueType else {
+                return
+            }
+            
+            //为新数据赋值
+            switch selValueType {
+            case .time(let time):
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.hour, .minute, .second], from: time)
+                
+                let oldDate = self.eventDate
+                var oldComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: oldDate)
+                oldComponents.hour = components.hour
+                oldComponents.minute = components.minute
+                oldComponents.second = components.second
+                
+                guard let newDate = calendar.date(from: oldComponents) else{
+                    return
+                }
+                self.eventDate = newDate
+            case .sound(let soundId):
+                self.eventSound = soundId == 0 ? "boy" : "girl"
+            default:
+                break
+            }
+            
+            self.tableView.reloadData()
+        }
+        
+        setSelectorBackground(flag: true)
+        
+        view.window?.bringSubview(toFront: selector!)
+        view.window?.addSubview(selector!)
+    }
+}

@@ -1,0 +1,77 @@
+//
+//  WeatherTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/4.
+//  Copyright © 2017年 i4. All rights reserved.
+//
+
+import UIKit
+import SnapKit
+class WeatherTableViewCell: UITableViewCell,UIScrollViewDelegate {
+    fileprivate var mainBackView:UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.white
+        view.layer.cornerRadius = 6
+        view.clipsToBounds = true
+        return view
+    }()
+    var MianScrollView : UIScrollView = {
+        let scrollview = UIScrollView.init()
+        scrollview.isPagingEnabled = true
+        scrollview.showsHorizontalScrollIndicator = false
+        return scrollview
+    }()
+    
+    var pageControll = UIPageControl()
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
+    }
+    //MARK:- 配置cell
+    func congigCell(){
+        self.backgroundColor = UIColor.clear
+        mainBackView.frame = CGRect.init(x: 10, y: 0, width: UIScreen.main.bounds.width-20, height:
+            70)
+        self.addSubview(mainBackView)
+        MianScrollView.frame = CGRect.init(x: 0, y: 0, width: UIScreen.main.bounds.width-20, height: 70)
+        MianScrollView.delegate = self
+        mainBackView.addSubview(MianScrollView)
+        for i in 0...2{
+            let view = WeatherDetailView.init()
+            view.configView()
+            view.tag = i
+            view.frame = CGRect.init(x: (UIScreen.main.bounds.width-20)*CGFloat(i), y: 0, width: UIScreen.main.bounds.width-20, height: 70)
+            MianScrollView.addSubview(view)
+        }
+        MianScrollView.contentSize = CGSize.init(width: (UIScreen.main.bounds.width-20)*3, height: 70)
+        
+        pageControll.numberOfPages = 3
+        pageControll.pageIndicatorTintColor = ZXDColor_gray
+        pageControll.currentPageIndicatorTintColor = UIColor.blue
+        pageControll.bounds = CGRect.init(x: 0, y: 0, width: 100, height: 20)
+        pageControll.center = CGPoint.init(x: mainBackView.center.x, y: 58)
+        pageControll.addTarget(self, action: #selector(WeatherTableViewCell.pagecontrollValueChange(_:)), for: .touchUpInside)
+        mainBackView.addSubview(pageControll)
+        
+    }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        pageControll.currentPage = Int(scrollView.contentOffset.x)/Int(UIScreen.main.bounds.width-20)
+    }
+   @objc func pagecontrollValueChange(_ pagecontroll:UIPageControl){
+    UIView.animate(withDuration: 0.3) {
+        self.MianScrollView.contentOffset.x = CGFloat(self.pageControll.currentPage)*(UIScreen.main.bounds.width-20)
+      }
+    
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        
+        // Configure the view for the selected state
+    }
+    
+}

@@ -1,0 +1,25 @@
+//
+//  FeedbackVC.swift
+//  Remind
+//
+//  Created by gg on 28/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class FeedbackVC: UIViewController {
+    
+    @IBOutlet weak var webView: UIWebView!
+    
+    private var url: URL?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        //更新内容
+        if let u = url{
+            let urlRequest = URLRequest(url: u)
+            webView.loadRequest(urlRequest)
+        }
+    }
+}

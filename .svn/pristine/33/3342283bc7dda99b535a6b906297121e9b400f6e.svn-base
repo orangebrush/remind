@@ -1,0 +1,121 @@
+//
+//  UIView+Frame.swift
+//  BatourTool
+//
+//  Created by iOS_Dev5 on 2016/10/20.
+//  Copyright © 2016年 kaicheng. All rights reserved.
+//
+
+import UIKit
+
+extension UIView {
+    var x: CGFloat {
+        get{
+            return self.frame.origin.x
+        }
+        set(newX) {
+            var frame: CGRect = self.frame
+            frame.origin.x = newX
+            self.frame = frame
+        }
+    }
+    var y: CGFloat {
+        get {
+            return self.frame.origin.y
+        }
+        set (newY) {
+            var frame: CGRect = self.frame
+            frame.origin.y = newY
+            self.frame = frame
+        }
+    }
+    var width: CGFloat {
+        get {
+            return self.frame.size.width
+        }
+        set (newWidth) {
+            var frame: CGRect = self.frame
+            frame.size.width = newWidth
+            self.frame = frame
+        }
+    }
+    var height: CGFloat {
+        get {
+            return self.frame.size.height
+        }
+        set (newHeight) {
+            var frame: CGRect = self.frame
+            frame.size.height = newHeight
+            self.frame = frame
+        }
+    }
+    var origin: CGPoint {
+        get {
+            return self.frame.origin
+        }
+        set (newOrigin) {
+            var frame: CGRect = self.frame
+            frame.origin = newOrigin
+            self.frame = frame
+        }
+    }
+    var size: CGSize {
+        get {
+            return self.frame.size
+        }
+        set (newSize) {
+            var frame: CGRect = self.frame
+            frame.size = newSize
+            self.frame = frame
+        }
+    }
+    var bottom: CGFloat {
+        get {
+            return self.y + self.height
+        }
+        set (newBottom) {
+            self.y = newBottom - self.height
+        }
+    }
+    var bottomMargin: CGFloat {
+        get {
+            return self.superview!.height - self.y - self.height
+        }
+        set (newBottomMargin) {
+            self.y = self.superview!.height - self.height - newBottomMargin
+        }
+    }
+    var right: CGFloat {
+        get {
+            return self.x + self.width
+        }
+        set (newRight) {
+            self.x = newRight - self.width
+        }
+    }
+    var rightMargin: CGFloat {
+        get {
+            return self.superview!.width - self.x - self.width
+        }
+        set (newRightMargin) {
+            self.x = self.superview!.width - self.width - newRightMargin
+        }
+    }
+    @objc var centerX: CGFloat {
+        get {
+            return self.center.x
+        }
+        set (newCenterX) {
+            self.center = CGPoint(x: newCenterX, y: self.center.y)
+        }
+    }
+    var centerY: CGFloat {
+        get {
+            return self.center.y
+        }
+        set (newCenterY) {
+            self.center = CGPoint(x: self.center.x, y: newCenterY)
+        }
+    }
+
+}

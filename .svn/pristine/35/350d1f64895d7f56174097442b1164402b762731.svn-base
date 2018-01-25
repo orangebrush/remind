@@ -1,0 +1,513 @@
+//
+//  EventViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class EventViewController: UIViewController {
+    
+    var isEventClient = false
+    var selectSection = 0
+    fileprivate lazy var EventTableView : UITableView = {
+        let tableview = UITableView.init(frame: CGRect.zero,style:.grouped)
+        
+        tableview.separatorStyle = .none
+        tableview.backgroundColor = UIColor.clear
+        tableview.delegate = self
+        tableview.dataSource = self
+        return tableview
+    }()
+    fileprivate lazy var LocalTableView : UITableView = {
+        let tableview = UITableView.init(frame: CGRect.zero, style: .grouped)
+        tableview.separatorStyle = .none
+        tableview.backgroundColor = UIColor.clear
+        tableview.delegate = self
+        tableview.dataSource = self
+        return tableview
+    }()
+    fileprivate lazy var MainScrollView : ZXDScrollView = {
+        let scrollview = ZXDScrollView.init(frame: CGRect.zero)
+        scrollview.backgroundColor = UIColor.clear
+        scrollview.delegate = self
+        return scrollview
+    }()
+    var navitemView : navView!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.addMianView()
+        NotificationCenter.default.addObserver(self, selector: #selector(EventViewController.EventValueChange), name: NSNotification.Name(rawValue: String.refershEvent), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(EventViewController.ClientValueChange), name: NSNotification.Name(rawValue: String.refelshClient), object: nil)
+        
+        
+        self.getClient()
+        //每次1秒后调用更新（避免过多操作）
+        self.getEventData(1)
+        
+    }
+    //MARK:- 接收到刷新列表的通知
+    @objc func EventValueChange(){
+        self.EventTableView.mj_header.beginRefreshing()
+    }
+    @objc func ClientValueChange(){
+        self.LocalTableView.mj_header.beginRefreshing()
+    }
+
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.updateBackground()
+       
+        navitemView.isHidden = false
+        self.MainScrollView.contentOffset.x = self.isEventClient ? keyDeviceWidth : 0
+        navitemView.swipView(self.isEventClient ? true : false)
+        
+        let item = BarButtonItem(imageName: "navbar_icon_add", tSelector: #selector(EventViewController.addRemiand))
+        self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+        let item1 = BarButtonItem(imageName: "navbar_icon_message", tSelector: #selector(EventViewController.messageClick))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        navitemView.isHidden = true
+    }
+    var eventData = [EventDB]()
+    var clientData = [EventClient]()
+    var eventPage = 1
+    var clientPage = 1
+    //MARK:- 添加主要视图
+    func addMianView(){
+        
+        self.view.addSubview(MainScrollView)
+        MainScrollView.addSubview(EventTableView)
+        MainScrollView.addSubview(LocalTableView)
+        EventTableView.register(EventTableViewCell.self, forCellReuseIdentifier: "EventTableViewCell")
+        LocalTableView.register(LocalTableViewCell.self, forCellReuseIdentifier: "LocalTableViewCell")
+        EventTableView.register(EventedtingTableViewCell.self, forCellReuseIdentifier: "EventedtingTableViewCell")
+        LocalTableView.register(EventedtingTableViewCell.self, forCellReuseIdentifier: "EventedtingTableViewCell")
+        
+        let navHeight = UIApplication.shared.statusBarFrame.height + (self.navigationController?.navigationBar.frame.height)!
+        let tabHeight = self.tabBarController?.tabBar.frame.height
+        let viewHeight = UIScreen.main.bounds.height - navHeight - tabHeight!
+        
+        MainScrollView.frame = CGRect.init(x: 0, y: navHeight, width: self.view.frame.width, height: viewHeight)
+        MainScrollView.configScrollView(2)
+        EventTableView.frame = CGRect.init(x: 0, y: 0, width: self.view.frame.width, height: viewHeight)
+        LocalTableView.frame = CGRect.init(x: self.view.frame.width, y: 0, width: self.view.frame.width, height: viewHeight)
+        
+        
+
+        
+        navitemView = navView.init(frame: CGRect.init(x: keyDeviceWidth/2-156/2, y: (self.navigationController?.navigationBar.frame.size.height)!-44, width: 160, height: 44))
+        navitemView.delegate = self
+        self.navigationController?.navigationBar.addSubview(navitemView)
+        
+        
+
+        
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 15))
+        view.backgroundColor = UIColor.clear
+        EventTableView.tableHeaderView = view
+        LocalTableView.tableHeaderView = view
+        self.addHeadFooter()
+        
+    }
+    //MARK:- 消息按钮点击
+    @objc func messageClick(){
+        let vc = remainedTableViewController()
+        self.navigationController?.pushViewController(vc, animated: true)  //show(vc, sender: nil)
+    }
+    //MARK:- 添加提醒按钮点击
+    @objc func addRemiand(){
+        if let vc = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateInitialViewController() as? EventHomeVC{
+            vc.eventHomeTipType = isEventClient ? .eventClientTip : .eventTip
+            self.navigationController?.show(vc, sender: nil)
+        }
+    }
+    //MARK:- 为tableview 添加头尾刷新
+    func addHeadFooter(){
+        let header = CKCylinderReversibleHeader.init {
+            self.eventPage = 1
+            self.EventTableView.mj_footer.isHidden = false
+            self.getEventData(self.eventPage)
+            self.EventTableView.mj_footer.resetNoMoreData()
+        }
+        header?.cylinderColor = UIColor.subSubWord
+        EventTableView.mj_header = header
+        
+        let header1 = CKCylinderReversibleHeader.init {
+            self.getClient()
+            
+        }
+        header1?.cylinderColor = UIColor.subSubWord
+        LocalTableView.mj_header = header1
+        
+        let footer = CKCylinderReversibleFooter.init {
+            self.eventPage += 1
+            self.EventTableView.mj_footer.isHidden = false
+            self.getEventData(self.eventPage)
+            
+        }
+        footer?.cylinderColor = UIColor.subSubWord
+        EventTableView.mj_footer = footer
+        
+    }
+    
+    //MARK:- 获取重要事件数据
+    func getEventData(_ page:Int){
+       
+        DataManager.share().getAllEventList(withPage: self.eventPage) { (result, message, list) in
+            if result == .failure{
+                self.endRefreshEvent(nil)
+                self.notif(withTitle: message)
+                return
+            }
+            if page == 1{
+                self.eventData.removeAll()
+            }
+            for event in list{
+                self.eventData.append(event)
+            }
+            
+            self.EventTableView.reloadData()
+            self.endRefreshEvent(list)
+        }
+    }
+    //MARK:- 结束重要事件列表的刷新
+    func endRefreshEvent(_ list:[EventDB]?){
+        if EventTableView.mj_header.isRefreshing{
+            EventTableView.mj_header.endRefreshing()
+        }
+        
+        if EventTableView.mj_footer.isRefreshing{
+            self.EventTableView.mj_footer.endRefreshing()
+            if (list != nil){
+                if list!.count == 0{
+                    self.notif(withTitle: "没有更多数据了")
+                   }else if list!.count < 20{
+                   
+                }
+                
+            }else{
+                self.EventTableView.mj_footer.isHidden = true
+            }
+            
+        }
+            
+
+    }
+    //MARK:- 结束本地事件列表的刷新
+    func endRefreshClient(_ list:[EventClient]?){
+        if LocalTableView.mj_header.isRefreshing{
+            LocalTableView.mj_header.endRefreshing()
+        }
+        
+    }
+    //MARK:- 获取本地事件的数据
+    func getClient(){
+        //从服务器获取每日提醒并插入数据库（并从数据库返回所有每日提醒）
+        DataManager.share().getAllEventClientList { (codeResult, message, eventClientList) in
+            
+            //显示非删除状态的每日提醒 2:已删除
+            self.clientData = eventClientList.filter{$0.status != 2}
+            self.LocalTableView.reloadData()
+            
+            if self.LocalTableView.mj_header.isRefreshing{
+                self.LocalTableView.mj_header.endRefreshing()
+            }
+            
+            let dataHandler = DataHandler.share()
+            
+            //获取未同步到服务器的 每日提醒
+            let unSyncEventClientList = eventClientList.filter{!$0.isSynced}
+            
+            for eventClient in unSyncEventClientList{
+                //同步删除的提交到服务器
+                if eventClient.status == 2{
+                    DataManager.share().deleteEventClient(withEventClientType: Int(eventClient.type), withEventClientId: Int(eventClient.id), closure: { (codeResult, message, eventClientId) in
+                        guard codeResult == .success else{
+                            return
+                        }
+                        
+                        dataHandler.executeEventClient(byEventClientType: Int(eventClient.type), byEventClientId: Int(eventClient.id), closure: { (eventClient) in
+                            eventClient?.isSynced = true
+                            dataHandler.commit()
+                        })
+                    })
+                }else{
+                    //同步未提交的新添加的每日提醒到服务器
+                    DataManager.share().addEventClient(withEventClientParam: eventClient, closure: { (codeResult, message, eventClientId) in
+                    })
+                }
+            }
+        }
+        
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+    
+}
+
+extension EventViewController:navHeadClickDelegate,UIScrollViewDelegate,eventsectionHeaderDelegate ,edtingCellDelegate,homeEdtingViewDegate{
+    func edtingBtnClick(_ row: Int) {
+        if !isEventClient{
+            
+            if row == 1 {
+                self.goEdting(false, selectSection)
+            }
+            if row == 0{
+                self.openOrCloseremind(event: self.eventData[selectSection], selectSection)
+            }
+            if row == 2{
+                self.alert(withTitle: "确定要删除这条重要事件", closure: { (confrim) in
+                    if confrim {
+                        DataManager.share().deleteEvent(withEventId: Int(self.eventData[self.selectSection].id), closure: { (result, message) in
+                            if result == .failure{
+                                self.notif(withTitle: message)
+                                return
+                            }
+                            guard  self.selectSection < self.eventData.count && self.selectSection >= 0 else {
+                                return
+                            }
+                            self.eventData.remove(at: self.selectSection)
+                            //防止把列表删除完了   还出现表尾
+                            if self.eventData.count == 0{
+                                self.EventTableView.mj_footer.isHidden = true
+                            }
+                            self.EventTableView.reloadData()
+                        })
+                    }
+                })
+            }
+        }
+            else{
+                
+                if row == 1  {
+                    self.goEdting(true, selectSection)
+                }
+                if row == 0{
+                    self.openOrClosClienteremind(clientData[self.selectSection], selectSection)
+                }
+                if row == 2{
+                    
+                    self.alert(withTitle: "确定要删除这条每日提醒", closure: { (confrim) in
+                        if confrim{
+                            let eventClient = self.clientData[self.selectSection]
+                            DataManager.share().deleteEventClient(withEventClientType: Int(eventClient.type), withEventClientId: Int(eventClient.id), closure: { (result, message, id) in
+                                if result == .failure{
+                                    self.notif(withTitle: message)
+                                    return
+                                }
+                                guard  self.selectSection < self.clientData.count && self.selectSection >= 0 else {
+                                    return
+                                }
+                                
+                                self.clientData.remove(at: self.selectSection)
+                                self.LocalTableView.reloadData()
+                            })
+                        }
+                    })
+                    
+                }
+                
+            }
+        }
+        
+    func CellClick(_ section: Int, _ isLocal: Bool, _ select: Int) {
+        
+    }
+    func eventHeaderClick(_ section: Int ,_ isLocal : Bool) {
+        let view = HomeEdtingView.init(frame:CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: UIScreen.main.bounds.height))
+        view.delegate = self
+        selectSection = section
+        if isEventClient{
+            let view1 = LocalTableView .headerView(forSection: section)
+            view.configView(nil, (view1?.frame.origin.y)!-LocalTableView.contentOffset.y + navigation_height! + UIApplication.shared.statusBarFrame.size.height, false, self.clientData[section].status == 0)
+            UIApplication.shared.keyWindow?.addSubview(view)
+        }else{
+            let view1 = EventTableView.headerView(forSection: section)
+            view.configView(nil, (view1?.frame.origin.y)!-EventTableView.contentOffset.y + navigation_height! + UIApplication.shared.statusBarFrame.size.height, false, self.eventData[section].status == 0)
+            UIApplication.shared.keyWindow?.addSubview(view)
+        }
+    }
+    
+    func navDelegaetClick(_ isClient: Bool) {
+        if isClient {
+            MainScrollView.contentOffset.x = keyDeviceWidth
+            self.isEventClient = true
+        }else{
+            MainScrollView.contentOffset.x = 0
+            self.isEventClient = false
+        }
+    }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        if MainScrollView.contentOffset.x == 0{
+            self.isEventClient = false
+            navitemView.swipView(false)
+        }else{
+            self.isEventClient = true
+            navitemView.swipView(true)
+        }
+    }
+    
+}
+extension EventViewController:UITableViewDelegate,UITableViewDataSource{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if tableView == EventTableView{
+            return 1
+        }else{
+            return 1
+        }
+        
+    }
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return tableView == EventTableView ? eventData.count : clientData.count
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if tableView == EventTableView{
+           
+            let cell = tableView.dequeueReusableCell(withIdentifier: "EventTableViewCell") as! EventTableViewCell
+            cell.configCell(nil, nil, eventData[indexPath.section], true, true)
+            return cell
+        }else{
+            
+            let cell = tableView.dequeueReusableCell(withIdentifier: "LocalTableViewCell") as! LocalTableViewCell
+            cell.configCell(clientData[indexPath.section])
+            return cell
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 64
+        
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 36
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+        let hf = UITableViewHeaderFooterView.init()
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 36))
+        view.backgroundColor = UIColor.clear
+        hf.backgroundView  = view
+        let view1 = eventHeader.init(frame: CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 36))
+        view1.delegate = self
+        if tableView == EventTableView{
+            view1.configView(section, tableView == EventTableView ? false : true, eventData[section], nil)
+        }else{
+            view1.configView(section, tableView == EventTableView ? false : true, nil, clientData[section])
+        }
+        
+        hf.addSubview(view1)
+        return hf
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 10))
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        if tableView == EventTableView{
+            let vc = DetailViewController()
+            vc.id = self.eventData[indexPath.section].id
+            vc.updateBackground()
+            self.navigationController?.modalPresentationStyle = .pageSheet
+            self.navigationController?.pushViewController(vc, animated: true) 
+        }else{
+            self.goEdting(true, indexPath.section)
+        }
+    }
+    //MARK:- 跳编辑界面
+    func goEdting(_ isLocal:Bool,_ section:Int){
+        if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+            //根视图
+            if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                if isLocal{
+                    eventEditorVC.eventClient = self.clientData[section]
+                }else{
+                    eventEditorVC.event = self.eventData[section]
+                }
+                navigationController?.show(eventEditorVC, sender: nil)
+            }
+            //            present(eventEditorNavigation, animated: true, completion: nil)
+        }
+    }
+    //MARK:- 打开关闭提醒
+    func openOrClosClienteremind(_ client:EventClient,_ section:Int){
+        
+           if client.status == 0{
+                DataManager.share().pauseEvent(withEventId: Int(client.id), closure: { (result, message) in
+                    if result == .failure{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    client.status = 1
+                    self.LocalTableView.reloadSections(IndexSet.init(integer: section), with: .none)
+                    
+                    //暂停提醒（删除）
+                    NotifManager.share().deleteNotification(withEventClientType: Int(client.type), withEventClientId: Int(client.id))
+                })
+            }else{
+                DataManager.share().startEvent(withEventId: Int(client.id), closure: { (result, message) in
+                    if result == .failure{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    client.status = 0
+                    self.LocalTableView.reloadSections(IndexSet.init(integer: section), with: .none)
+                    
+                    //开始提醒
+                    NotifManager.share().addLocalNotification(withEventClient: client)
+                })
+            }
+        
+    }
+    
+    
+    func openOrCloseremind(event : EventDB,_ section:Int){
+        
+        var event = event
+        if event.status == 2{
+            self.notif(withTitle: "事件已结束", duration: 0.8, closure: nil)
+            return
+        }
+        if event.status == 0{
+            DataManager.share().pauseEvent(withEventId:Int(event.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                event.status = 1
+                self.eventData.remove(at: section)
+                self.eventData.insert(event, at: section)
+                self.EventTableView.reloadSections(IndexSet.init(integer: section), with: .none)
+            })
+        }else{
+            DataManager.share().startEvent(withEventId: Int(event.id), closure: { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    return
+                }
+                event.status = 0
+                self.eventData.remove(at: section)
+                self.eventData.insert(event, at: section)
+                self.EventTableView.reloadSections(IndexSet.init(integer: section), with: .none)
+            })
+        }
+    }
+    
+    
+}
+

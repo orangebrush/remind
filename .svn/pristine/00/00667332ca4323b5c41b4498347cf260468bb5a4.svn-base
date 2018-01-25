@@ -1,0 +1,52 @@
+//
+//  StockSettingViewController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/22.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class StockSettingViewController: BasedViewController ,UITableViewDelegate,UITableViewDataSource{
+    var selectIndex = 0
+    fileprivate lazy var mainTbale : UITableView = {
+        let table = UITableView.init(frame: CGRect.zero, style: .plain)
+        table.backgroundColor = UIColor.bgColor
+        table.delegate = self
+        table.dataSource = self
+        table.separatorStyle = .none
+        return table
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = UIColor.bgColor
+        mainTbale.frame = CGRect.init(x: 10, y: (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth-20, height: keyDeviceHeight-((navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height))
+        mainTbale.register(AloneStockSettingCell.self, forCellReuseIdentifier: "AloneStockSettingCell")
+        self.view.addSubview(mainTbale)
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 3
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 10
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: 10))
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "AloneStockSettingCell") as! AloneStockSettingCell
+        cell.configView(indexPath.row == 0, tableView.numberOfRows(inSection: indexPath.section) == indexPath.row + 1, indexPath, selectIndex)
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 48
+    }
+}

@@ -1,0 +1,339 @@
+//
+//  AppDelegate.swift
+//  Remind
+//
+//  Created by gg on 04/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import UIKit
+import IQKeyboardManager
+
+let EventNewNotification   = NSNotification.Name(rawValue: "EventNewNotification")
+
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate, WXApiDelegate, WeiboSDKDelegate {
+
+    var window: UIWindow?
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+        
+        //DataHandler.share().setCustom(withCustomType: CustomType.img(#imageLiteral(resourceName: "bgImage3")))
+        
+        IQKeyboardManager.shared().isEnabled = true
+        IQKeyboardManager.shared().isEnableAutoToolbar = false
+        IQKeyboardManager.shared().shouldResignOnTouchOutside = true
+        //初始化注册本地推送
+        setNotificationSetting(application)
+        
+        //打开APP后设置提醒个数重置
+        application.applicationIconBadgeNumber = 0
+        self.configCustomView()
+        //获取通知
+        if let options = launchOptions {
+            if let localNotification = options[.localNotification] as? UILocalNotification{
+                if let userInfo = localNotification.userInfo{
+                    
+                    //获取每日提醒
+                    guard let id = userInfo["id"] as? Int, let type = userInfo["type"] as? Int else{
+                        return true
+                    }
+                    
+                    guard let eventClient = DataHandler.share().getEventClient(byEventClientType: type, byEventClientId: id) else{
+                        return true
+                    }
+                    
+                    guard let name = eventClient.name else{
+                        return true
+                    }
+                    
+                    let alert = UIAlertController(title: "新提醒", message: name, preferredStyle: .alert)
+                    let cancel = UIAlertAction(title: "取消", style: .cancel) { (action) in
+                        
+                    }
+                    let check = UIAlertAction(title: "查看", style: .default) { (action) in
+                        
+                    }
+                    alert.addAction(cancel)
+                    alert.addAction(check)
+                    window?.rootViewController?.present(alert, animated: true, completion: nil)
+                }
+            }
+        }
+        
+        if let localNotification = launchOptions?[UIApplicationLaunchOptionsKey.localNotification] as? UILocalNotification{
+            if let userInfoDic = localNotification.userInfo as? [String: Any]{
+                didReceiveRemoteNotification(withUserInfo: userInfoDic)
+            }
+        }
+        
+        if let userInfo = launchOptions?[UIApplicationLaunchOptionsKey.remoteNotification] as? [String : Any]{
+            didReceiveRemoteNotification(withUserInfo: userInfo)
+        }
+        
+        //初始化sdk
+        DataHandler.share()
+        DataManager.share()
+        
+        
+        //wx0f92c7205cd4572b 微信
+        //b8c32b88f70973e38285da0425139909 AppSecret
+        WXApi.registerApp("wx0f92c7205cd4572b")
+        
+        //微博
+        WeiboSDK.enableDebugMode(true)
+        WeiboSDK.registerApp("4085500274")
+        
+        //QQ
+        _ = TencentOAuth.init(appId: "1106447610", andDelegate: nil)
+        
+        //初始化
+        do{
+           try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+           try AVAudioSession.sharedInstance().setActive(true)
+        }catch let error{
+            print(error)
+        }
+        
+        //上传过去30天数据
+        StepManager.share().getStepsListAndDistanceMList(byLastDays: 30) { (codeResult, stepsAndDistanceMList) in
+            var stepModelList = [StepModel]()
+            for stepsAndDistanceM in stepsAndDistanceMList{
+                var stepModel = StepModel()
+                stepModel.date = stepsAndDistanceM.0
+                stepModel.step = stepsAndDistanceM.1
+                stepModel.distanceM = stepsAndDistanceM.2
+                stepModelList.append(stepModel)
+            }
+            
+            DataManager.share().addSteps(withStepModelList: stepModelList, closure: { (codeResult, message) in
+                
+            })
+        }
+        
+        return true
+    }
+    
+    
+    //MARK:- 配置基本视图
+    func configCustomView(){
+        UITabBarItem.appearance().setTitleTextAttributes([NSAttributedStringKey.foregroundColor:UIColor.subWord,NSAttributedStringKey.font:UIFont.smallContent ?? UIFont.systemFontSize], for: .normal)
+        UITabBarItem.appearance().setTitleTextAttributes([NSAttributedStringKey.foregroundColor:UIColor.orangeFont,NSAttributedStringKey.font:UIFont.smallContent ?? UIFont.systemFontSize], for: .selected)
+    }
+
+    //准备进入后台
+    func applicationWillResignActive(_ application: UIApplication) {
+        
+    }
+
+    //进入后台
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        
+    }
+
+    //准备进入前台
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        UIApplication.shared.applicationIconBadgeNumber = 0                
+    }
+
+    //进入前台
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        
+    }
+
+    //程序终止
+    func applicationWillTerminate(_ application: UIApplication) {
+        func reset(_ task: inout UIBackgroundTaskIdentifier?){
+            if task != UIBackgroundTaskInvalid{
+                task = UIBackgroundTaskInvalid
+            }
+        }
+        
+        let app = UIApplication.shared
+        var task: UIBackgroundTaskIdentifier?
+        task = app.beginBackgroundTask {
+            DispatchQueue.main.async {
+                reset(&task)
+            }
+        }
+        
+        DispatchQueue.global().async {
+            DispatchQueue.main.async {
+                reset(&task)
+            }
+        }
+    }
+
+    //MARK:- 推送设置------------------------------------------------------------------------------------------------------------------------------------------------
+    func setNotificationSetting(_ application: UIApplication){
+        let settings = UIUserNotificationSettings(types: [.alert, .badge, .sound], categories: nil)
+        application.registerUserNotificationSettings(settings)
+        UIApplication.shared.registerForRemoteNotifications()
+    }
+    //MARK:- 获取本地推送回调（运行中）
+    func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
+        window?.rootViewController?.notif(withTitle: notification.alertBody ?? "", duration: 3, closure: nil)
+        
+        if application.applicationState == .active{
+            if let soundName = notification.soundName {
+                if let url = Bundle.main.url(forResource:  soundName, withExtension: "") {
+                    var soundid: SystemSoundID = 0
+                    AudioServicesCreateSystemSoundID(url as CFURL, &soundid)
+                    AudioServicesPlayAlertSound(soundid)
+                } else {
+                    AudioServicesPlaySystemSound(1007)
+                }
+            }
+        }else{
+            UIApplication.shared.applicationIconBadgeNumber = 1
+        }
+    }
+    
+    
+    func application(_ application: UIApplication, handleActionWithIdentifier identifier: String?, forRemoteNotification userInfo: [AnyHashable : Any], completionHandler: @escaping () -> Void) {
+        
+    }
+    
+    func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        
+    }
+    
+    //MARK:- 获取远程推送回调
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        /*
+        你有一个“单次事件”预提醒
+        你有一个“单次事件”需要办理
+        你有一个“定期会议”事件预提醒
+        你有一个“定期会议”事件需要办理
+        你有一个“生日”事件预提醒
+        你有一个“生日”事件需要办理
+        你有一个“纪念日”事件预提醒
+        你有一个“纪念日”事件需要办理
+        你有一个“生活缴费”事件预提醒
+        你有一个“生活缴费”事件需要办理
+        你有一个“信用卡还款”事件预提醒
+        你有一个“信用卡还款”事件需要办理
+        你有一个“股指交割”事件预提醒
+        你有一个“股指交割”事件需要办理
+        你有一个“国债交割”事件预提醒
+        你有一个“国债交割”事件需要办理
+        你有一个“定期问候”事件预提醒
+        你有一个“定期问候”事件需要办理
+        你有一个“自定义”事件预提醒
+        你有一个“自定义”事件需要办理
+         */
+        
+        //"content-avilable" =1  in aps
+        
+        //回调
+//        completionHandler(UIBackgroundFetchResultNewData);
+//        //语音播报
+//        AVSpeechUtterance *utterance = [AVSpeechUtterance speechUtteranceWithString:userInfo[@"aps"][@"alert"]];
+//        AVSpeechSynthesizer *synth = [[AVSpeechSynthesizer alloc] init];
+//        [synth speakUtterance:utterance];
+        
+        
+        
+        NotificationCenter.default.post(name: EventNewNotification, object: nil)
+        
+        guard let userInfoDic = userInfo["aps"] as? [String : Any] else{
+            return
+        }
+        completionHandler(UIBackgroundFetchResult.newData)
+        let utterance = AVSpeechUtterance.init(string: userInfoDic["alert"] as! String)
+        let synth = AVSpeechSynthesizer()
+        synth.speak(utterance)
+        
+        if application.applicationState == .active {            //运行中
+            didReceiveRemoteNotification(withUserInfo: userInfoDic)
+            UIApplication.shared.applicationIconBadgeNumber = 0
+        }else if application.applicationState == .inactive{     //待激活
+            didReceiveRemoteNotification(withUserInfo: userInfoDic)
+
+            UIApplication.shared.applicationIconBadgeNumber = 1
+        }else{                                                  //后台
+            didReceiveRemoteNotification(withUserInfo: userInfoDic)
+        }
+    }
+    
+    ///获取远程推送后调用
+    func didReceiveRemoteNotification(withUserInfo userInfo: [String : Any]){
+        guard let sound = userInfo["sound"] as? String else {
+            print("无声音字段")
+            return
+        }
+        //"newSounds.bundle/" ".mp3"
+        if let url = Bundle.main.url(forResource: sound, withExtension: nil) {
+            
+            var soundid: SystemSoundID = 0
+            AudioServicesCreateSystemSoundID(url as CFURL, &soundid)
+            AudioServicesPlayAlertSound(soundid)
+        } else {
+            AudioServicesPlaySystemSound(1007)
+        }
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+    }
+    
+    //MARK:- 点击了通知，都会被调用
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) {
+        
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        
+        var tokenString: String = ""
+        
+        for i in 0..<deviceToken.count {
+            tokenString += String(format: "%02.2hhx", deviceToken[i] as CVarArg)
+        }
+        
+        print("==================================")
+        print("token:")
+        print(tokenString)
+        print("==================================")
+        
+        UserDefaults.standard.setValue(tokenString, forKey: "token")
+        DataManager.share().register { (codeResult, message, data) in
+            self.window?.rootViewController?.notif(withTitle: message)
+        }
+        
+    }
+    
+    //MARK: 微信 微博
+    func application(_ application: UIApplication, handleOpen url: URL) -> Bool {
+        return WXApi.handleOpen(url as URL!, delegate: self) || WeiboSDK.handleOpen(url, delegate: self) || QQApiInterface.handleOpen(url, delegate: QQRespObject.shareInstance)
+    }
+    
+    func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {
+        return WXApi.handleOpen(url as URL!, delegate: self) || WeiboSDK.handleOpen(url, delegate: self) || QQApiInterface.handleOpen(url, delegate: QQRespObject.shareInstance)
+    }
+    
+    //MARK:- 微信 delegate
+    func onResp(_ resp: BaseResp!) {
+        let errCode = resp.errCode
+        if errCode == 0{
+            window?.rootViewController?.notif(withTitle: "分享成功")
+        }else{
+            window?.rootViewController?.notif(withTitle: "分享取消")
+        }
+    }
+    
+    
+    //MARK:- 微博 delegate
+    func didReceiveWeiboRequest(_ request: WBBaseRequest!) {
+        
+    }
+    
+    func didReceiveWeiboResponse(_ response: WBBaseResponse!) {
+        let code = response.statusCode
+        if code == WeiboSDKResponseStatusCode.success{
+            window?.rootViewController?.notif(withTitle: "分享成功")
+        }else{
+            window?.rootViewController?.notif(withTitle: "分享取消")
+        }
+    }
+    
+    //MARK:- qq
+}
+

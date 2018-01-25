@@ -1,0 +1,205 @@
+//
+//  GANCountIntervalPicker.swift
+//  Remind
+//
+//  Created by gg on 17/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class GANCountIntervalPicker: UIPickerView {
+    
+    fileprivate let intervalList = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+    var selectedCount = 1
+    var selectedInterval = 0
+    
+    var selectedClosure: ((Int, Int)->())?
+    
+    
+    //private---------------------------------------------------------------------------
+    private lazy var componentWidth: CGFloat! = {
+        return self.frame.width / 2
+    }()
+    private let componentHeight: CGFloat = 52
+    private lazy var countLabel: UILabel! = {
+        let frame = CGRect(x: componentWidth * 0.56, y: (self.frame.height - componentHeight) / 2 + (17 - 9) / 4, width: 21, height: componentHeight)
+        let label = UILabel(frame: frame)
+        label.backgroundColor = .clear
+        label.font = UIFont(withNormalFontSize: 9)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.text = "次"
+        return label
+    }()
+    
+    private lazy var minuteLabel: UILabel! = {
+        let frame = CGRect(x: componentWidth * 0.56 + componentWidth, y: (self.frame.height - componentHeight) / 2 + (17 - 9) / 4, width: 21, height: componentHeight)
+        let label = UILabel(frame: frame)
+        label.backgroundColor = .clear
+        label.font = UIFont(withNormalFontSize: 9)
+        label.textColor = UIColor(colorHex: 0x333333)
+        label.text = "分钟"
+        return label
+    }()
+    
+    //MARK:- init----------------------------------------------------------------------------------------------------------------
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        config()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        initSelectedDate()
+    }
+    
+    //MARK:- 初始化选择日期
+    private func initSelectedDate(){
+        
+        selectRow(selectedCount - 1, inComponent: 0, animated: true)
+        
+        //如果次数大于2，并且未选择，则默认设置为30分钟
+        if selectedCount != 1 && selectedInterval == 0{
+            selectedInterval = 30
+        }
+        
+        var row1 = 0
+        if intervalList.contains(selectedInterval){
+            for interval in intervalList{
+                if interval == selectedInterval{
+                    break
+                }
+                row1 += 1
+            }
+        }
+        reloadComponent(1)
+        selectRow(row1, inComponent: 1, animated: true)
+    }
+    
+    private func config(){
+        delegate = self
+        dataSource = self
+        
+        backgroundColor = UIColor.clear
+        
+        addSubview(countLabel)
+        addSubview(minuteLabel)
+        
+        
+        let hx = bounds.width / 2
+        let hFrame = CGRect(x: hx, y: 0, width: kLineHeight, height: bounds.height)
+        let hSep = UIView(frame: hFrame)
+        hSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(hSep)
+        
+        for i in 0..<2{
+            let vy = CGFloat(i) * componentHeight + (bounds.height - componentHeight) / 2
+            let vframe = CGRect(x: 0, y: vy, width: bounds.width, height: kLineHeight)
+            let vsep = UIView(frame: vframe)
+            vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+            addSubview(vsep)
+        }
+        
+        //添加背景白色
+        let backViewFrame = CGRect(x: 0, y: (bounds.height - componentHeight) / 2, width: bounds.width, height: componentHeight)
+        let backView = UIView(frame: backViewFrame)
+        backView.backgroundColor = .white
+        backView.layer.zPosition = -0.1
+        addSubview(backView)
+    }
+}
+
+extension GANCountIntervalPicker: UIPickerViewDelegate, UIPickerViewDataSource{
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 2
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        if component == 0 {
+            return 18
+        }
+        if pickerView.selectedRow(inComponent: 0) == 0{ //1次
+            return 1
+        }
+        return intervalList.count
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return componentHeight
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        //主cell
+        let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+        pickerLabel0?.backgroundColor = .clear
+        pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+        
+        var text: String
+        switch component {
+        case 0:     //小时
+            text = "\(row + 1)"
+        default:    //分钟
+            let row0 = pickerView.selectedRow(inComponent: 0)
+            if row0 == 0{   //1次
+                text = "0"
+            }else{
+                text = "\(intervalList[row])"
+            }
+        }
+        let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+        //attributedString0.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.clear, range: NSMakeRange(text.count - 1, 1))
+        pickerLabel0?.attributedText = attributedString0
+        
+        
+        //其他小cell
+        let frame = CGRect(x: 0, y: 0, width: componentWidth, height: componentHeight)
+        let pickerLabel = UILabel(frame: frame)
+        pickerLabel.font = UIFont(withNormalFontSize: 17)
+        pickerLabel.textColor = UIColor(colorHex: 0x333333)
+        
+        pickerLabel.backgroundColor = .clear
+        pickerLabel.textAlignment = .center
+        
+        let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+        //attributedString.addAttribute(NSAttributedStringKey.foregroundColor, value: UIColor.clear, range: NSMakeRange(text.count - 1, 1))
+        pickerLabel.attributedText = attributedString
+        return pickerLabel
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        
+        if component == 0{
+            pickerView.reloadComponent(1)
+            if row != 0 {
+                var row1 = 0
+                if intervalList.contains(selectedInterval){
+                    for interval in intervalList{
+                        if interval == selectedInterval{
+                            break
+                        }
+                        row1 += 1
+                    }
+                }
+                reloadComponent(1)
+                selectRow(row1, inComponent: 1, animated: true)
+                
+                //pickerView.selectRow(5, inComponent: 1, animated: true)     //30分钟
+            }
+        }
+        let row0 = pickerView.selectedRow(inComponent: 0)
+        let row1 = pickerView.selectedRow(inComponent: 1)
+        
+        let count = row0 + 1
+        let interval = count == 1 ? 0 : intervalList[row1]
+        
+        selectedCount = count
+        selectedInterval = count == 1 ? 0 : interval
+        
+        selectedClosure?(selectedCount, selectedInterval)
+    }
+}

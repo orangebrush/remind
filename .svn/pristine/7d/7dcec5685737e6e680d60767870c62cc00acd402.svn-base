@@ -1,0 +1,67 @@
+//
+//  UITabarViewController+extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+extension UINavigationController: UINavigationControllerDelegate{
+    open override func awakeFromNib() {
+        super.awakeFromNib()
+        
+        
+        delegate = self
+        
+        if navigation_height == nil {
+            navigation_height = navigationBar.frame.height
+        }
+        
+//        //设置title
+//        navigationBar.titleTextAttributes = [NSAttributedStringKey.font: UIFont.navTitle, NSAttributedStringKey.foregroundColor: UIColor(colorHex: 0xffffff, alpha: 1)]
+//        //navigationBar.titleTextAttributes = [NSAttributedStringKey.font: UIFont.navTitle, NSAttributedStringKey.foregroundColor: UIColor.white]
+//        navigationBar.tintColor = UIColor.subWord
+//        UIApplication.shared.statusBarStyle = .lightContent
+//        self.navigationBar.barTintColor = UIColor(colorHex: 0x111111, alpha: 1)
+        
+        //禁用轻扫
+        interactivePopGestureRecognizer?.isEnabled = false
+        
+        
+        self.setNavigationBarStyle()
+        
+        
+        
+        //UIApplication.shared.statusBarStyle = UIStatusBarStyle.lightContent
+    }
+    
+
+    //切换回调
+    public func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+     
+        tabBarController?.tabBar.isHidden = viewControllers.count != 1
+      
+        if viewControllers.count == 1{
+            leftButton?.isHidden = false
+            rightButton?.isHidden = false
+        }else{
+            leftButton?.isHidden = true
+            rightButton?.isHidden = true
+        }
+    }
+    
+    //MARK:- 转场代理实现
+    public func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationControllerOperation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        
+        //编辑页
+        if operation == .push && toVC.isKind(of: EventEditorVC.self) {
+            return PushTransitioning()
+        }else if operation == .pop && fromVC.isKind(of: EventEditorVC.self){
+            return PopTransitioning()
+        }        
+        return nil
+    }
+ }
+

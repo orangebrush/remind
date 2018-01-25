@@ -1,0 +1,274 @@
+//
+//  BindingEmailVC.swift
+//  Remind
+//
+//  Created by gg on 20/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+
+var verificationCount = 0
+///设置倒计时
+func setVerificationCount(withCount count: Int, withVerificationButton verificationButton: UIButton){
+    let cot = count
+    if cot > 0 {
+        verificationButton.isEnabled = false
+        verificationButton.setTitleColor(.lightGray, for: .normal)
+        let text = "\(cot)s后重发"
+        verificationButton.titleLabel?.text = text
+        verificationButton.setTitle(text, for: .normal)
+        verificationCount = cot - 1
+        delay(1, task: {
+            setVerificationCount(withCount: cot - 1, withVerificationButton: verificationButton)
+        })
+    }else{
+        verificationButton.isEnabled = true
+        verificationButton.setTitleColor(UIColor.white, for: .normal)
+        let text = "获取验证码"
+        verificationButton.titleLabel?.text = text
+        verificationButton.setTitle(text, for: .normal)
+    }
+}
+
+class BindingEmailVC: UIViewController {
+    
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var titleLabel: UILabel!
+    @IBOutlet weak var label0: UILabel!
+    @IBOutlet weak var label1: UILabel!
+    @IBOutlet weak var label2: UILabel!
+    @IBOutlet weak var emailTextField: UITextField!
+    @IBOutlet weak var verificationTextField: UITextField!
+    @IBOutlet weak var bindingButton: UIButton!
+    @IBOutlet weak var verificationButton: UIButton!
+    
+    
+    //MARK:- 存储初始contentview bottom距离
+    fileprivate var contentViewBottom: CGFloat = 0
+    
+    ///存储已验证邮箱
+    private var emailAddr: String?
+    
+    private var isEmailBinded = false
+    
+    //MARK:- init-----------------------------------------------------------------------------------------------
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        config()
+        createContents()
+    }
+    
+    private func config(){
+        
+        view.backgroundColor = .separator
+        
+        bindingButton.layer.cornerRadius = .cornerRadius
+        bindingButton.backgroundColor = .confirm
+        bindingButton.setTitleColor(.white, for: .normal)
+        
+        contentViewBottom = view_size.height - contentView.frame.origin.y - contentView.frame.height
+        
+        titleLabel.textColor = .white
+        titleLabel.font = .content
+        titleLabel.text = "如果你希望通过电子邮箱来接收你\"重要事件\"的提醒，请先关联电子邮箱，然后在新建\"重要事件\"时，将\"同时提醒到电子邮箱\"后面的开关打开。"
+        
+        label0.text = "1.输入接收验证码的电子邮箱地址并点\"获取验证码\"。"
+        label0.textColor = .subWord
+        label0.font = .content
+        
+        label1.text = "2.到电子邮箱内找到并记住验证码。"
+        label1.textColor = .subWord
+        label1.font = .content
+        
+        label2.text = "3.返回此界面输入验证码完成关联。"
+        label2.textColor = .subWord
+        label2.font = .content
+        
+        setVerificationCount(withCount: verificationCount, withVerificationButton: verificationButton)
+        
+        //键盘事件
+//        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notif:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notif:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+    }
+    
+    private func createContents(){
+        DataManager.share().getInfo { (codeResult, message, infoModel) in
+            guard codeResult == .success else{
+                //self.notif(withTitle: message)
+                return
+            }
+            
+            self.isEmailBinded = infoModel.isEmailBinding
+            
+            guard self.isEmailBinded else{
+                self.verificationTextField.isHidden = false
+                self.emailTextField.isHidden = false
+                return
+            }
+            
+            self.verificationTextField.endEditing(true)
+            self.verificationTextField.isHidden = true
+            self.emailTextField.isHidden = true
+            
+            self.bindingButton.setTitle("解除绑定", for: .normal)
+            
+//            let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor: UIColor.word])
+//            attributedString.addAttributes([NSAttributedStringKey.foregroundColor: UIColor.confirm], range: NSMakeRange(text.count - wxId.count, wxId.count))
+        }
+    }
+    
+    //MARK:- 获取验证码
+    @IBAction func getVerificationCode(_ sender: UIButton) {
+        
+        emailTextField.endEditing(true)
+        verificationTextField.endEditing(true)
+        
+        
+        //判断邮箱是否正确
+        guard let emailText = emailTextField.text else {
+            self.notif(withTitle: "未输入电子邮箱")
+            return
+        }
+        
+        //判断邮箱是否合法
+        guard emailText.isEmail() else {
+            self.notif(withTitle: "格式错误")
+            return
+        }
+        
+        let dataManager = DataManager.share()
+        
+        //获取验证码
+        dataManager.getEmailVerification(withEmail: emailText) { (codeResult, message, emailAddr) in
+            self.notif(withTitle: message)
+            guard codeResult == .success else{
+                return
+            }
+            
+            //开始倒计时
+            setVerificationCount(withCount: 120, withVerificationButton: self.verificationButton)
+            
+            //保存已验证邮箱
+            self.emailAddr = emailAddr
+        }
+    }
+    
+    
+    //MARK:- 点击绑定
+    @IBAction func bind(_ sender: UIButton) {
+        
+        emailTextField.endEditing(true)
+        verificationTextField.endEditing(true)
+        
+        let dataManager = DataManager.share()
+        if isEmailBinded{
+            dataManager.unbindEmail(closure: { (codeResult, message) in
+                self.notif(withTitle: message, duration: 2, closure: {
+                    self.navigationController?.popViewController(animated: true)
+                })
+            })
+        }else{
+            //判断验证码是否已输入
+            guard let verificationCode = verificationTextField.text else {
+                self.notif(withTitle: "未输入验证码")
+                return
+            }
+            
+            //判断邮箱是否为之前输入的邮箱
+            guard let emailText = emailTextField.text, let tempEmail = emailAddr, emailText == tempEmail else{
+                self.notif(withTitle: "邮箱不匹配")
+                return
+            }
+            
+            //绑定邮箱
+            dataManager.bindEmail(withEmailVerification: verificationCode) { (codeResult, message, email)  in
+                self.notif(withTitle: message, duration: 2, closure: {
+                    self.navigationController?.popViewController(animated: true)
+                })
+            }
+        }
+    }
+}
+
+//MARK:- textview delegate
+extension BindingEmailVC: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.endEditing(true)
+        if textField == emailTextField{
+            verificationTextField.becomeFirstResponder()
+        }
+        return true
+    }
+    
+    //键盘弹出
+    @objc func keyboardWillShow(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let keyboardBounds = (userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+        let duration = (userInfo![UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue
+        
+        let offset = keyboardBounds.size.height
+        
+        let animations = {
+            let keyboardTransform = CGAffineTransform(translationX: 0, y: -offset + self.contentViewBottom)
+            self.contentView.transform = keyboardTransform
+            
+            self.contentView.layer.shadowColor = UIColor.black.cgColor
+            self.contentView.layer.shadowOffset = CGSize(width: 0, height: -5)
+            self.contentView.layer.shadowOpacity = 0.5
+        }
+        
+        if duration > 0 {
+            let options = UIViewAnimationOptions(rawValue: UInt((userInfo![UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue << 16))
+            UIView.animate(withDuration: duration, delay: 0, options: options, animations: animations, completion: nil)
+        }else{
+            animations()
+        }
+    }
+    
+    //键盘回收
+    @objc func keyboardWillHide(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let duration = (userInfo![UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue
+        
+        let animations = {
+            self.contentView.transform = CGAffineTransform.identity
+            
+            self.contentView.layer.shadowOpacity = 0
+        }
+        
+        if duration > 0 {
+            let options = UIViewAnimationOptions(rawValue: UInt((userInfo![UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue << 16))
+            UIView.animate(withDuration: duration, delay: 0, options: options, animations: animations, completion: nil)
+        }else{
+            animations()
+        }
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        
+        if string == "\n" || string == " "{
+            return false
+        }
+        
+        
+        var existedLength = 0
+        if let text = textField.text{
+            existedLength = Int(text.count)         //textView.text?.lengthOfBytes(using: .utf8)
+        }
+        let selectedLength = range.length           //range.length
+        let replaceLength = Int(string.count)       //text.lengthOfBytes(using: .utf8)
+        
+        let maxLength = textField == verificationTextField ? 6 : 20
+        
+        if existedLength - selectedLength + replaceLength > maxLength {
+            return false
+        }
+        
+        return true
+    }
+}

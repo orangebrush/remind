@@ -1,0 +1,92 @@
+//
+//  cutySearchViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/26.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class cutySearchViewController: BasedViewController {
+     var searchArr = [City]()
+     lazy var tableView : UITableView = {
+       let tableiew = UITableView.init()
+        tableiew.delegate = self
+        tableiew.dataSource = self
+        return tableiew
+    }()
+     lazy var  textFiled : UITextField = {
+        let textFiled = UITextField()
+        textFiled.placeholder = "搜索全国城市"
+        textFiled.delegate = self
+        textFiled.font = UIFont.normal
+        return textFiled
+        
+    }()
+    lazy var headderView : UIView = {
+       let view = UIView.init()
+       view.backgroundColor = UIColor.white
+        return view
+    }()
+    lazy var textView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.separator
+        view.layer.cornerRadius = CGFloat.cornerRadius
+        view.clipsToBounds = true
+        return view
+    }()
+    lazy var imageView : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "添加城市"
+        self.view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        let navHeight = (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height
+        
+        headderView .frame = CGRect.init(x: 0, y: navHeight, width: keyDeviceWidth, height: 61)
+        self.view.addSubview(headderView)
+        
+        textView.frame = CGRect.init(x: 10, y: 8, width: keyDeviceWidth-20, height: 45)
+        headderView.addSubview(textView)
+        
+        imageView.frame = CGRect.init(x: 10, y: 14, width: 18, height: 18)
+        textView.addSubview(imageView)
+        
+        textFiled.frame = CGRect.init(x: 33, y: 0, width: keyDeviceWidth-20-33, height: 45)
+        textView.addSubview(textFiled)
+        
+//        NotificationCenter.default.addObserver(self, selector: #selector(cutySearchViewController.kebordShow), name: Notification.Name.UIKeyboardDidHide, object: textFiled)
+//        NotificationCenter.default.addObserver(self, selector: #selector(cutySearchViewController.keyBordHide), name:  Notification.Name.UIKeyboardDidShow, object: textFiled)
+        NotificationCenter.default.addObserver(self, selector: #selector(cutySearchViewController.keyBordHeight(_:)), name:  Notification.Name.UIKeyboardDidChangeFrame, object: textFiled)
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    @objc func kebordShow(){
+        
+    }
+    @objc func keyBordHide(){
+        
+    }
+    @objc func keyBordHeight(_ notifiction:Notification){
+        let userinfo = notifiction.userInfo
+        let rect = userinfo![UIKeyboardFrameEndUserInfoKey]
+        print(rect as! CGRect)
+    
+    }
+
+}
+
+extension cutySearchViewController:UITableViewDelegate,UITableViewDataSource,UITextFieldDelegate{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return searchArr.count
+    }
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        return UITableViewCell()
+    }
+}

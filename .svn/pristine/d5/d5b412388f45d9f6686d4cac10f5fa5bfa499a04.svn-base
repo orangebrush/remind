@@ -1,0 +1,14 @@
+//
+//  Int+extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/15.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+extension Int {
+   /// 每页的总数据
+   static let paging = 20
+}

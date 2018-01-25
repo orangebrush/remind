@@ -1,0 +1,461 @@
+//
+//  CotactEmailViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/12.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+import Kingfisher
+
+class CotactEmailViewController: BasedViewController, UITextFieldDelegate {
+    
+    var scrollView : UIScrollView = UIScrollView()
+    
+    var bgView : UIView = UIView()
+    
+    let statusBarHight = UIApplication.shared.statusBarFrame.height
+    
+    
+    var notContactView : UIView = UIView()
+    
+    var contactedView : UIView = UIView()
+    
+    var emailTextField: UITextField = UITextField()
+    
+    var textField: UITextField = UITextField()
+    
+    var bindButton = UIButton()
+    
+    var keyboardHeight: CGFloat = 0
+    
+    var model: InfoModel?
+    
+    var loginGetCodeView = LoginGetCodeView()
+    
+    var emailAddr: String?
+    
+    
+    var headerImageView: UIImageView = UIImageView()
+    var nameLabel: UILabel = UILabel()
+    
+    private var isEmailBinded = false
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        backButtonTitle = "我"
+        automaticallyAdjustsScrollViewInsets = false
+        self.view.backgroundColor = UIColor.separator
+        
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        let navigationBarHeight = (navigationController?.navigationBar.height)!
+        view.addSubview(scrollView)
+        
+        scrollView.snp.makeConstraints { (make) in
+            make.left.right.bottom.top.equalToSuperview()
+        }
+        let contentView: UIView = UIView()
+        scrollView.addSubview(contentView)
+        contentView.snp.makeConstraints({ (make) in
+            make.top.left.bottom.right.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().offset(0.5)
+        })
+        
+        scrollView.addSubview(bgView)
+        bgView.backgroundColor = UIColor.white
+        bgView.layer.cornerRadius = 6
+        bgView.clipsToBounds = true
+        bgView.snp.makeConstraints { (make) in
+            make.left.equalTo(10)
+            make.top.equalTo(navigationBarHeight + statusBarHight + 12)
+            make.bottom.equalToSuperview().offset(-20  - (isIphoneX ? 34 : 0))
+            make.right.equalToSuperview().offset(-10)
+        }
+        
+        bgView.addSubview(notContactView)
+        notContactView.isHidden = true
+        notContactView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        
+        
+        bgView.addSubview(contactedView)
+        contactedView.isHidden = true
+        contactedView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        
+        setupdateNotContactView()
+        
+        setupdateContactedView()
+        
+        getInfo()
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notif:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        
+    }
+    
+    private func getInfo(){
+        
+        DataManager.share().getInfo { (codeResult, message, infoModel) in
+            guard codeResult == .success else{
+                //self.notif(withTitle: message)
+                return
+            }
+            
+            self.model = infoModel
+            if (self.model?.isEmailBinding)! {
+                self.notContactView.isHidden = true
+                self.contactedView.isHidden  = false
+                self.nameLabel.text = self.model?.emailAddr
+                self.headerImageView.image = UIImage.init(named: "related_mail_90")
+            }else {
+                self.contactedView.isHidden = true
+                self.notContactView.isHidden  = false
+            }
+        }
+    }
+    func setupdateNotContactView() {
+        let topLabel = UILabel()
+        topLabel.textColor = UIColor.word
+        topLabel.font = UIFont.normal
+        topLabel.numberOfLines = 0
+        notContactView.addSubview(topLabel)
+        topLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        topLabel.text = "关联邮箱后，你可以选择将“重要事件”的提醒同时发送到邮箱中。"
+        
+        
+        let lineView = UIView()
+        lineView.backgroundColor = UIColor.separator
+        notContactView.addSubview(lineView)
+        lineView.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.top.equalTo(topLabel.snp.bottom).offset(26)
+            make.height.equalTo(kLineHeight)
+        }
+        
+        
+        let middleLabel = UILabel()
+        middleLabel.textColor = UIColor.subWord
+        middleLabel.font = UIFont.normal
+        middleLabel.numberOfLines = 0
+        notContactView.addSubview(middleLabel)
+        middleLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(lineView.snp.bottom).offset(21)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        middleLabel.text = "1、输入接收提醒的邮箱地址，点获取验证码；"
+        
+        
+        let bottomLabel = UILabel()
+        bottomLabel.textColor = UIColor.subWord
+        bottomLabel.font = UIFont.normal
+        bottomLabel.numberOfLines = 0
+        notContactView.addSubview(bottomLabel)
+        bottomLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.top.equalTo(middleLabel.snp.bottom).offset(20)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(40)
+        }
+        bottomLabel.text = "2、进入邮箱查收验证码，再返回此界面输入验证码已完成关联"
+        
+        
+        emailTextField.textColor = UIColor.word
+        emailTextField.placeholder = "请输入邮箱地址"
+        emailTextField.font = UIFont.normal
+        notContactView.addSubview(emailTextField)
+        emailTextField.clearButtonMode = .whileEditing
+        emailTextField.keyboardType = .asciiCapable
+        emailTextField.delegate = self
+        emailTextField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        emailTextField.snp.makeConstraints { (make) in
+            make.top.equalTo(bottomLabel.snp.bottom).offset(12)
+            make.height.equalTo(44)
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+        }
+        let toplineView = UIView()
+        notContactView.addSubview(toplineView)
+        toplineView.backgroundColor = UIColor.highlightedColor
+        toplineView.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(1)
+            make.bottom.equalTo(emailTextField)
+        }
+        
+        
+        
+        textField.textColor = UIColor.word
+        textField.placeholder = "请输入验证码"
+        textField.font = UIFont.normal
+        
+        
+        textField.rightView = loginGetCodeView
+        textField.rightViewMode = .always
+        notContactView.addSubview(textField)
+        textField.clearButtonMode = .whileEditing
+        textField.keyboardType = .numberPad
+        textField.delegate = self
+        textField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        textField.snp.makeConstraints { (make) in
+            make.top.equalTo(emailTextField.snp.bottom).offset(7)
+            make.height.equalTo(44)
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+        }
+        
+        loginGetCodeView.codeButton.addTarget(self, action: #selector(getCode), for: .touchUpInside)
+        
+        let bottomlineView = UIView()
+        notContactView.addSubview(bottomlineView)
+        bottomlineView.backgroundColor = UIColor.highlightedColor
+        bottomlineView.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.height.equalTo(1)
+            make.bottom.equalTo(textField)
+        }
+        
+        
+        notContactView.addSubview(bindButton)
+        bindButton.setTitleColor(UIColor.white, for: .normal)
+        bindButton.backgroundColor = UIColor.orange
+        bindButton.layer.cornerRadius = 6
+        bindButton.clipsToBounds = true
+        bindButton.titleLabel?.font = UIFont.navTitle
+        bindButton.setTitle("立即关联", for: .normal)
+        bindButton.addTarget(self, action: #selector(bindButtonClick), for: .touchUpInside)
+        bindButton.snp.makeConstraints { (make) in
+            make.top.equalTo(bottomlineView.snp.bottom).offset(40)
+            make.height.equalTo(44)
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+        }
+        let titleColor = UIColor.white.withAlphaComponent(0.4)
+        bindButton.setTitleColor(titleColor, for: .disabled)
+        bindButton.isEnabled = false
+        
+        
+    }
+    
+    func setupdateContactedView() {
+        contactedView.addSubview(headerImageView)
+        headerImageView.layer.cornerRadius = 45
+        headerImageView.layer.borderWidth = kLineHeight
+        headerImageView.layer.borderColor = UIColor.black.withAlphaComponent(0.07).cgColor
+        headerImageView.snp.makeConstraints { (make) in
+            make.top.equalTo(70)
+            make.height.width.equalTo(90)
+            make.centerX.equalToSuperview()
+        }
+        
+        contactedView.addSubview(nameLabel)
+        nameLabel.textColor = UIColor.word
+        nameLabel.textAlignment = .center
+        nameLabel.font = UIFont.navTitle
+        nameLabel.snp.makeConstraints { (make) in
+            make.left.right.equalToSuperview()
+            make.top.equalTo(headerImageView.snp.bottom)
+            make.height.equalTo(47)
+        }
+        
+        let infoLabel = UILabel()
+        infoLabel.numberOfLines = 0
+        infoLabel.textColor = UIColor.subWord
+        infoLabel.font = UIFont.normal
+        infoLabel.text = "若将“重要事件”同时提醒到邮箱，在新建或编辑“重要事件”时，将“同时提醒到邮箱”后面的开关打开即可。"
+        contactedView.addSubview(infoLabel)
+        infoLabel.snp.makeConstraints { (make) in
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+            make.top.equalTo(nameLabel.snp.bottom).offset(40)
+            make.height.equalTo(60)
+        }
+        
+        let removeBindButton = UIButton()
+        contactedView.addSubview(removeBindButton)
+        removeBindButton.setTitleColor(UIColor.orange, for: .normal)
+        removeBindButton.backgroundColor = UIColor.separator
+        removeBindButton.layer.cornerRadius = 6
+        removeBindButton.clipsToBounds = true
+        removeBindButton.titleLabel?.font = UIFont.navTitle
+        removeBindButton.setTitle("解除关联", for: .normal)
+        removeBindButton.addTarget(self, action: #selector(removeBindButtonClick), for: .touchUpInside)
+        removeBindButton.snp.makeConstraints { (make) in
+            make.top.equalTo(infoLabel.snp.bottom).offset(60)
+            make.height.equalTo(44)
+            make.left.equalTo(40)
+            make.right.equalToSuperview().offset(-40)
+        }
+        
+    }
+    @objc func removeBindButtonClick() {
+        let dataManager = DataManager.share()
+        dataManager.unbindEmail(closure: { (codeResult, message) in
+            self.notif(withTitle: message, duration: 2, closure: {
+                //                self.navigationController?.popViewController(animated: true)
+            })
+            if codeResult == .success {
+                self.contactedView.isHidden = true
+                self.notContactView.isHidden  = false
+                self.emailTextField.text = ""
+                self.loginGetCodeView = LoginGetCodeView()
+                self.textField.rightView = self.loginGetCodeView
+            }
+        })
+        
+    }
+    @objc func getCode() {
+        
+        self.view.endEditing(true)
+        //判断邮箱是否正确
+        guard let emailText = emailTextField.text else {
+            self.notif(withTitle: "未输入电子邮箱")
+            return
+        }
+        
+        //判断邮箱是否合法
+        guard emailText.isEmail() else {
+            self.notif(withTitle: "格式错误")
+            return
+        }
+        
+   
+        
+        let dataManager = DataManager.share()
+        
+        //获取验证码
+        dataManager.getEmailVerification(withEmail: emailText) { (codeResult, message, emailAddr) in
+            if codeResult == .success {
+                self.loginGetCodeView.codeButton.scheduleTimer(leftTime: 120)
+                //保存已验证邮箱
+                self.emailAddr = emailAddr
+            }else {
+               
+            }
+            self.notif(withTitle: message)
+            
+        }
+        
+    }
+    @objc func bindButtonClick() {
+        
+        textField.endEditing(true)
+        
+        
+        let dataManager = DataManager.share()
+        
+        //判断验证码是否已输入
+        guard let verificationCode = textField.text else {
+            self.notif(withTitle: "未输入验证码")
+            return
+        }
+        //判断邮箱是否为之前输入的邮箱
+        guard let emailText = emailTextField.text, let tempEmail = emailAddr, emailText == tempEmail else{
+            self.notif(withTitle: "邮箱不匹配")
+            return
+        }
+        
+        
+        dataManager.bindEmail(withEmailVerification: verificationCode) { (codeResult, message, email) in
+            self.notif(withTitle: message, duration: 2, closure: {
+                //                        self.navigationController?.popViewController(animated: true)
+            })
+            if codeResult == .success {
+                self.textField.text = ""
+                self.emailTextField.text = ""
+                let titleColor = UIColor.white.withAlphaComponent(0.4)
+                self.bindButton.setTitleColor(titleColor, for: .disabled)
+                self.bindButton.isEnabled = false
+                
+                
+                self.notContactView.isHidden = true
+                self.contactedView.isHidden  = false
+                self.nameLabel.text = email //self.emailAddr
+                self.headerImageView.image = UIImage.init(named: "related_mail_90")
+            }
+        }
+        
+    }
+    
+    @objc func editingChanged(textField: UITextField) {
+        if textField == self.textField {
+            if textField.text?.count == 6 {
+                let titleColor = UIColor.white
+                bindButton.setTitleColor(titleColor, for: .normal)
+                bindButton.isEnabled = true
+            }else {
+                let titleColor = UIColor.white.withAlphaComponent(0.4)
+                bindButton.setTitleColor(titleColor, for: .disabled)
+                bindButton.isEnabled = false
+            }
+        }else {
+            
+            if let text = textField.text {
+                if text.isEmail() {
+                    loginGetCodeView.codeButton.type = .normal
+                } else {
+                    loginGetCodeView.codeButton.type = .disabled
+                }
+            }
+            
+            
+            
+        }
+ 
+        
+    }
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+//        scrollView.contentOffset.y = scrollView.contentSize.height - scrollView.bounds.size.height
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if string == "\n" || string == " "{
+            return false
+        }
+        if textField == self.textField {
+            var existedLength = 0
+            if let text = textField.text{
+                existedLength = Int(text.count)         //textView.text?.lengthOfBytes(using: .utf8)
+            }
+            let selectedLength = range.length           //range.length
+            let replaceLength = Int(string.count)       //text.lengthOfBytes(using: .utf8)
+            
+            if existedLength - selectedLength + replaceLength > 6 {
+                return false
+            }
+        }
+        
+     
+        
+        
+    
+        
+        return true
+    }
+    
+    
+    //键盘弹出
+    @objc func keyboardWillShow(notif:NSNotification){
+        let userInfo = notif.userInfo
+        
+        let keyboardBounds = (userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+        
+        keyboardHeight = keyboardBounds.size.height
+    }
+}

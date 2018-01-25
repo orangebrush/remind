@@ -1,0 +1,36 @@
+//
+//  SoundCell.swift
+//  Remind
+//
+//  Created by gg on 04/01/2018.
+//  Copyright © 2018 ganyi. All rights reserved.
+//
+
+import Foundation
+class SoundCell: UITableViewCell {
+    @IBOutlet weak var nameLabel: UILabel!
+    @IBOutlet weak var selectImageView: UIImageView!
+    
+    var showSelected: Bool = false{
+        didSet{
+            selectImageView.isHidden = !isSelected
+        }
+    }
+    
+    var sound: String = "girl"
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        
+        config()
+    }
+    
+    private func config(){
+        
+        nameLabel.font = UIFont(withNormalFontSize: 14)
+        nameLabel.textColor = .word
+        
+    
+        showSelected = false
+    }
+}

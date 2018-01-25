@@ -1,0 +1,241 @@
+//
+//  EventedtingTableViewCell.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/21.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+protocol edtingCellDelegate:class {
+    func CellClick(_ section:Int, _ isLocal:Bool,_ select:Int)
+}
+class EventedtingTableViewCell: UITableViewCell {
+    weak var delegate : edtingCellDelegate?
+    var eventImageArr = [UIImage]()
+    var eventText = [String]()
+    var section = 0
+    var islocal = false
+    fileprivate lazy var imageview : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var textlabel : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var cutlabel : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.edtingSeparator
+        return label
+    }()
+    fileprivate lazy var backView : UIView = {
+        let view = UIView.init()
+        view.backgroundColor = UIColor.header
+        return view
+    }()
+    fileprivate lazy var imageview1 : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var textlabel1 : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var cutlabel1 : UILabel = {
+        let label = UILabel.init()
+        label.backgroundColor = UIColor.edtingSeparator
+        return label
+    }()
+    fileprivate lazy var imageview2 : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var imageview3 : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var imageview4 : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var imageview5 : UIImageView = {
+        let img = UIImageView.init()
+        return img
+    }()
+    fileprivate lazy var textlabel2 : UILabel = {
+        let label = UILabel.init()
+        label.textColor = UIColor.word
+        label.font = UIFont.normal
+        return label
+    }()
+    fileprivate lazy var btn : UIButton = {
+        let button = UIButton.init(type: .custom)
+        button.addTarget(self, action: #selector(EventedtingTableViewCell.buttonClick(_:)), for: .touchUpInside)
+        button.tag = 0
+        return button
+    }()
+    fileprivate lazy var btn1 : UIButton = {
+        let button = UIButton.init(type: .custom)
+        button.addTarget(self, action: #selector(EventedtingTableViewCell.buttonClick(_:)), for: .touchUpInside)
+        button.tag = 1
+        return button
+    }()
+    fileprivate lazy var btn2 : UIButton = {
+        let button = UIButton.init(type: .custom)
+        button.addTarget(self, action: #selector(EventedtingTableViewCell.buttonClick(_:)), for: .touchUpInside)
+        button.tag = 2
+        return button
+    }()
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        self.backgroundColor = UIColor.clear
+        self.selectionStyle = .none
+        self.clipsToBounds = true
+        self.contentView.clipsToBounds = true
+        backView.frame = CGRect.init(x: 10, y: 0, width: keyDeviceWidth-20, height: 120)
+        self.contentView.addSubview(backView)
+        backView.addSubview(imageview)
+        backView.addSubview(textlabel)
+        backView.addSubview(cutlabel)
+        backView.addSubview(imageview1)
+        backView.addSubview(textlabel1)
+        backView.addSubview(cutlabel1)
+        backView.addSubview(imageview2)
+        backView.addSubview(textlabel2)
+        backView.addSubview(imageview3)
+        backView.addSubview(imageview4)
+        backView.addSubview(imageview5)
+        backView.addSubview(btn)
+        backView.addSubview(btn1)
+        backView.addSubview(btn2)
+        
+    }
+    func configView(_ indexPath:IndexPath,_ event:EventDB?,_ client:EventClient?,_ section:Int){
+        self.section = section
+        if (event != nil){
+            eventImageArr = [#imageLiteral(resourceName: "card_icon_edit"),#imageLiteral(resourceName: "card_icon_closereminding"),#imageLiteral(resourceName: "card_icon_delete")]
+            self.islocal = false
+            if event?.status == Int32(0){
+                eventText = ["编辑提醒","关闭提醒","删除提醒"]
+                imageview3.image = #imageLiteral(resourceName: "card_icon_switch_open")
+            }else{
+                eventText = ["编辑提醒","打开提醒","删除提醒"]
+                imageview3.image = #imageLiteral(resourceName: "card_icon_switch_shut")
+            }
+            
+        }else{
+            self.islocal = true
+            eventImageArr = [#imageLiteral(resourceName: "card_icon_edit"),#imageLiteral(resourceName: "card_icon_closereminding"),#imageLiteral(resourceName: "card_icon_delete")]
+            if client?.status == Int32(0){
+                eventText = ["编辑提醒","关闭提醒","删除提醒"]
+                imageview3.image = #imageLiteral(resourceName: "card_icon_switch_open")
+            }else{
+                
+                eventText = ["编辑提醒","打开提醒","删除提醒"]
+                imageview3.image = #imageLiteral(resourceName: "card_icon_switch_shut")
+            }
+        }
+        imageview4.image = #imageLiteral(resourceName: "card_icon_rightarrow")
+        imageview5.image = #imageLiteral(resourceName: "card_icon_rightarrow")
+        let image = eventImageArr[0]
+        let image1 = eventImageArr[1]
+        let image2 = eventImageArr[2]
+        
+        imageview.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.centerY.equalTo(textlabel.snp.centerY)
+            make.width.equalTo(image.size.width)
+            make.height.equalTo(image.size.height)
+        }
+        imageview1.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.centerY.equalTo(textlabel1.snp.centerY)
+            make.width.equalTo(image1.size.width)
+            make.height.equalTo(image1.size.height)
+        }
+        imageview3.snp.makeConstraints { (make) in
+            make.right.equalTo(-15)
+            make.width.height.equalTo(32)
+            make.centerY.equalTo(textlabel1.snp.centerY)
+        }
+        imageview4.snp.makeConstraints { (make) in
+            
+            make.width.height.equalTo(15)
+            make.centerY.equalTo(textlabel.snp.centerY)
+            make.right.equalTo(-15)
+        }
+        imageview5.snp.makeConstraints { (make) in
+            make.width.height.equalTo(15)
+            make.centerY.equalTo(textlabel2.snp.centerY)
+            make.right.equalTo(-15)
+        }
+        imageview2.snp.makeConstraints { (make) in
+            make.left.equalTo(20)
+            make.centerY.equalTo(textlabel2.snp.centerY)
+            make.width.equalTo(image2.size.width)
+            make.height.equalTo(image2.size.height)
+        }
+        
+        imageview.image = image
+        imageview1.image = image1
+        imageview2.image = image2
+        textlabel.text = eventText[0]
+        textlabel1.text = eventText[1]
+        textlabel2.text = eventText[2]
+        textlabel.snp.makeConstraints { (make) in
+            make.left.equalTo(45)
+            make.top.equalTo(0)
+            make.bottom.equalTo(cutlabel.snp.top)
+            make.width.equalTo(200)
+        }
+        cutlabel.snp.makeConstraints { (make) in
+            make.left.equalTo(imageview.snp.left)
+            make.height.equalTo(kLineHeight)
+            make.right.equalTo(0)
+            make.bottom.equalTo(textlabel1.snp.top)
+        }
+        textlabel1.snp.makeConstraints { (make) in
+            make.left.width.height.equalTo(textlabel)
+            make.bottom.equalTo(cutlabel1.snp.top)
+        }
+        cutlabel1.snp.makeConstraints { (make) in
+            make.left.width.height.equalTo(cutlabel)
+            make.bottom.equalTo(textlabel2.snp.top)
+        }
+        textlabel2.snp.makeConstraints { (make) in
+            make.left.width.height.equalTo(textlabel)
+            make.bottom.equalTo(0)
+        }
+        btn.snp.makeConstraints { (make) in
+            make.left.top.right.equalTo(0)
+            make.bottom.equalTo(btn1.snp.top)
+        }
+        btn1.snp.makeConstraints { (make) in
+            make.left.width.height.equalTo(btn)
+            make.bottom.equalTo(btn2.snp.top)
+        }
+        btn2.snp.makeConstraints { (make) in
+            make.left.width.height.equalTo(btn)
+            make.bottom.equalTo(0)
+        }
+        
+        
+    }
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    @objc func buttonClick(_ button:UIButton){
+        delegate?.CellClick(self.section, self.islocal, button.tag)
+    }
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        
+        // Configure the view for the selected state
+    }
+    
+}

@@ -1,0 +1,134 @@
+//
+//  FrequencyPickerCell.swift
+//  Remind
+//
+//  Created by gg on 14/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+class FrequencyPickerCell: UITableViewCell {
+    @IBOutlet weak var pickerView: UIPickerView!
+    
+    
+    let weekdaylists = ["星期一","星期二","星期三","星期四","星期五","星期六","星期日"]
+    
+    let weekdayId = [2,3,4,5,6,7,1]
+    
+    
+    var weekydayTuple = (0, 0)          //周日== 1。  2 3 4 5 6 7
+    weak var frequency: FrequencyModel?
+    
+    var closure: ((_ weekdayTuple: (Int, Int))->())?
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        
+
+        let hSep = UIView()
+        hSep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+        addSubview(hSep)
+        hSep.snp.makeConstraints { (make) in
+            make.width.equalTo(kLineHeight)
+            make.top.bottom.equalToSuperview()
+            make.centerX.equalToSuperview()
+        }
+        
+        for i in 0..<2{
+            let vsep = UIView()
+            vsep.backgroundColor = UIColor(colorHex: 0xe6e6e6)
+            addSubview(vsep)
+            
+            vsep.snp.makeConstraints { (make) in
+                make.height.equalTo(kLineHeight)
+                make.leading.equalTo(10)
+                make.trailing.equalTo(-10)
+                make.centerY.equalToSuperview().offset(i == 0 ? -26 : 26)
+            }
+        }
+    }
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        backgroundColor = UIColor.clear
+        self.selectionStyle = .none
+
+        
+        pickerView.delegate = self
+        pickerView.dataSource = self
+        pickerView.selectRow(weekydayTuple.0 - 1, inComponent: 0, animated: true)
+        pickerView.selectRow((weekdayId as NSArray).index(of: weekydayTuple.1), inComponent: 1, animated: true)
+        
+
+    }
+}
+
+//MARK:- pickerview delegate
+extension FrequencyPickerCell: UIPickerViewDelegate, UIPickerViewDataSource{
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 2
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return component == 0 ? 5 : 7
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+        return 52
+    }
+    func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+        let pickerLabel0 = pickerView.view(forRow: row, forComponent: component) as? UILabel
+        pickerLabel0?.backgroundColor = .clear
+        pickerLabel0?.font = UIFont(withSemiboldFontSize: 17)
+        
+        var text = ""
+        if component == 0{
+            if row == 4{
+                text = "最后1个"
+            }else{
+                text = "第\(row + 1)个"
+            }
+        }else{
+            text = weekdaylists[row]
+        }
+        let attributedString0 = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+        pickerLabel0?.attributedText = attributedString0
+        
+        
+        //其他小cell
+        let frame = CGRect(x: 0, y: 0, width: self.width / 2, height: 52)
+        let pickerLabel = UILabel(frame: frame)
+        pickerLabel.font = UIFont(withNormalFontSize: 17)
+        pickerLabel.textColor = UIColor(colorHex: 0x333333)
+        
+        pickerLabel.backgroundColor = .clear
+        pickerLabel.textAlignment = .center
+        
+        let attributedString = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.foregroundColor : UIColor(colorHex: 0x333333), NSAttributedStringKey.font: UIFont(withNormalFontSize: 17)])
+        pickerLabel.attributedText = attributedString
+        return pickerLabel
+    }
+    
+//    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+//        let attributes = [NSAttributedStringKey.font: UIFont.normal, NSAttributedStringKey.foregroundColor: UIColor.subWord]
+//        var text = ""
+//        if component == 0{
+//            if row == 4{
+//                text = "最后1个"
+//            }else{
+//                text = "第\(row + 1)个"
+//            }
+//        }else{
+//            text = weekdaylists[row]
+//        }
+//        let attributed = NSAttributedString(string: text, attributes: attributes)
+//        return attributed
+//    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        if component == 0{
+            weekydayTuple.0 = row + 1
+        }else{
+            weekydayTuple.1 = weekdayId[row]
+        }
+        closure?(weekydayTuple)
+    }
+}

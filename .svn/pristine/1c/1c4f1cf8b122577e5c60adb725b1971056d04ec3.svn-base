@@ -1,0 +1,423 @@
+//
+//  DetailViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/19.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class DetailViewController: BasedViewController ,UITextViewDelegate{
+    var event : EventDB!
+    var id : Int32!
+    var titleArr = ["提醒时间","提醒次数","预提醒","提示音","同时提醒到"]
+    var contentArr = [String]()
+    var backToRoot = false
+    var valueChange = false
+    fileprivate lazy var mianTableView : UITableView = {
+        let tableView = UITableView.init(frame: .zero, style: .grouped)
+        tableView.separatorStyle = .none
+        return tableView
+    }()
+    
+    fileprivate lazy var mainBackView : UIView = {
+        let view = UIView.init(frame: CGRect.zero)
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+        view.layer.cornerRadius = CGFloat.cornerRadius
+        view.clipsToBounds = true
+        return view
+    }()
+//    fileprivate lazy var backView : UIView = {
+//        let view = UIView.init(frame: CGRect.zero)
+//        view.backgroundColor = UIColor.white
+//        view.layer.cornerRadius = CGFloat.cornerRadius
+//        view.clipsToBounds = true
+//        return view
+//    }()
+    fileprivate  lazy var bottomView : UIView = {
+        let view = UIView.init(frame: .zero)
+        return view
+    }()
+    
+    fileprivate lazy var mainTableView : UITableView = {
+        let tableView = UITableView.init(frame: .zero, style: .grouped)
+        tableView.backgroundColor = UIColor.white
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.separatorStyle = .none
+        return tableView
+    }()
+    var footerView : detailFooterView!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "事件详情"
+        
+        self.updateBackground()
+        
+        mainBackView.frame = CGRect.init(x: 10, y: (navigation_height ?? 64) + UIApplication.shared.statusBarFrame.size.height+10, width: keyDeviceWidth-20, height:keyDeviceHeight - 40 - (navigation_height ?? 64) - UIApplication.shared.statusBarFrame.size.height - ( UIApplication.shared.statusBarFrame.size.height > 22 ? 34 : 0))
+        self.view.addSubview(mainBackView)
+       }
+    override func backToPrevious() {
+        if backToRoot{
+           self.backRootVC()
+        }else{
+            self.navigationController?.popViewController(animated: true)
+            guard (self.event != nil)  else{
+                return
+            }
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refreshEventAll), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refelshHome), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.refrshEventWithID), object: nil, userInfo: ["eventID":self.event.id])
+    
+        }
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        self.getStringData()
+        let item = BarButtonItem(imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+        
+    }
+    //MARK: 获取数据
+    func getStringData(){
+        DataManager.share().getEventInfo(withEventId: Int(id)) { (result, message, event1) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.event = event1
+            if self.event != nil{
+                self.resetAllData()
+                self.addMainView()
+            }
+        }
+    }
+    //MARK:- 添加主要视图
+    func addMainView(){
+        
+        while  mainBackView.subviews.last != nil{
+            mainBackView.subviews.last?.removeFromSuperview()
+        }
+        
+        let headerView = detailHeaderView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 40))
+        headerView.configView(event)
+        headerView.delegate = self
+        mainBackView.addSubview(headerView)
+        
+        
+        
+        let tableHeader = detailTableHeader.init(frame: CGRect.init(x: 0, y: 40, width: keyDeviceWidth - 20, height: self.getTableHeaderHeight()))
+        tableHeader.configNewView(event)
+        tableHeader.delegate = self
+        mainBackView.addSubview(tableHeader)
+        
+        
+        
+        mainTableView.frame = CGRect.init(x: 0, y: 40+self.getTableHeaderHeight(), width: keyDeviceWidth-20, height: mainBackView.frame.size.height - 120 - 40 - self.getTableHeaderHeight())
+        mainBackView.addSubview(mainTableView)
+
+        
+        mainTableView.register(detailTableViewCell.self, forCellReuseIdentifier: "detailTableViewCell")
+        
+        
+        footerView = detailFooterView.init(frame: CGRect.init(x: 0, y: mainBackView.frame.size.height - 120, width: keyDeviceWidth-20, height: 120))
+        footerView.delegate = self
+        footerView.configView(event)
+        mainBackView.addSubview(footerView)
+        
+    }
+    
+    
+    
+    //MARK:- 获取表头的高度
+    func getTableHeaderHeight()->CGFloat{
+        var text =  ""
+        var height : CGFloat = 0
+        if event.type == Int32(1)  || event.type == Int(2){
+            height = 117
+        }else{
+            text = event.introduce ?? "无"
+            height = 57+getStrHeight(UIFont.init(withNormalFontSize: 16), text, 6).1
+        }
+        return height
+    }
+    
+    func resetAllData(){
+        var ring  = event.ring
+        
+        if event.ring == "girl"{
+          ring = "女声"
+        }else if event.ring == "boy"{
+            ring = "男声"
+        }
+        
+        contentArr = [event.param3 ?? "", ring ?? ""]
+        var str = ""
+        if event.isWeixinOpen&&event.isWeixinBinded{
+            str = str + "微信"
+        }
+        if event.isEmailOpen && event.isEmailBinded{
+            if str == ""{
+                str = str + "邮箱"
+            }else{
+                str = str + "、邮箱"
+            }
+        }
+        if str == "" {
+            str = "无"
+        }
+        contentArr.append(str)
+        if self.getStringWithList(event) != ""{
+            contentArr.insert(self.getStringWithList(event), at: 1)
+        }else{
+            contentArr.insert("无预提醒", at: 1)
+        }
+        contentArr.insert(event.content ?? "", at: 0)
+        self.mainTableView.reloadData()
+    }
+    
+    func getStringWithList(_ event:EventDB)->String{
+        let beginningList = event.beginningList
+        
+        var result = ""
+        var list = [BeginningDB]()
+        for element in beginningList{
+            let beginning = element
+            list.append(beginning)
+        }
+        let sortedList = list.sorted{$0.cycle! > $1.cycle!}
+        var preCycle: Int32 = 0
+        var index = 0
+        for beginning in sortedList {
+            
+            //根据周期换行
+            if beginning.cycle != preCycle{
+                if preCycle != 0{
+                    result += ", "
+                }
+                index = 0
+            }else{
+                if index != 0 {
+                    result += ", "
+                }
+            }
+            index += 1
+            preCycle = beginning.cycle!
+            // none = 0, minute, hour, day, week, month, year
+            switch beginning.cycle!{
+            case 1:
+                
+                let count = beginning.count!
+                let hour = count / 60
+                let minute = count % 60
+                let hourStr = hour < 1 ? "" : "\(hour)小时"
+                let minuteStr = minute > 0 ? "\(minute)分钟" : ""
+                result += hourStr
+                result += minuteStr
+            case 2:
+                result += "\(beginning.count!)"
+                result += "小时"
+            case 3:
+                result += "\(beginning.count!)"
+                result += "天"
+            case 4:
+                result += "\(beginning.count!)"
+                result += "星期"
+            case 5:
+                result += "\(beginning.count!)"
+                result += "月"
+            case 6:
+                result += "\(beginning.count!)"
+                result += "年"
+            default:
+                result += "\(beginning.count!)"
+                result += ""
+            }
+            
+        }
+        return result
+    }
+    ///获取带行高的高度
+    func getStrHeight(_ font:UIFont,_ str:String,_ lineSpace:CGFloat)->(NSMutableAttributedString,CGFloat){
+        let atr = NSMutableAttributedString.init(string: str)
+        let pary = NSMutableParagraphStyle.init()
+        pary.lineSpacing = lineSpace
+        atr.addAttributes([NSAttributedStringKey.font:font,NSAttributedStringKey.paragraphStyle:pary], range: NSRange.init(location: 0, length: str.count))
+        let rect = atr.boundingRect(with: CGSize.init(width: keyDeviceWidth-60, height: 1000), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil)
+        return (atr,rect.size.height)
+        
+    }
+    
+   
+    
+    func getcontentStrHeight(_ font:UIFont,_ str:String,_ lineSpace:CGFloat)->(NSMutableAttributedString,CGFloat){
+        let atr = NSMutableAttributedString.init(string: str)
+        let pary = NSMutableParagraphStyle.init()
+        pary.lineSpacing = lineSpace
+        atr.addAttributes([NSAttributedStringKey.font:font,NSAttributedStringKey.paragraphStyle:pary], range: NSRange.init(location: 0, length: str.count))
+        let rect = atr.boundingRect(with: CGSize.init(width:  keyDeviceWidth-119-20-20, height: 1000), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil)
+        return (atr,rect.size.height)
+        
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+    func getTableViewHeight()->CGFloat{
+        var height : CGFloat = 0
+        height = self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[1], 4).1 + 48*3
+        return height
+        
+    }
+}
+extension DetailViewController : UITableViewDelegate,UITableViewDataSource ,detailHeaderDelegate,detailFooterViewDelegate,detailTableHeaderDelegate{
+    func swithShowReturn() {
+        self.notif(withTitle: "事件已结束")
+    }
+    
+    func detailTableHeaderClick() {
+        let birthdayVC = BirthdayVC()
+        birthdayVC.birthdayEvent = event
+        navigationController?.show(birthdayVC, sender: nil)
+        //        if let birthdayVC = UIStoryboard(name: "Profile", bundle: Bundle.main).instantiateViewController(withIdentifier: "birthday") as? BirthdayVC{
+        //            birthdayVC.birthdayEvent = event
+        //            navigationController?.show(birthdayVC, sender: nil)
+        //        }
+    }
+    
+    func solveBtnClick() {
+        
+//        DataManager.share().finishEvent(withEventId: Int(self.event.id)) { (result, message) in
+//            if result == .failure{
+//                self.notif(withTitle: message)
+//                return
+//            }
+//            self.getStringData()
+//        }
+        self.alert(withTitle: "确定要删除这条重要事件") { (confrim) in
+            if confrim{
+                DataManager.share().deleteEvent(withEventId: Int(self.event.id)) { (result, message) in
+                    if result == .failure{
+                        return
+                    }
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.deleteEventWithID), object: nil, userInfo: ["eventID":self.event.id])
+                    self.backRootVC()
+                }
+            }
+        }
+    }
+    
+    //MARK:- 返回判断是否返回根视图
+    func backRootVC(){
+        guard let viewControllers = self.navigationController?.viewControllers else{
+            self.navigationController?.popToRootViewController(animated: true)
+            return
+        }
+        for vc in viewControllers{
+            if vc.isKind(of: HomeAllTableViewController.self){
+                self.navigationController?.popToViewController(vc, animated: true)
+                return
+            }
+        }
+        if let rootVC = navigationController?.viewControllers.first as? EventViewController{
+            rootVC.isEventClient = false
+        }
+        navigationController?.popToRootViewController(animated: true)
+        
+    }
+    
+    func edtingBtnClick() {
+        if let eventEditorNavigation = UIStoryboard(name: "EventHome", bundle: Bundle.main).instantiateViewController(withIdentifier: "editor") as? UINavigationController{
+            //根视图
+            if let eventEditorVC = eventEditorNavigation.viewControllers.first as? EventEditorVC{
+                
+                eventEditorVC.event = self.event
+                navigationController?.show(eventEditorVC, sender: nil)
+            }
+        }
+        
+        
+    }
+    
+    func switchvalueChange(_ ison: Bool) {
+        if ison{
+            
+            DataManager.share().startEvent(withEventId: Int(id)) { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.switchValueChange), object: nil, userInfo: ["code":0])
+                    return
+                }
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.switchValueChange), object: nil, userInfo: ["code":1])
+                DataManager.share().getEventInfo(withEventId: Int(self.event.id), closure: { (result, message, evnet) in
+                    self.event = evnet
+                    self.footerView.configView(self.event)
+                    
+                })
+            }
+        }else{
+            DataManager.share().pauseEvent(withEventId: Int(id)) { (result, message) in
+                if result == .failure{
+                    self.notif(withTitle: message)
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.switchValueChange), object: nil, userInfo: ["code":0])
+                    return
+                }
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: String.switchValueChange), object: nil, userInfo: ["code":1])
+                DataManager.share().getEventInfo(withEventId: Int(self.event.id), closure: { (result, message, evnet) in
+                    self.event = evnet
+                    self.footerView.configView(self.event)
+                    
+                })
+            }
+        }
+        
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.contentArr.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "detailTableViewCell")as!detailTableViewCell
+        cell.configView(titleArr[indexPath.row],contentArr[indexPath.row], indexPath.row == 4,indexPath.row == 0)
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.row == 2{
+            if self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[2], 4).1 < 25{
+                return self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[2], 4).1 + 26
+            }else{
+                return self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[2], 4).1 + 26
+            }
+           
+        }else if indexPath.row == 0{
+            if self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[0], 4).1 < 25{
+                return self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[0], 4).1 + 26
+            }else{
+                return self.getcontentStrHeight(UIFont.init(withNormalFontSize: 14), contentArr[0], 4).1 + 26
+            }
+        }else{
+            return 48
+        }
+        
+    }
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return CGFloat.leastNormalMagnitude
+    }
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 16))
+        view.backgroundColor = UIColor.white
+        return view
+    }
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        let view = UIView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth-20, height: 16))
+        view.backgroundColor = UIColor.white
+        return view
+    }
+    
+}

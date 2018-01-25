@@ -1,0 +1,217 @@
+//
+//  LoginRegisterView.swift
+//  Remind
+//
+//  Created by dong on 2018/1/4.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+import SnapKit
+
+struct LoginLayoutConstant {
+    
+    static let padding: CGFloat = 25
+    
+    static let buttonHeight: CGFloat = 44
+    
+    static let buttonMargin: CGFloat = 15
+    
+    static let buttonFontSize: CGFloat = 18
+    
+}
+
+enum LoginRegisterViewTitleType {
+    case big
+    case small
+}
+
+final class LoginRegisterView: UIView {
+    
+    var text: String {
+        return inputTextView.textField.text ?? ""
+    }
+    
+    var text2: String {
+        return inputTextView.textField2.text ?? ""
+    }
+    
+    func text(_ index: Int) -> String {
+        return inputTextView.textField(index).text ?? ""
+    }
+    
+    fileprivate(set) var inputTextView: LoginInputView!
+    
+    fileprivate(set) lazy var button: UIButton = {
+        let button = UIButton()
+        button.titleLabel?.font = UIFont.systemFont(ofSize: LoginLayoutConstant.buttonFontSize)
+        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(UIColor.white.withAlphaComponent(0.5), for: .disabled)
+        let themeColor = UIColor.orangeFont
+        button.setBackgroundImage(UIImage.image(color: themeColor), for: .normal)
+        button.setBackgroundImage(UIImage.image(color: themeColor), for: .disabled)
+        button.layer.cornerRadius = 3
+        button.clipsToBounds = true
+        button.isEnabled = false
+        return button
+    }()
+    
+    init(title: String, type: LoginRegisterViewTitleType, _ initializer: (LoginInputView) -> Void) {
+        super.init(frame: CGRect.zero)
+        backgroundColor = .white
+        
+        let titleLabel = UILabel()
+        titleLabel.textColor = UIColor.word
+        titleLabel.text = title
+        addSubview(titleLabel)
+        titleLabel.snp.makeConstraints { (make) in
+            make.centerX.equalToSuperview()
+        }
+        switch type {
+        case .big:
+            titleLabel.font = UIFont.systemFont(ofSize: 30)
+            titleLabel.snp.makeConstraints { (make) in
+                make.top.equalToSuperview().offset(93)
+            }
+        case .small:
+            titleLabel.font = UIFont.systemFont(ofSize: 18)
+            titleLabel.snp.makeConstraints { (make) in
+                make.top.equalToSuperview().offset(77)
+            }
+        }
+        
+        inputTextView = LoginInputView(initializer)
+        addSubview(inputTextView)
+        inputTextView.snp.makeConstraints { (make) in
+            make.leading.trailing.equalToSuperview().inset(25)
+        }
+        switch type {
+        case .big:
+            inputTextView.snp.makeConstraints { (make) in
+                make.top.equalTo(titleLabel.snp.bottom).offset(30)
+            }
+        case .small:
+            inputTextView.snp.makeConstraints { (make) in
+                make.top.equalTo(titleLabel.snp.bottom).offset(24)
+            }
+        }
+        
+        addSubview(button)
+        button.snp.makeConstraints { (make) in
+            make.leading.trailing.equalToSuperview().inset(LoginLayoutConstant.padding)
+            make.height.equalTo(LoginLayoutConstant.buttonHeight)
+            make.top.equalTo(inputTextView.snp.bottom).offset(LoginLayoutConstant.buttonMargin)
+        }
+        
+        inputTextView.subviews.flatMap { $0 as? UITextField }.forEach { (textField) in
+            textField.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
+        }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc fileprivate func editingChanged(textField: UITextField) {
+        if (textField as! MemberTextField).type == .phone {
+            let codeTextField = inputTextView.subviews.filter({ (view) -> Bool in
+                return (view as! MemberTextField).type == .code
+            }).first as? MemberTextField
+            let codeButton = codeTextField?.loginGetCodeView?.codeButton
+            guard codeButton?.type != .timing else {
+                return
+            }
+            
+            if (textField as! MemberTextField).isValid {
+                codeTextField?.loginGetCodeView?.codeButton.type = .normal
+            } else {
+                codeTextField?.loginGetCodeView?.codeButton.type = .disabled
+            }
+        }
+        
+        button.isEnabled = inputTextView.subviews.flatMap { $0 as? MemberTextField }.filter({ (textField) -> Bool in
+            return textField.isValid
+        }).count == inputTextView.subviews.count
+    }
+    
+}
+
+final class LoginInputView: UIView {
+    
+    var textField: UITextField {
+        return textField(0)
+    }
+    
+    var textField2: UITextField {
+        return textField(1)
+    }
+    
+    init(_ initializer: (LoginInputView) -> Void) {
+        super.init(frame: CGRect.zero)
+        loadView()
+        initializer(self)
+        makeConstraints()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+    
+    func textField(_ index: Int) -> UITextField {
+        return subviews[index] as! UITextField
+    }
+    
+    func addTextField(_ initializer: (MemberTextField) -> Void) {
+        let textField = MemberTextField()
+        textField.backgroundColor = .white
+        textField.font = UIFont.systemFont(ofSize: 14)
+        textField.textColor = UIColor.word
+        textField.clearButtonMode = .whileEditing
+        addSubview(textField)
+        textField.snp.makeConstraints { (make) in
+            make.leading.trailing.equalToSuperview()
+            make.height.equalTo(44)
+        }
+        let separateView = UIView()
+        separateView.backgroundColor = UIColor.grayBtn
+        textField.addSubview(separateView)
+        separateView.snp.makeConstraints { (make) in
+            make.bottom.left.right.equalToSuperview()
+            make.height.equalTo(1 / UIScreen.main.scale)
+        }
+        initializer(textField)
+    }
+    
+    fileprivate func makeConstraints() {
+        updateConstraints()
+        subviews.enumerated().forEach { (index, textField) in
+            if index == 0 {
+                textField.snp.makeConstraints({ (make) in
+                    make.top.equalToSuperview()
+                })
+            } else {
+                let preView = subviews[index - 1]
+                textField.snp.makeConstraints({ (make) in
+                    make.top.equalTo(preView.snp.bottom).offset(0.5)
+                })
+            }
+            
+            if index == subviews.count - 1 {
+                textField.snp.makeConstraints({ (make) in
+                    make.bottom.equalToSuperview()
+                })
+            }
+        }
+    }
+    
+    fileprivate func loadView() {
+
+//        backgroundColor = UIColor.grayBtn
+//        layer.borderWidth = 0.5
+//        layer.borderColor = UIColor.grayBtn.cgColor
+//        layer.cornerRadius = 5
+    }
+    
+}
+

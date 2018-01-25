@@ -1,0 +1,312 @@
+//
+//  DM+Weather.swift
+//  RemindData
+//
+//  Created by gg on 09/12/2017.
+//  Copyright © 2017 ganyi. All rights reserved.
+//
+
+import Foundation
+import CoreLocation
+
+public struct WeatherSetting {
+    public var ring = ""
+    public var date = Date()
+    public var isPause = false
+    public var cityCount = 0
+    public var isEmailOpen = false
+    public var isBindingEmail = false
+    public var isWeixinOpen = false
+    public var isBindingWeixin = false
+    public var wxNickName = ""
+    public var email = ""
+}
+
+
+extension DataManager{
+    //MARK:- 获取天气列表
+    public func getWeatherInfo(withCity city: City, withDays days: Int = 4, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ weather: WeatherModel)->()){
+        let dic = [
+            "city": city.name,
+            "days": "\(days)"
+        ]
+        
+        Session.session(withAction: Actions.getWeatherInfo, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, WeatherModel())
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else {
+                    return
+                }
+                
+                guard let weatherData = dataDic["data"] as? [String: Any] else{
+                    closure(.failure, "json error", WeatherModel())
+                    return
+                }
+                
+                let weather = self.getWeather(fromJSON: weatherData)
+                closure(.success, message, weather)
+            }
+        }
+    }
+    
+    //MARK:- 获取所有城市 isLocal是否获取本地缓存
+    public func getAllCityList(withLocal isLocal: Bool = false, withSearchName searchName: String?, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ cityList: [City])->()){
+        if isLocal {
+            let allCity = readCityFile()
+            closure(.success, "成功", allCity)
+        }else{
+            var dic = [String: Any]()
+            if let schName = searchName{
+                dic["name"] = schName
+            }
+            Session.session(withAction: Actions.getCityList, withRequestMethod: .post, withParam: dic, closure: { (codeResult, message, data) in
+                DispatchQueue.main.async {
+                    guard codeResult == .success else{
+                        closure(.failure, message, [])
+                        return
+                    }
+                    
+                    guard let citysDic = data as? [[String: Any]] else{
+                        return
+                    }
+                    
+                    let cityList = getCityList(fromJSON: citysDic)
+                    closure(.success, message, cityList)
+                }
+            })
+        }
+    }
+    
+    //MARK:- 获取热门城市
+    public func getAllHotCityList(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ cityList: [City])->()){
+        Session.session(withAction: Actions.getHotCityList, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let hotCitysDic = data as? [[String: Any]] else{
+                    return
+                }
+                let hotCityList = getCityList(fromJSON: hotCitysDic)
+                closure(.success, message, hotCityList)
+            }
+        }
+    }
+    
+    //MARK:- 获取用户收藏城市
+    public func getMarkedWeatherList(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ weatherModelList: [WeatherModel])->()){
+        Session.session(withAction: Actions.getMarkCityList, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, [])
+                    return
+                }
+                
+                guard let datasDic = data as? [[String: Any]] else{
+                    return
+                }
+                
+                var weatherList = [WeatherModel]()
+                for dataDic in datasDic{
+                    let weatherModel = self.getWeather(fromJSON: dataDic)
+                    weatherList.append(weatherModel)
+                }
+                closure(.success, message, weatherList)
+            }
+        }
+    }
+    
+    //MARK:- 用户收藏城市
+    public func addCityList(withCityList cityList: [City], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var jsonStr = "["
+        for (index, city) in cityList.enumerated(){
+            if index != 0{
+                jsonStr += ","
+            }
+            jsonStr += "{"
+            jsonStr += "\"cityId\":\"\(city.id)\",\"name\":\"\(city.name)\",\"sort\":\"\(city.sort)\""
+            jsonStr += "}"
+        }
+        jsonStr += "]"
+        
+        let dic = ["data": jsonStr]
+        Session.session(withAction: Actions.markCity, withRequestMethod: .post, withParam: dic, closure: { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        })
+    }
+    
+    ///排序城市
+    public func sortCity(withCityList cityList: [City], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        
+        var dataDic = [[String: Any]]()
+        for city in cityList{
+            let dic = [
+                "id": city.id,
+                "sort": 0
+            ]
+            dataDic.append(dic)
+        }
+        
+        let jsonDic = ["data": dataDic]
+        
+        Session.session(withAction: Actions.sortCity, withRequestMethod: .post, withParam: jsonDic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    ///收藏单个城市
+    public func addCity(withCity city: City, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "cityId": "\(city.id)",
+            "name": city.name
+        ]
+        Session.session(withAction: Actions.markSingleCity, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    //MARK:- 取消收藏城市
+    public func deleteCity(withCityId cityId: Int, withIsLocal localFlag: Bool = false, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = ["id": "\(cityId)", "localFlag": "\(localFlag ? 1 : 0)"]
+        Session.session(withAction: Actions.unmarkCity, withRequestMethod: .post, withParam: dic, closure: { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        })
+    }
+    
+    //MARK:- 获取用户天气提醒设置
+    public func getWeatherSetting(closure: @escaping (_ codeResult: CodeResult, _ message: String, _ weatherSetting: WeatherSetting)->()){
+        Session.session(withAction: Actions.getWeatherSetting, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                var weatherSetting = WeatherSetting()
+                guard codeResult == .success else{
+                    closure(.failure, message, weatherSetting)
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else{
+                    closure(.failure, "error json data", weatherSetting)
+                    return
+                }
+                
+                if let ring = dataDic["ring"] as? String{
+                    weatherSetting.ring = ring
+                }
+                
+                if let dateStr = dataDic["beginTime"] as? String{
+                    let date = Date(withDateStr: dateStr, withFormatStr: "H:mm")
+                    weatherSetting.date = date
+                }
+                
+                if let status = dataDic["status"] as? Int{
+                    weatherSetting.isPause = status == 1
+                }
+                weatherSetting.cityCount = dataDic["cityCount"] as? Int ?? 0
+                weatherSetting.isEmailOpen = dataDic["byEmail"] as? Bool ?? false
+                weatherSetting.isWeixinOpen = dataDic["byWeixin"] as? Bool ?? false
+                weatherSetting.isBindingEmail = dataDic["isBindingEmail"] as? Bool ?? false
+                weatherSetting.isBindingWeixin = dataDic["isBindingWeixin"] as? Bool ?? false
+                weatherSetting.wxNickName = dataDic["wxNickName"] as? String ?? ""
+                weatherSetting.email = dataDic["email"] as? String ?? ""
+                
+                closure(.success, message, weatherSetting)
+            }
+        }
+    }
+    
+    //MARK:- 保存用户天气提醒设置
+    public func setWeatherSetting(withWeatherSetting weatherSetting: WeatherSetting , closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "ring": weatherSetting.ring,
+            "time": weatherSetting.date.formatString(with: "H:mm"),
+            "status": weatherSetting.isPause ? "1" : "0"
+        ]
+        Session.session(withAction: Actions.setWeatherSetting, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    
+    
+    //MARK:- 根据定位添加城市
+    public func setLocationCity(withCityLocation cityLocation: CLLocationCoordinate2D, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        let dic = [
+            "lon": "\(cityLocation.longitude)",     //经度
+            "lat": "\(cityLocation.latitude)"
+        ]
+        
+        Session.session(withAction: Actions.setLocationCity, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
+    
+    
+    
+    //************************************************************************************************************************
+    //MARK:- 解析天气数据
+    func getWeather(fromJSON jsonData: [String: Any]) -> WeatherModel{
+        var weather = WeatherModel()
+        if let cityName = jsonData["city"] as? String{
+            var city = City()
+            city.name = cityName
+            city.id = jsonData["cityId"] as? Int ?? 0
+            city.localFlag = (jsonData["localFlag"] as? Int ?? 0) == 1
+            weather.city = city
+        }
+        weather.date = jsonData["date"] as? String ?? ""         //日期
+        weather.week = jsonData["week"] as? String ?? ""         //周几
+        weather.lunar = jsonData["lunar"] as? String ?? ""       //农历日期
+        weather.weather = jsonData["weather"] as? String ?? ""   //天气情况
+        if let aqi = jsonData["aqi"] as? String{                 //空气质量指数
+            weather.aqi = aqi
+        }
+        if let temp = jsonData["temp"] as? String{                  //温度
+            weather.temp = Int(temp) ?? 0
+        }
+        if let tempHigh = jsonData["tempHigh"] as? String{          //最高温度
+            weather.tempHigh = Int(tempHigh) ?? 0
+        }
+        if let tempLow = jsonData["tempLow"] as? String{            //最低温度
+            weather.tempLow = Int(tempLow) ?? 0
+        }
+        if let aqiInfoData = jsonData["aqiInfo"] as? [String: String]{       //空气质量指数详情
+            var aqiInfo = AqiInfoModel()
+            aqiInfo.level = aqiInfoData["level"] ?? ""              //等级
+            if let colorHexStr = aqiInfoData["color"] {             //颜色
+                aqiInfo.color = UIColor(colorHexStr: colorHexStr)
+            }
+            aqiInfo.affect = aqiInfoData["affect"] ?? ""            //影响提示
+            aqiInfo.measure = aqiInfoData["measure"] ?? ""          //注意事项
+            
+            weather.aqiInfo = aqiInfo
+        }
+        weather.imgStr = jsonData["img"] as? String ?? "0"          //图片数字
+        weather.quality = jsonData["quality"] as? String ?? ""      //优良
+        if let dailyDataList = jsonData["daily"] as? [[String: Any]]{
+            for dailyData in dailyDataList{
+                let dailyWeather = getWeather(fromJSON: dailyData)
+                weather.dailyList.append(dailyWeather)
+            }
+        }
+        
+        return weather
+    }
+}

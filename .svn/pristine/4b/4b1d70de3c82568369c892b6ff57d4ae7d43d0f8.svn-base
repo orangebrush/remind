@@ -1,0 +1,82 @@
+//
+//  RetrievePasswordSettingNewPasswordViewController.swift
+//  Remind
+//
+//  Created by dong on 2018/1/8.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+final class RetrievePasswordSettingNewPasswordViewController: BaseLoginViewController {
+    
+    fileprivate lazy var loginRegisterView: LoginRegisterView = {
+        let loginRegisterView = LoginRegisterView(title: "设置新密码", type: .small, { (inputView) in
+            inputView.addTextField { (textField) in
+                textField.placeholder = "新密码 (8-32个字符)"
+                textField.setRightViewType(type: .password)
+                textField.returnKeyType = .next
+            }
+            inputView.addTextField { (textField) in
+                textField.placeholder = "确认新密码"
+                textField.setRightViewType(type: .password)
+                textField.returnKeyType = .done
+            }
+        })
+        
+        loginRegisterView.button.setTitle("确定", for: .normal)
+        loginRegisterView.button.addTarget(self, action: #selector(confirm), for: .touchUpInside)
+        return loginRegisterView
+    }()
+    
+    fileprivate let phoneNumber: String
+    
+    init(phoneNumber: String) {
+        self.phoneNumber = phoneNumber
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Do any additional setup after loading the view.
+        view.addSubview(loginRegisterView)
+        loginRegisterView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+    }
+    
+}
+
+extension RetrievePasswordSettingNewPasswordViewController {
+    
+    @objc fileprivate func confirm() {
+        let password = loginRegisterView.text
+        let password2 = loginRegisterView.text2
+        
+        guard password == password2 else {
+//            MSGToast.show("两次输入的密码不一致", inView: self.view)
+            return
+        }
+        
+        let (isValid, validateError) = LoginValidate.validatePassword(text: password)
+        guard isValid else {
+//            MSGToast.show(validateError, inView: self.view)
+            return
+        }
+        
+        view.endEditing(true)
+//        MSGToast.show("设置中", isloading: true, inView: view)
+//        LoginService.resetNewPassword(phoneNumber: phoneNumber, password: password, successHandler: { (_) in
+//            MSGToast.cancel()
+//            self.navigationController?.popToRootViewController(animated: true)
+//        }) { (error) in
+//            MSGToast.show(error.errorMessage, inView: self.view)
+//        }
+    }
+    
+}
