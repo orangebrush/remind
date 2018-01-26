@@ -1,0 +1,95 @@
+//
+//  CKFestivalViewController.swift
+//  Remind
+//
+//  Created by mk on 2018/1/25.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class CKFestivalViewController: UIViewController, UIScrollViewDelegate {
+    
+    var dataSource: [Any]? = []
+
+    var segementControl :DDSegmentedControl?
+    var scrollView :UIScrollView?
+    var isShowVCArray = [UIViewController]()
+    var VCArray = [CKAllFestivalViewController(),CKChinaFestivalViewController(),CKWorldFestivalViewController(),CKHolidayFestivalViewController()]
+    var currentIndex: UInt? {
+        didSet {
+            let VC = VCArray[Int(currentIndex!)]
+            if isShowVCArray.contains(VC) == false {
+                VC.title = ["全部","中国节日","世界节日","节气"][Int(currentIndex!)]
+                self.addChildViewController(VC)
+                self.scrollView?.addSubview(VC.view!)
+                VC.view!.snp.makeConstraints({ (make) in
+                    make.top.bottom.equalToSuperview()
+                    make.width.equalTo(SCREEN_WIDTH)
+                    make.left.equalTo( CGFloat(currentIndex!) * SCREEN_WIDTH)
+                })
+                isShowVCArray.append(VC)
+            }
+        }
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Do any additional setup after loading the view.
+        let titles = ["全部","中国节日","世界节日","节气"]
+        view.backgroundColor = .white
+        segementControl = DDSegmentedControl.init(frame: CGRect(x: 15, y: 15, width: SCREEN_WIDTH-30, height: 30.0), displayLine: false, titles:titles, index: 0, backgroundColor: .white, titleColor: UIColor.init(colorHex: 0x999999), indicatorViewBackgroundColor: UIColor.clear, selectedTitleColor: UIColor.confirm,isFollowSliding: true) {
+            if let index = self.segementControl?.index {
+                self.scrollView?.setContentOffset(CGPoint(x: CGFloat(index) * SCREEN_WIDTH, y: 0), animated: true)
+                self.currentIndex = index
+            }
+        }
+//        segmentedControlSelected(CGRect(x: 15, y: 0, width: SCREEN_WIDTH-30, height: 60.0), count: titles.count, segmentedControl: segementControl!)
+        self.view.addSubview(segementControl!)
+        
+
+        scrollView = UIScrollView(frame: CGRect(x: 0, y: segementControl!.bottom+15, width: self.view.bounds.width, height: self.view.frame.height - segementControl!.bottom - 10))
+        scrollView?.contentSize = CGSize(width: SCREEN_WIDTH * CGFloat(titles.count), height: (scrollView?.frame.height)!)
+        scrollView?.isPagingEnabled = true
+        scrollView?.bounces = false
+        scrollView?.delegate = self
+        scrollView?.showsHorizontalScrollIndicator = false
+        view.addSubview(scrollView!)
+        
+        for (i ,vc) in VCArray.enumerated() {
+            vc.view.frame = CGRect(x: (scrollView?.width)! * CGFloat(i) , y: 0, width: SCREEN_WIDTH, height: (scrollView?.height)!)
+        }
+        
+        currentIndex = 0
+        
+        
+        scrollView?.snp.makeConstraints { (make) in
+            make.right.left.equalToSuperview()
+            make.top.equalTo(segementControl!.bottom+15)
+            make.bottom.equalTo(0)
+        }
+        
+        let contentView: UIView = UIView()
+        scrollView?.insertSubview(contentView, at: 0)
+        contentView.snp.makeConstraints({ (make) in
+            make.top.left.bottom.right.equalToSuperview()
+            make.width.equalTo(SCREEN_WIDTH * CGFloat(titles.count))
+            make.height.equalToSuperview()
+        })
+        
+        
+    }
+    
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        segementControl?.moveIndicatorViewFrame(proportionX: CGFloat(scrollView.contentOffset.x / (scrollView.contentSize.width - scrollView.width)))
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        let index = UInt(scrollView.contentOffset.x) / UInt(SCREEN_WIDTH)
+        segementControl?.set(index)
+        
+    }
+
+}

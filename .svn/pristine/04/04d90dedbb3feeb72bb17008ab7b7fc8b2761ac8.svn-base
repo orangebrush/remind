@@ -1,0 +1,253 @@
+//
+//  DetailWebViewController.swift
+//  Remind
+//
+//  Created by zxd on 2018/1/25.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+import WebKit
+class DetailWebViewController: BasedViewController,UIScrollViewDelegate {
+    fileprivate lazy var  mainScrollView : UIScrollView = {
+        let scroll = UIScrollView.init()
+        scroll.delegate = self
+        scroll.isPagingEnabled = true
+        scroll.alwaysBounceVertical = false
+        scroll.showsHorizontalScrollIndicator = false
+        return scroll
+    }()
+    fileprivate lazy var topCoverView : UIView = {
+        let tempView = UIView.init()
+        tempView.backgroundColor = UIColor.black.withAlphaComponent(0)
+        return tempView
+    }()
+    fileprivate lazy var topCoverView1 : UIView = {
+        let tempView = UIView.init()
+        tempView.backgroundColor = UIColor.black.withAlphaComponent(0)
+        return tempView
+    }()
+    
+    fileprivate lazy var backButton : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.addTarget(self, action: #selector(DetailWebViewController.backClick), for: .touchUpInside)
+        btn.setImage(#imageLiteral(resourceName: "web_detail_back"), for: .normal)
+        return btn
+    }()
+    fileprivate lazy var shareButton : UIButton = {
+        let btn = UIButton.init(type: .custom)
+        btn.addTarget(self, action: #selector(DetailWebViewController.shareClick), for: .touchUpInside)
+        btn.setImage(#imageLiteral(resourceName: "web_detail_share"), for: .normal)
+        return btn
+    }()
+    fileprivate lazy var cityLable : UILabel = {
+        let label = UILabel.init()
+        label.textAlignment = .center
+        label.font = UIFont.init(withNormalFontSize: 17)
+        label.textColor = UIColor.white
+        return label
+    }()
+    fileprivate lazy var locationImage : UIImageView = {
+        let img = UIImageView.init()
+        img.image = #imageLiteral(resourceName: "web_detail_location")
+        return img
+    }()
+    fileprivate lazy var addImage : UIImageView = {
+        let img = UIImageView.init()
+        img.image = #imageLiteral(resourceName: "web_detail_add")
+        return img
+    }()
+    fileprivate lazy var addButton : UIButton = {
+        let button = UIButton.init(type: .custom)
+        button.addTarget(self, action: "", for: .touchUpInside)
+        return button
+    }()
+    var  isMarked = true
+    var webArr = [Int]()
+    var webViewArr = [WKWebView]()
+    var dataArr = [WeatherModel]()
+    var wetherModel : WeatherModel?
+    var currentIndex = 0
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.automaticallyAdjustsScrollViewInsets = false
+        self.navigationController?.navigationBar.isHidden = true
+        mainScrollView.frame = self.view.bounds
+        mainScrollView.contentSize = CGSize.init(width: keyDeviceWidth*CGFloat(3), height: keyDeviceHeight)
+        mainScrollView.setContentOffset(CGPoint.init(x: keyDeviceWidth, y: 0), animated: false)
+        self.view.addSubview(mainScrollView)
+        self.view.backgroundColor = UIColor.bgColor
+        topCoverView1.frame = CGRect.init(x: 0, y: 0, width: UIApplication.shared.statusBarFrame.size.width, height:UIApplication.shared.statusBarFrame.size.height)
+        self.view.addSubview(topCoverView1)
+        topCoverView.frame = CGRect.init(x: 0, y: UIApplication.shared.statusBarFrame.size.height, width: UIApplication.shared.statusBarFrame.size.width, height:44)
+        self.view.addSubview(topCoverView)
+        
+        topCoverView.addSubview(backButton)
+        topCoverView.addSubview(locationImage)
+        topCoverView.addSubview(cityLable)
+        topCoverView.addSubview(addImage)
+        topCoverView.addSubview(shareButton)
+        
+        backButton.snp.makeConstraints { (make) in
+            make.left.equalTo(12)
+            make.centerY.equalToSuperview()
+            make.width.height.equalTo(25)
+        }
+        locationImage.snp.makeConstraints { (make) in
+            make.width.equalTo(11)
+            make.height.equalTo(14)
+            make.centerY.equalToSuperview()
+            make.right.equalTo(cityLable.snp.left).offset(-5)
+        }
+        cityLable.snp.makeConstraints { (make) in
+            make.center.equalToSuperview()
+            make.top.bottom.equalTo(0)
+        }
+        addImage.snp.makeConstraints { (make) in
+            make.left.equalTo(cityLable.snp.right)
+            make.centerY.equalToSuperview()
+        }
+        shareButton.snp.makeConstraints { (make) in
+            make.right.equalTo(-20)
+            make.width.height.equalTo(25)
+            make.centerY.equalToSuperview()
+        }
+        self.cityLable.text = wetherModel?.city.name ?? ""
+        self.resetData()
+        self.addMainViewToScrollView(true)
+        
+    }
+    //重制data
+    func resetData(){
+        if self.dataArr.count < 2{
+            self.mainScrollView.contentSize = CGSize.init(width: keyDeviceWidth*CGFloat(self.dataArr.count), height: keyDeviceHeight)
+        }else{
+            let frist = self.dataArr.first
+            let end = self.dataArr.last
+            self.dataArr.insert(end!, at: 0)
+            self.dataArr.append(frist!)
+            self.mainScrollView.contentSize = CGSize.init(width: keyDeviceWidth*CGFloat(self.dataArr.count), height: keyDeviceHeight)
+            
+        }
+        //获取附近的cell
+        //        let tempcity1 = self.wetherModel?.city
+        //        var tempcity2 : City?
+        //        var tempcity3 : City?
+        
+        
+    }
+    //MARK:- 判断是否创建cell
+    func isContain(_ index:Int)->Bool{
+        return self.webArr.contains(index)
+    }
+    //MARK:- 创建WKWebView
+    func addView(_ index:Int){
+        let web = WKWebView.init(frame: CGRect.init(x: keyDeviceWidth*CGFloat(index), y: -UIApplication.shared.statusBarFrame.size.height, width: keyDeviceWidth, height: keyDeviceHeight+UIApplication.shared.statusBarFrame.size.height))
+        web.load(URLRequest.init(url:URL.init(string:Urls.host + "weather/info?cityid=\(self.dataArr[index].city.id)&uid=\(MemberManager.share().member?.uuid ?? "")")!))
+        web.scrollView.delegate = self
+        web.tag = index
+        webViewArr.append(web)
+        mainScrollView.addSubview(web)
+    }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView == mainScrollView{
+            return
+        }
+        var value = (scrollView.contentOffset.y + UIApplication.shared.statusBarFrame.size.height)/(UIApplication.shared.statusBarFrame.size.height+44)*0.3
+        if scrollView.contentOffset.y <= -UIApplication.shared.statusBarFrame.size.height{
+            value = 0
+        }
+        if value > 0.3{
+            value = 0.3
+        }
+        topCoverView.backgroundColor = UIColor.black.withAlphaComponent(value)
+        topCoverView1.backgroundColor = UIColor.black.withAlphaComponent(value)
+        
+    }
+    
+    //MARK:- 向mainScrollView上添加视图
+    func addMainViewToScrollView(_ isFrist:Bool){
+        for (index,model) in self.dataArr.enumerated(){
+            
+            if model.city.id == self.wetherModel?.city.id{
+                self.currentIndex = index
+                if isFrist{
+                    self.mainScrollView.setContentOffset(CGPoint.init(x: keyDeviceWidth*CGFloat(index), y: 0) , animated: false)
+                }
+                if !isContain(index){
+                    self.addView(index)
+                    self.webArr.append(index)
+                }
+                if index-1>=0{
+                    if !isContain(index-1){
+                        self.addView(index-1)
+                        self.webArr.append(index-1)
+                    }
+                }
+                if index+1 <= self.dataArr.count-1{
+                    if !isContain(index+1){
+                        self.addView(index+1)
+                        self.webArr.append(index+1)
+                    }
+                }
+            }
+            
+            
+            
+        }
+    }
+    //获取所有收藏城市
+    func getMainData(){
+        DataManager.share().getMarkedWeatherList { (result, message, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.dataArr = list
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        if scrollView == mainScrollView{
+            if scrollView.contentOffset.x == 0{
+                scrollView.setContentOffset(CGPoint.init(x: keyDeviceWidth*CGFloat(self.dataArr.count-2), y: 0), animated: false)
+            }
+            
+            if scrollView.contentOffset.x == keyDeviceWidth*CGFloat(self.dataArr.count-1){
+                scrollView.setContentOffset(CGPoint.init(x: keyDeviceWidth*CGFloat(1), y: 0), animated: false)
+            }
+            self.wetherModel = self.dataArr[Int(scrollView.contentOffset.x)/Int(keyDeviceWidth)]
+            cityLable.text = self.wetherModel?.city.name
+            
+            self.addMainViewToScrollView(false)
+            for item in self.webViewArr{
+                item.scrollView.setContentOffset(CGPoint.init(x: 0, y: -UIApplication.shared.statusBarFrame.size.height), animated: false)
+            }
+        }
+        
+    }
+    
+    
+    @objc func backClick(){
+        self.navigationController?.popViewController(animated: true)
+    }
+    @objc func shareClick(){
+        
+    }
+    @objc func addClick(){
+        
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(true)
+        self.navigationController?.navigationBar.isHidden = false
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        
+    }
+    
+    
+    
+    
+}

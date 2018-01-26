@@ -1,0 +1,280 @@
+//
+//  remainedTableViewController.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/25.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class remainedTableViewController: BasedTableViewController {
+    var page = 1
+    var noticeList = [Notice]()
+    var stingArr = [String]()
+    var selectRow = 0
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = UIColor.clear
+        tableView.register(noticeTableViewCell.self, forCellReuseIdentifier: "noticeTableViewCell")
+        
+        tableView.contentInset = UIEdgeInsetsMake(0, 0, 40, 0)
+        
+        
+        self.addHeadFooter()
+        self.getNewData()
+        self.updateBackground()
+      
+        self.title = "提醒消息"
+        //添加通知来刷新列表
+        NotificationCenter.default.addObserver(self, selector: #selector(remainedTableViewController.getNewData), name: NSNotification.Name(rawValue: String.refrshMessage), object: nil)
+
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        let item1 = BarButtonItem(textStr: "提醒", imageName: "navbar_icon_back", tSelector: #selector(backToPrevious))
+        self.navigationItem.leftBarButtonItems = customItemsPosition(items: [item1], position: .left)
+        self.configDelteButton()
+    }
+    
+    fileprivate func configDelteButton() {
+        if self.noticeList.count != 0 {
+            let item = BarButtonItem(textStr: "清空", tSelector: #selector(remainedTableViewController.deleteBtnClick))
+            self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+            
+        } else {
+            //灰掉
+            let item = BarButtonItem(textStr: "清空", textColor: UIColor.init(colorHex: 0xffffff, alpha: 0.6),  tSelector: #selector(remainedTableViewController.deleteBtnClick))
+            self.navigationItem.rightBarButtonItems = customItemsPosition(items: [item], position: .right)
+            
+        }
+    }
+    
+    //MARK:- 清空数据接口
+    @objc func deleteBtnClick(){
+        
+        if self.noticeList.count == 0{
+            return
+        }
+        self.alert(withTitle: "是否清空所有消息") { (confrim) in
+            if confrim {
+                DataManager.share().deleteAllNotices { (result, message) in
+                    if result == .failure{
+                        self.notif(withTitle: message)
+                        return
+                    }
+                    self.noticeList.removeAll()
+                    self.page = 1
+                    self.tableView.reloadData()
+                    self.configDelteButton()
+                }
+            }
+        }
+
+    }
+    @objc func backBtnClick(){
+        self.navigationController?.popViewController(animated: true)
+    }
+    //MARK:- 获取tableview的数据
+    func getOldData(){
+        
+        var minID = 0
+        if noticeList.count != 0{
+            
+            let idList = noticeList.map({$0.id})
+            guard let minId = idList.min() else{
+                return
+            }
+            minID = Int(minId)
+        }
+        DataManager.share().getNoticeList(withPageSize: 20, withId: minID, withGetNewNerLog: false) { (result, message, hasOtherNotice ,list)  in
+            
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            for notice in list{
+                self.stingArr.append(notice.time!)
+            }
+            self.noticeList = list + self.noticeList
+            self.endReflesh(self.noticeList.count<20 ? false : true)
+            self.tableView.reloadData()
+            self.configDelteButton()
+        }
+    }
+    
+    //MARK:- 获取新数据
+    @objc func getNewData(){
+        var maxID = 0
+        if noticeList.count != 0{
+           let idList = noticeList.map({$0.id})
+            guard let maxId = idList.max()else{
+                return
+            }
+            maxID = Int(maxId)
+        }
+        DataManager.share().getNoticeList(withPageSize: 20, withId: maxID, withGetNewNerLog: true) { (result, message , true, list) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            for notice in list{
+                self.stingArr.append(notice.time!)
+            }
+            self.noticeList = self.noticeList + list
+            self.tableView.reloadData()
+            if self.noticeList.count > 0{
+                self.tableView.scrollToRow(at: IndexPath.init(row: self.noticeList.count-1, section: 0), at: .bottom, animated: false)
+            }
+            
+            self.configDelteButton()
+        }
+    }
+    
+    
+    func endReflesh(_ hasMore:Bool){
+        if self.tableView.mj_header.isRefreshing{
+            self.tableView.mj_header.endRefreshing()
+            if !hasMore{
+                notif(withTitle: "没有更多数据了")
+            }
+        }
+    }
+    
+    //MARK:- 为tableview 添加头尾刷新
+    func addHeadFooter(){
+        let header = CKCylinderReversibleHeader.init {
+            self.page += 1
+            self.getOldData()
+        }
+        header?.cylinderColor = UIColor.subSubWord
+        tableView.mj_header = header
+        
+    }
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    // MARK: - Table view data source
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        
+        return 1
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let notice = self.noticeList[indexPath.row]
+        var height : CGFloat = 0
+        if notice.isOperated {
+            height = 40
+        }
+        var contain = false
+        if indexPath.row == 0{
+            return 195 + height
+        }else{
+            for i in  0..<indexPath.row{
+                if i < stingArr.count - 1{
+                    if stingArr[i] == stingArr[indexPath.row]{
+                        contain = true
+                    }
+                }
+            }
+            if contain {
+                return 156 + height
+            }else{
+                return 195 + height
+            }
+        }
+    }
+    
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.noticeList.count
+    }
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "noticeTableViewCell", for: indexPath)as!noticeTableViewCell
+        var contain = false
+        if indexPath.row == 0{
+            contain = false
+        }else{
+            for i in  0..<indexPath.row{
+                if stingArr[i] == stingArr[indexPath.row]{
+                    contain = true
+                }
+            }
+        }
+        cell.delegate = self
+        cell.configView(noticeList[indexPath.row], !contain, indexPath.row)
+        return cell
+    }
+}
+extension remainedTableViewController : noticeTableViewCellDelegate,homeEdtingViewDegate{
+    func solveButtonClick(_ row: Int) {
+        let notice = noticeList[row]
+        DataManager.share().finishNotice(withNotice: notice) { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            let tempID = self.noticeList[row].notificationId
+            for item in self.noticeList{
+                if item.notificationId == tempID {
+                   item.isOperated = false
+                    self.tableView.reloadRows(at: [IndexPath.init(row: row, section: 0)], with: .none)
+                }
+            }
+//            self.noticeList[row].isOperated = false
+            
+            
+        }
+    }
+    
+  
+    func edtingBtnClick(_ row: Int) {
+        guard  selectRow < noticeList.count else{
+            return
+        }
+        let notice = noticeList[selectRow]
+        DataManager.share().deleteNotice(withNoticeId: Int(notice.id), closure: { (result, message) in
+            if result == .failure{
+                self.notif(withTitle: message)
+                return
+            }
+            self.noticeList.remove(at: self.selectRow)
+            self.stingArr.remove(at: self.selectRow)
+            self.tableView.reloadData()
+        })
+    }
+    func buttonClick(_ row: Int) {
+        let notice = self.noticeList[row]
+        let homeEdtingView = HomeEdtingView.init(frame: CGRect.init(x: 0, y: 0, width: keyDeviceWidth, height: keyDeviceHeight))
+        homeEdtingView.delegate = self
+        selectRow = row
+        guard let cell = tableView.cellForRow(at: IndexPath.init(row: row, section: 0)) else{
+            return
+        }
+        
+        var top : CGFloat = 0
+        top = cell.frame.origin.y-tableView.contentOffset.y
+        if cell.frame.size.height > 160{
+            top = top + 49
+        }else{
+            top = top + 10
+        }
+        
+        homeEdtingView.configMessageView(notice.isBeginning, top, notice.isOperated, true)
+        UIApplication.shared.keyWindow?.addSubview(homeEdtingView)
+        
+
+        
+    }
+    
+    func cellClick(_ row: Int) {
+        //跳转详情界面
+    }
+    
+    
+    
+    
+}

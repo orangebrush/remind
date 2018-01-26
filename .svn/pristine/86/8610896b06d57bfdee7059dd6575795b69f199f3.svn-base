@@ -1,0 +1,82 @@
+//
+//  ZoomUpTransitioning.swift
+//  Remind
+//
+//  Created by dong on 2018/1/26.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+import Foundation
+
+class ZoomUpTransitioning: NSObject, UIViewControllerAnimatedTransitioning {
+    
+    fileprivate weak var transitionContext: UIViewControllerContextTransitioning?
+    fileprivate weak var fromViewController: UIViewController?
+    fileprivate weak var toViewController: UIViewController?
+    
+    private var startRect: CGRect?
+    
+    convenience init(startRect: CGRect) {
+        self.init()
+        
+        self.startRect = startRect
+    }
+    
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        
+        return 0.3
+    }
+    
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        
+        self.transitionContext = transitionContext
+
+        toViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.to)
+        fromViewController = transitionContext.viewController(forKey: .from)
+
+        let finalFrame = transitionContext.finalFrame(for: toViewController!)
+        toViewController?.view.frame = finalFrame.offsetBy(dx: 0, dy: 0)
+        let containerView = transitionContext.containerView
+
+        let toViewView = toViewController!.view
+        containerView.addSubview(toViewView!)
+        
+
+        let originFrame = CGRect.init(x: 0, y: 100, width: keyDeviceWidth, height: 200)
+        let xScale = originFrame.size.width/(toViewView?.frame.size.width)!
+        let yScale = originFrame.size.height/(toViewView?.frame.size.height)!
+        toViewView?.transform = CGAffineTransform(scaleX: xScale, y: yScale)
+        toViewView?.center = CGPoint.init(x: originFrame.midX, y: originFrame.midY)
+        
+        containerView.addSubview(toViewView!)
+        UIView.animate(withDuration: 0.3, animations: { () -> Void in
+            toViewView?.center = CGPoint.init(x: finalFrame.midX, y: finalFrame.midY)
+            toViewView?.transform = CGAffineTransform.identity
+        }) { (finished) -> Void in
+            transitionContext.completeTransition(true)
+        }
+
+
+//        let values = [0, 0.25, 0.5, 0.75, 1]
+//        let keyTimes = [0, 0.25, 0.5, 0.75, 1]
+//
+//        let maskAnim = CAKeyframeAnimation(keyPath: "transform.scale")
+//        maskAnim.values = values
+//        maskAnim.keyTimes = keyTimes as [NSNumber]
+//        maskAnim.duration = 0.3
+//        maskAnim.isRemovedOnCompletion = true
+//        maskAnim.fillMode = kCAFillModeBoth
+//        maskAnim.delegate = self
+//        maskAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn)
+//        toViewController?.view.layer.add(maskAnim, forKey: nil)
+
+    }
+}
+
+//MARK:- 路径动画代理
+extension ZoomUpTransitioning: CAAnimationDelegate{
+    
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        
+        transitionContext?.completeTransition(true)
+    }
+}

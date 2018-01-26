@@ -1,0 +1,71 @@
+//
+//  ZoomOutTransitioning.swift
+//  Remind
+//
+//  Created by dong on 2018/1/26.
+//  Copyright © 2018年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+class ZoomOutTransitioning: NSObject, UIViewControllerAnimatedTransitioning {
+    
+    fileprivate weak var transitionContext: UIViewControllerContextTransitioning?
+    fileprivate weak var fromViewController: UIViewController?
+    fileprivate weak var toViewController: UIViewController?
+    
+    private var endRect: CGRect?
+    
+    convenience init(endRect: CGRect) {
+        self.init()
+        
+        self.endRect = endRect
+    }
+    
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        return 0.3
+    }
+    
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        
+        self.transitionContext = transitionContext
+        
+        toViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.to)
+        fromViewController = transitionContext.viewController(forKey: .from)
+        
+
+        var finalFrame = transitionContext.finalFrame(for: toViewController!)
+        finalFrame = finalFrame.offsetBy(dx: 0, dy: view_size.height)
+        
+        let containerView = transitionContext.containerView
+        containerView.addSubview(toViewController!.view)
+        containerView.sendSubview(toBack: toViewController!.view)
+        
+        let values = [1, 0.75, 0.5, 0.25, 0]
+        let keyTimes = [0, 0.25, 0.5, 0.75, 1]
+        
+        let maskAnim = CAKeyframeAnimation(keyPath: "transform.scale")
+        maskAnim.values = values
+        maskAnim.keyTimes = keyTimes as [NSNumber]
+        maskAnim.duration = 0.3
+        maskAnim.isRemovedOnCompletion = true
+        maskAnim.fillMode = kCAFillModeBoth
+        maskAnim.delegate = self
+        maskAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseIn)
+        fromViewController?.view.layer.add(maskAnim, forKey: nil)
+        self.fromViewController!.view.alpha = 1
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseIn, animations: {
+            self.fromViewController!.view.alpha = 0
+        }, completion: {
+            _ in
+        })
+    }
+}
+//MARK:- 路径动画代理
+extension ZoomOutTransitioning: CAAnimationDelegate{
+    
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        self.fromViewController?.removeFromParentViewController()
+        transitionContext?.completeTransition(true)
+    }
+}

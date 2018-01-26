@@ -1,0 +1,122 @@
+//
+//  UITabarViewController+extension.swift
+//  Remind
+//
+//  Created by zxd on 2017/12/5.
+//  Copyright © 2017年 ganyi. All rights reserved.
+//
+
+import UIKit
+
+extension UINavigationController: UINavigationControllerDelegate{
+    open override func awakeFromNib() {
+        super.awakeFromNib()
+        
+        
+        delegate = self
+        
+        if navigation_height == nil {
+            navigation_height = navigationBar.frame.height
+        }
+        
+        //禁用轻扫
+        interactivePopGestureRecognizer?.isEnabled = true
+        
+        
+        self.setNavigationBarStyle()
+        
+        
+        
+        //UIApplication.shared.statusBarStyle = UIStatusBarStyle.lightContent
+    }
+    
+
+    //切换回调
+    public func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+     
+        if viewControllers.count != 1{
+//            var tmpTitle = viewControllers[viewControllers.count-2].navigationItem.title ?? "提醒"
+//
+//            if tmpTitle == "米橙生活"{
+//                tmpTitle = "首页"
+//            }
+//            let curVC = self.viewControllers[viewControllers.count-1]
+//            if !curVC.isKind(of: EventEditorVC.self) &&
+//                !curVC.isKind(of: EventHomeVC.self)
+//            {
+//                let item = BarButtonItem(textStr: tmpTitle, imageName: "navbar_icon_back", tSelector: #selector(navigationControllerBackToPrevious))
+//                curVC.navigationItem.leftBarButtonItems = customItemsPosition(items: [item], position: .left)
+//            }
+//
+//            leftButton?.isHidden = viewControllers.count != 1
+//            rightButton?.isHidden = viewControllers.count != 1
+        }
+        
+    }
+    
+    public func navigationController(_ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool) {
+        if viewControllers.count == 1{
+            setTarbarHidden(viewControllers.count != 1)
+         }
+        if navigationController.viewControllers.first == viewController{
+            interactivePopGestureRecognizer?.isEnabled = false
+        }else{
+            if (viewController.isKind(of: EventEditorVC.self) || viewController.isKind(of: EventHomeVC.self))||viewController.isKind(of: DetailViewController.self) {
+                interactivePopGestureRecognizer?.isEnabled = false
+            }else {
+                interactivePopGestureRecognizer?.isEnabled = true
+            }
+            
+        }
+    }
+    
+    //MARK:- 显示与隐藏tabbar
+    func setTarbarHidden(_ flag: Bool){
+        guard let tabBar = self.tabBarController?.tabBar else {
+            return
+        }
+        if flag && tabBar.origin.y >= view_size.height{
+            return
+        }else if !flag && tabBar.origin.y < view_size.height{
+            return
+        }
+        
+        
+        
+        let offset: CGFloat = flag ? 52 + (isIphoneX ? 34 : 0) : 0
+        let duration: TimeInterval = flag ? 0.2 : 0.5
+        UIView.animate(withDuration: duration) {
+            if tabBar.origin.y >= view_size.height{
+                tabBar.frame.origin.y = view_size.height - tabBar.height
+                leftButton?.frame.origin.y = view_size.height - tabBar.height + originButtonY
+                rightButton?.frame.origin.y = view_size.height - tabBar.height + originButtonY
+                leftButton?.isHidden = false
+                rightButton?.isHidden = false
+            }else{
+                tabBar.frame = tabBar.frame.offsetBy(dx: 0, dy: offset)
+                leftButton?.frame = leftButton!.frame.offsetBy(dx: 0, dy: offset)
+                rightButton?.frame = rightButton!.frame.offsetBy(dx: 0, dy: offset)
+            }
+        }
+    }
+    
+    //MARK:- 转场代理实现
+    public func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationControllerOperation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        setTarbarHidden(viewControllers.count != 1)
+        //编辑页
+        if operation == .push && (toVC.isKind(of: EventEditorVC.self) || toVC.isKind(of: EventHomeVC.self)) {
+            return PushTransitioning()
+        }else if operation == .pop && (fromVC.isKind(of: EventEditorVC.self) || fromVC.isKind(of: EventHomeVC.self)){
+            return PopTransitioning()
+        }
+        
+//        if operation == .push && (toVC.isKind(of: HomeAllTableViewController.self)) {
+//            return ZoomUpTransitioning()
+//        }else if operation == .pop && (fromVC.isKind(of: HomeAllTableViewController.self)){
+//            return ZoomOutTransitioning()
+//        }
+        
+        return nil
+    }
+ }
+
