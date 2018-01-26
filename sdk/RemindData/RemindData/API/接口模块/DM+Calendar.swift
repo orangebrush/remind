@@ -49,51 +49,59 @@ extension DataManager{
         let dic = ["beginDate": date.formatString(with: "yyyy") + "-01-01"]
         
         Session.session(withAction: Actions.getCalendarData, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
-            DispatchQueue.main.async {
-                var calendarModel = CalendarModel()
-                guard codeResult == .success else{
+            var calendarModel = CalendarModel()
+            guard codeResult == .success else{
+                DispatchQueue.main.async {
                     closure(.failure, message, calendarModel)
-                    return
                 }
-                
-                guard let dataDic = data as? [String: Any] else{
+                return
+            }
+            
+            guard let dataDic = data as? [String: Any] else{
+                DispatchQueue.main.async {
                     closure(.failure, "data json error", calendarModel)
-                    return
                 }
-                
-                //taboo
-                if let tabooListData = dataDic["taboo"] as? [[String: Any]]{
-                    for tabooData in tabooListData{
-                        var taboo = Taboo()
-                        taboo.content = tabooData["content"] as? String ?? ""
-                        taboo.type = tabooData["tayp"] as? Int ?? 0
-                        calendarModel.tabooList.append(taboo)
+                return
+            }
+            
+            //taboo
+            if let tabooListData = dataDic["taboo"] as? [[String: Any]]{
+                for tabooData in tabooListData{
+                    var taboo = Taboo()
+                    taboo.content = tabooData["content"] as? String ?? ""
+                    taboo.type = tabooData["type"] as? Int ?? 0
+                    if let dateStr = tabooData["date"] as? String{
+                        taboo.date = Date(withDateStr: dateStr, withFormatStr: "yyy-M-d").GMT()
+                    }
+                    calendarModel.tabooList.append(taboo)
+                }
+            }
+            
+            //holiday
+            if let holidayListData = dataDic["holiday"] as? [[String: Any]]{
+                for holidayData in holidayListData{
+                    if let dayListData = holidayData["holidayCalendarList"] as? [[String: Any]]{
+                        for dayData in dayListData {
+                            let holiday = self.getHoliday(fromJson: dayData)
+                            calendarModel.holidayList.append(holiday)
+                        }
                     }
                 }
-                
-                //holiday
-                if let holidayListData = dataDic["holiday"] as? [[String: Any]]{
-                    for holidayData in holidayListData{
-                        let holiday = self.getHoliday(fromJson: holidayData)
-                        calendarModel.holidayList.append(holiday)
-                    }
+            }
+            
+            //节日节气
+            if let festivalListData = dataDic["festival"] as? [[String: Any]] {
+                for festivalData in festivalListData{
+                    let festival = self.getFestivalModel(fromJSON: festivalData)
+                    calendarModel.festivalList.append(festival)
                 }
-                
-                //节日节气
-                if let festivalListData = dataDic["festival"] as? [[String: Any]] {
-                    for festivalData in festivalListData{
-                        let festival = self.getFestivalModel(fromJSON: festivalData)
-                        calendarModel.festivalList.append(festival)
-                    }
-                }
-                
-                //缓存到本地
-                if let first = calendarModel.tabooList.first{
-                    
-                    let year = Calendar.current.component(.year, from: date)
-                    self.localCalendarModel[year] = calendarModel
-                }
-                
+            }
+            
+            //缓存到本地    
+            let year = Calendar.current.component(.year, from: date)
+            self.localCalendarModel[year] = calendarModel
+            
+            DispatchQueue.main.async {
                 closure(.success, message, calendarModel)
             }
         }
