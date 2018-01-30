@@ -49,8 +49,11 @@ public struct CalendarModel{
 extension DataManager{
     
     ///获取万年历数据
-    public func getCalendarData(withDate date: Date, closure: @escaping (CodeResult, String, CalendarModel)->()){
-        let dic = ["beginDate": date.formatString(with: "yyyy") + "-01-01"]
+    public func getCalendarData(withDate date: Date, fromFirstDay flag: Bool = true, closure: @escaping (CodeResult, String, CalendarModel)->()){
+        let dic = [
+            "beginDate":
+                flag ? date.formatString(with: "yyyy") + "-01-01" : date.formatString(with: "yyyy-MM-dd")
+        ]
         
         Session.session(withAction: Actions.getCalendarData, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             var calendarModel = CalendarModel()

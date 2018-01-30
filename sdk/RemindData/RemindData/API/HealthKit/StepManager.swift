@@ -8,6 +8,7 @@
 
 import Foundation
 import HealthKit
+import CoreMotion
 public final class StepManager: NSObject {
     
     private var healthStore: HKHealthStore?
@@ -63,14 +64,42 @@ public final class StepManager: NSObject {
     }
     
     
+    //运动与健康内容
+//    var pedonmeter: CMPedometer = CMPedometer()
     
-    ///获取当前步数
+    ///获取当前步数(今天)
     public func getStepsAndDistanceM(closure: @escaping (_ codeResult: CodeResult,_ daySteps: Int, _ distanceM: Int)->()){
         
         guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else{
             closure(.failure, 0, 0)
             return
         }
+        
+        //请求运动与健康
+//        if CMPedometer.isStepCountingAvailable() {
+//            let calendar = Calendar.current
+//            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: Date())
+//            components.hour = 0
+//            components.minute = 0
+//            components.second = 0
+//
+//            let startDate = calendar.date(from: components)
+//            var endComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: Date())
+//            endComponents.hour = 23
+//            endComponents.minute = 59
+//            endComponents.second = 59
+//            let endDate = calendar.date(from: endComponents)
+//
+//
+//            pedonmeter.queryPedometerData(from: startDate!, to: endDate!, withHandler: { pedometerData, error in
+//                if (error != nil) {
+//                    print(error ?? "")
+//                }else {
+//                    print("步数" + "\(String(describing: pedometerData?.numberOfSteps))")
+//                    print("距离" + "\(String(describing: pedometerData?.distance))")
+//                }
+//            })
+//        }
         
         let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         
@@ -98,17 +127,19 @@ public final class StepManager: NSObject {
                     let startComponents = Calendar.current.dateComponents([.year, .month, .day], from: startDate)
                     let endComponents = Calendar.current.dateComponents([.year, .month, .day], from: endDate)
                     
-                    if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch" {
-                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
-                            totalStepsFromWatch += Int(step)
-                        }else{
-                            totalStepsFromWatch += Int(step / 2)
-                        }
-                    }else{
-                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
-                            totalSteps += Int(step)
-                        }else{
-                            totalSteps += Int(step / 2)
+                    if let deviceName = (sample as! HKQuantitySample).device?.name{
+                        if deviceName == "Apple Watch" {
+                            if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                                totalStepsFromWatch += Int(step)
+                            }else{
+                                totalStepsFromWatch += Int(step / 2)
+                            }
+                        }else if deviceName == "iPhone"{
+                            if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                                totalSteps += Int(step)
+                            }else{
+                                totalSteps += Int(step / 2)
+                            }
                         }
                     }
                 }
@@ -156,11 +187,26 @@ public final class StepManager: NSObject {
             for sample in list{
                 let quantity = (sample as! HKQuantitySample).quantity
                 let meter = quantity.doubleValue(for: HKUnit.meter())
+                let startDate = (sample as! HKQuantitySample).startDate
+                let endDate = (sample as! HKQuantitySample).endDate
                 
-                if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch" {
-                    totalMeterFromWatch += Int(meter)
-                }else{
-                    totalMeter += Int(meter)
+                let startComponents = Calendar.current.dateComponents([.year, .month, .day], from: startDate)
+                let endComponents = Calendar.current.dateComponents([.year, .month, .day], from: endDate)
+                
+                if let deviceName = (sample as! HKQuantitySample).device?.name{
+                    if deviceName == "Apple Watch" {
+                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                            totalMeterFromWatch += Int(meter)
+                        }else{
+                            totalMeterFromWatch += Int(meter / 2)
+                        }
+                    }else if deviceName == "iPhone"{
+                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                            totalMeter += Int(meter)
+                        }else{
+                            totalMeter += Int(meter / 2)
+                        }
+                    }
                 }
             }
             
@@ -187,6 +233,7 @@ public final class StepManager: NSObject {
         }
         
         let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        
         
         let predicate = predicateForSamples(byDays: lastdays)
         let query = HKSampleQuery(sampleType: stepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
@@ -225,17 +272,19 @@ public final class StepManager: NSObject {
                 let endComponents = calendar.dateComponents([.year, .month, .day], from: endDate)
                 if (components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay) ||
                     (endComponents.year! == tempYear && endComponents.month! == tempMonth && endComponents.day! == tempDay){
-                    if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch"{
-                        if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
-                            tempStepsFromWatch += Int(step)
-                        }else{
-                            tempStepsFromWatch += Int(step / 2)
-                        }
-                    }else{
-                        if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
-                            tempSteps += Int(step)
-                        }else{
-                            tempSteps += Int(step / 2)
+                    if let deviceName = (sample as! HKQuantitySample).device?.name{
+                        if deviceName == "Apple Watch"{
+                            if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
+                                tempStepsFromWatch += Int(step)
+                            }else{
+                                tempStepsFromWatch += Int(step / 2)
+                            }
+                        }else if deviceName == "iPhone" {
+                            if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
+                                tempSteps += Int(step)
+                            }else{
+                                tempSteps += Int(step / 2)
+                            }
                         }
                     }
                 }else{
@@ -248,10 +297,12 @@ public final class StepManager: NSObject {
                     tempDay = components.day!
                     tempSteps = 0
                     tempStepsFromWatch = 0
-                    if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch"{
-                        tempStepsFromWatch += Int(step)
-                    }else{
-                        tempSteps += Int(step / 2)
+                    if let deviceName = (sample as! HKQuantitySample).device?.name {
+                        if deviceName == "Apple Watch"{
+                            tempStepsFromWatch += Int(step)
+                        }else if deviceName == "iPhone" {
+                            tempSteps += Int(step)
+                        }
                     }
                     tempDate = startDate
                 }
@@ -327,10 +378,12 @@ public final class StepManager: NSObject {
                 
                 let components = calendar.dateComponents([.year, .month, .day], from: startDate)
                 if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay{
-                    if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName != "Apple Watch"{
-                        tempDistanceMsFromWatch += Int(meter)
-                    }else{
-                        tempDistanceMs += Int(meter)
+                    if let deviceName = (sample as! HKQuantitySample).device?.name {
+                        if deviceName == "Apple Watch"{
+                            tempDistanceMsFromWatch += Int(meter)
+                        }else if deviceName == "iPhone" {
+                            tempDistanceMs += Int(meter)
+                        }
                     }
                 }else{
                     if let d = tempDate{
@@ -342,10 +395,12 @@ public final class StepManager: NSObject {
                     tempDay = components.day!
                     tempDistanceMs = 0
                     tempDistanceMsFromWatch = 0
-                    if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName != "Apple Watch"{
-                        tempDistanceMsFromWatch += Int(meter)
-                    }else{
-                        tempDistanceMs += Int(meter)
+                    if let deviceName = (sample as! HKQuantitySample).device?.name {
+                        if deviceName == "Apple Watch"{
+                            tempDistanceMsFromWatch += Int(meter)
+                        }else if deviceName == "iPhone" {
+                            tempDistanceMs += Int(meter)
+                        }
                     }
                     tempDate = startDate
                 }
