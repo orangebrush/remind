@@ -72,7 +72,7 @@ public final class StepManager: NSObject {
             return
         }
         
-        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         
         let query = HKSampleQuery(sampleType: stepType, predicate: predicateForSamplesToday(), limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
             DispatchQueue.main.async {
@@ -92,11 +92,24 @@ public final class StepManager: NSObject {
                 for sample in list{
                     let quantity = (sample as! HKQuantitySample).quantity
                     let step = quantity.doubleValue(for: HKUnit.count())
+                    let startDate = (sample as! HKQuantitySample).startDate
+                    let endDate = (sample as! HKQuantitySample).endDate
+                    
+                    let startComponents = Calendar.current.dateComponents([.year, .month, .day], from: startDate)
+                    let endComponents = Calendar.current.dateComponents([.year, .month, .day], from: endDate)
                     
                     if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch" {
-                        totalStepsFromWatch += Int(step)
+                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                            totalStepsFromWatch += Int(step)
+                        }else{
+                            totalStepsFromWatch += Int(step / 2)
+                        }
                     }else{
-                        totalSteps += Int(step)
+                        if startComponents.year! == endComponents.year! && startComponents.month! == endComponents.month! && startComponents.day! == endComponents.day!{
+                            totalSteps += Int(step)
+                        }else{
+                            totalSteps += Int(step / 2)
+                        }
                     }
                 }
                 
@@ -173,7 +186,7 @@ public final class StepManager: NSObject {
             return
         }
         
-        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         
         let predicate = predicateForSamples(byDays: lastdays)
         let query = HKSampleQuery(sampleType: stepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
@@ -205,14 +218,25 @@ public final class StepManager: NSObject {
                 
                 let quantity = (sample as! HKQuantitySample).quantity
                 let startDate = (sample as! HKQuantitySample).startDate
+                let endDate = (sample as! HKQuantitySample).endDate
                 let step = quantity.doubleValue(for: HKUnit.count())
                 
                 let components = calendar.dateComponents([.year, .month, .day], from: startDate)
-                if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay{
+                let endComponents = calendar.dateComponents([.year, .month, .day], from: endDate)
+                if (components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay) ||
+                    (endComponents.year! == tempYear && endComponents.month! == tempMonth && endComponents.day! == tempDay){
                     if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch"{
-                        tempStepsFromWatch += Int(step)
+                        if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
+                            tempStepsFromWatch += Int(step)
+                        }else{
+                            tempStepsFromWatch += Int(step / 2)
+                        }
                     }else{
-                        tempSteps += Int(step)
+                        if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day!{
+                            tempSteps += Int(step)
+                        }else{
+                            tempSteps += Int(step / 2)
+                        }
                     }
                 }else{
                     if let d = tempDate{
@@ -227,7 +251,7 @@ public final class StepManager: NSObject {
                     if let deviceName = (sample as! HKQuantitySample).device?.name, deviceName == "Apple Watch"{
                         tempStepsFromWatch += Int(step)
                     }else{
-                        tempSteps += Int(step)
+                        tempSteps += Int(step / 2)
                     }
                     tempDate = startDate
                 }
@@ -298,6 +322,7 @@ public final class StepManager: NSObject {
                 
                 let quantity = (sample as! HKQuantitySample).quantity
                 let startDate = (sample as! HKQuantitySample).startDate
+                let endDate = (sample as! HKQuantitySample).endDate
                 let meter = quantity.doubleValue(for: HKUnit.meter())
                 
                 let components = calendar.dateComponents([.year, .month, .day], from: startDate)
@@ -327,7 +352,7 @@ public final class StepManager: NSObject {
             }
             if let d = tempDate{
                 let maxDistanceMs = max(tempDistanceMsFromWatch, tempDistanceMs)
-                resultList.append((d, maxDistanceMs))
+                resultList.append((d, maxDistanceMs / 2))
             }
             
             closure(resultList)
@@ -365,6 +390,6 @@ public final class StepManager: NSObject {
 //            return nil
 //        }
         
-        return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: HKQueryOptions.strictStartDate)
+        return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: HKQueryOptions.strictEndDate)
     }
 }

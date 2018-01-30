@@ -186,21 +186,24 @@ extension DataManager{
             "status": "\(eventClient.status)",
             "createDate": "2022"
         ]
-        Session.session(withAction: Actions.addEventClient, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
-            DispatchQueue.main.async {
-                
-                //如果添加成功则修改数据库同步字段
-                if codeResult == .success {
-                    let dataHandler = DataHandler.share()
-                    if let ec = dataHandler.getEventClient(byEventClientType: Int(eventClient.type), byEventClientId: Int(eventClient.id)){
-                        ec.isSynced = true
-                        ec.status = 0
-                        dataHandler.commit()
+        let dataHandler = DataHandler.share()
+        if let ec = dataHandler.getEventClient(byEventClientType: Int(eventClient.type), byEventClientId: Int(eventClient.id)){
+            ec.isSynced = true
+            ec.status = 0
+            //先添加到本地
+            if dataHandler.commit(){
+                closure(.success, "添加成功", Int(eventClient.id))
+                //后同步到服务器
+                Session.session(withAction: Actions.addEventClient, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+                    DispatchQueue.main.async {
+                        if codeResult == .success {
+                        }
+                        
+                        //let id = (data as? [String: Int])?["id"] ?? 0
                     }
                 }
-                
-                let id = (data as? [String: Int])?["id"] ?? 0
-                closure(codeResult, message, id)
+            }else{
+                closure(.failure, "添加失败", 0)
             }
         }
     }
@@ -282,6 +285,9 @@ extension DataManager{
                         let id = (data as? [String: Int])?["id"] ?? 0
                         if codeResult == .success {
                         }
+                        
+                        eventClient.isSynced = true
+                        dataHandler.commit()
                         closure(codeResult, message, id)
                     }
                 }

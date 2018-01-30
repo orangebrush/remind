@@ -91,7 +91,15 @@ extension DataManager{
                     if let isOperatedInt = recordData["status"] as? Int32{              //0:不再提醒可以操作,1:不再提醒不可以操作
                         notice.isOperated = isOperatedInt == 0
                     }
-                    
+                    if let extra = (recordData["extra"] as? [String:Any]){
+                        if let lunarYear = extra["lunarYear"] as? Int32{
+                            notice.lunarYear = lunarYear
+                        
+                        }
+                        if let ignoreYear = extra["ignoreYear"] as? Int{
+                            notice.ignoreYear = ignoreYear == 1
+                        }
+                    }
                     noticeList.append(notice)
                 }
                 

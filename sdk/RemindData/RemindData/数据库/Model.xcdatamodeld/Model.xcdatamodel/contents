@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="13772" systemVersion="17C205" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="13772" systemVersion="17B1003" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Beginning" representedClassName="Beginning" syncable="YES" codeGenerationType="class">
         <attribute name="count" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="cycle" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
@@ -150,8 +150,10 @@
         <attribute name="eventId" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="eventTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="id" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="ignoreYear" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="isBeginning" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="isOperated" optional="YES" attributeType="Boolean" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="lunarYear" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="nextTime" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="notificationId" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="sendCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
@@ -192,7 +194,7 @@
         <element name="FrequencyWeekday" positionX="171" positionY="162" width="128" height="60"/>
         <element name="FrequencyWeeksTuple" positionX="189" positionY="180" width="128" height="75"/>
         <element name="Member" positionX="-63" positionY="-18" width="128" height="360"/>
-        <element name="Notice" positionX="198" positionY="189" width="128" height="315"/>
+        <element name="Notice" positionX="198" positionY="189" width="128" height="345"/>
         <element name="Step" positionX="144" positionY="135" width="128" height="105"/>
         <element name="Tip" positionX="144" positionY="135" width="128" height="150"/>
     </elements>

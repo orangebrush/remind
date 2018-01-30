@@ -50,6 +50,53 @@ public class BeginningModel: NSObject {
         }
         return "\(n.0.rawValue):\(n.1)"
     }
+    
+    ///显示预提醒文字
+    public func showBeginning() -> String{
+        var value = list.isEmpty ? "无" : "提前"
+        let sortedEventBeginningList = list.sorted(by: { (arg0, arg1) -> Bool in
+            
+            let (cycle0, value0) = arg0
+            let (cycle1, value1) = arg1
+            if cycle0.rawValue < cycle1.rawValue{
+                return true
+            }else if cycle0.rawValue > cycle1.rawValue{
+                return false
+            }else{
+                if value0 < value1{
+                    return true
+                }
+            }
+            return false
+        })
+        
+        for (index, tuple) in sortedEventBeginningList.enumerated(){
+            if index != 0{
+                value += ","
+            }
+            value += "\(tuple.1)"
+            
+            let prefixValue: String
+            switch tuple.0{
+            case .minute:
+                prefixValue = "分钟"
+            case .hour:
+                prefixValue = "小时"
+            case .day:
+                prefixValue = "天"
+            case .week:
+                prefixValue = "星期"
+            case .month:
+                prefixValue = "月"
+            case .year:
+                prefixValue = "年"
+            default:
+                prefixValue = ""
+            }
+            value += prefixValue
+        }
+        return value
+    }
 }
 
 public enum FrequencyValType{

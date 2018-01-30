@@ -117,7 +117,7 @@ extension DataManager{
         let holidayData = jsonData
 
         var holiday = Holiday()
-        holiday.id = holidayData["id"] as? Int ?? 0
+        holiday.id = holidayData["holidayId"] as? Int ?? 0
         holiday.name = holidayData["name"] as? String ?? ""
         holiday.status = holidayData["status"] as? Int ?? 0
         if let icon = holidayData["icon"] as? String{
