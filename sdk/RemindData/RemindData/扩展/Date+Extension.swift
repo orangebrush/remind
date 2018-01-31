@@ -89,7 +89,7 @@ extension Date {
         let date1 = calendar.startOfDay(for: self)
         let date2 = calendar.startOfDay(for: date)
         
-        let components = calendar.dateComponents([.day], from: date1, to: date2)
+        let components = calendar.dateComponents([.day], from: date2, to: date1)
         return components.day ?? 0
     }
 }
