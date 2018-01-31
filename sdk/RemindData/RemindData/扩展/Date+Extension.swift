@@ -81,4 +81,15 @@ extension Date {
         return newDate ?? self
     }
     
+    ///计算间隔时间
+    public func intervalDay(fromDate date: Date = Date()) -> Int{
+        let calendar = NSCalendar.current
+        
+        // Replace the hour (time) of both dates with 00:00
+        let date1 = calendar.startOfDay(for: self)
+        let date2 = calendar.startOfDay(for: date)
+        
+        let components = calendar.dateComponents([.day], from: date1, to: date2)
+        return components.day ?? 0
+    }
 }

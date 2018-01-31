@@ -244,9 +244,24 @@ public final class StepManager: NSObject {
                 return
             }
             
-            guard let list = results else{
-                DispatchQueue.main.async {                    
-                    closure(.failure, [])
+            guard let list = results, !list.isEmpty else{
+                DispatchQueue.main.async {
+                    //未开启权限则从网络获取
+                    DataManager.share().getStepLogList(withPage: 1, withPageSize: lastdays, closure: { (codeResult, message, stepModelList) in
+                        guard codeResult == .success else{
+                            closure(.failure, [])
+                            return
+                        }
+                        var result = [(Date, Int, Int)]()
+                        for i in 0..<lastdays{
+                            guard i < stepModelList.count else{
+                                continue
+                            }
+                            let stepModel = stepModelList[i]
+                            result.append((stepModel.date, stepModel.step, stepModel.distanceM))
+                        }
+                        closure(.success, result)
+                    })
                 }
                 return
             }
