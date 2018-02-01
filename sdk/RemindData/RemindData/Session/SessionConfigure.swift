@@ -63,6 +63,7 @@ struct Actions {
     static let deleteNotice             = "notice/log/delete"                   //删除提醒
     static let deleteAllNotices         = "notice/log/deleteall"                //删除所有提醒
     static let getNewestNotices         = "notice/log/newestLogs"               //获取最新提醒消息
+    static let getNoticesCount          = "notice/log/count"                    //获取新消息个数
     
     
     static let addFeedback              = "feedback/save"                       //保存反馈

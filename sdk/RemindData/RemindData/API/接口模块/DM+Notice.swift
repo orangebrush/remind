@@ -111,6 +111,31 @@ extension DataManager{
         }
     }
     
+    //MARK:- 获取未读消息个数
+    public func getUnreadNoticeCount(withLastId lastId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ count: Int)->()){
+        let dic = ["id": lastId]
+        Session.session(withAction: Actions.getNoticesCount, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                guard codeResult == .success else{
+                    closure(.failure, message, 0)
+                    return
+                }
+                
+                guard let dataDic = data as? [String: Any] else {
+                    closure(.failure, "json data error", 0)
+                    return
+                }
+                
+                guard let count = dataDic["count"] as? Int else {
+                    closure(.failure, "count not existed", 0)
+                    return
+                }
+                
+                closure(.success, message, count)
+            }
+        }
+    }
+    
     //MARK:- 不再提醒
     public func cancelNotice(withNoticeId noticeId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
         let dic = ["id": "\(noticeId)"]
