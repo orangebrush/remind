@@ -174,9 +174,9 @@ extension DataManager{
                             if let ignoreYear = eventData["ignoreYear"] as? Int{
                                 event.isIgnoreYear = ignoreYear == 1
                             }
-                            event.lunarYear = eventData["iosLunarYear"] as? Int ?? 2000                //农历年份
-                            event.lunarMonth = eventData["iosLunarMonth"] as? Int ?? 1                 //农历月份
-                            event.lunarDay = eventData["iosLunarDay"] as? Int ?? 1                     //农历日
+                            event.lunarYear = eventData["lunarYear"] as? Int ?? 2000                //农历年份
+                            event.lunarMonth = eventData["lunarMonth"] as? Int ?? 1                 //农历月份
+                            event.lunarDay = eventData["lunarDay"] as? Int ?? 1                     //农历日
                             if let isLeapMonth = eventData["isLeapMonth"] as? Int{                  //是否为闰月
                                 event.isLeapMonth = isLeapMonth == 1
                             }

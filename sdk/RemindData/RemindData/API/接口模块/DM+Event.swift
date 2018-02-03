@@ -315,12 +315,10 @@ public struct EventParam{
     public init() {
     }
     
-    ///事件id
-    //public var id = 0
-    ///事件说明
-    public var introduce = ""
     ///事件开始时间
     public var beginDate = Date()
+    ///事件说明
+    public var introduce = ""
     ///频率
     public var frequencyModel = FrequencyModel()
     ///提醒次数
@@ -339,11 +337,10 @@ public struct EventParam{
     public var hasEmailRemind = false
     ///事件类型
     public var type = 0 //EventType.custom
-    //    public var festivals = "公历"
     ///是否忽略年份
     public var isIgnoreYear = false
     ///是否为农历
-    public var  isLunar = false
+    public var isLunar = false
     ///农历年
     public var lunarYear = 2000
     ///农历月
@@ -352,12 +349,6 @@ public struct EventParam{
     public var lunarDay = 1
     ///是否为闰月
     public var isLeapMonth = false
-    ///周期保存文字
-    public var param1 = ""
-    ///时间保存文字
-    public var param2 = ""
-    ///类型保存文字
-    public var param3 = ""
     ///提醒状态文字
     public var remindText = ""
     ///提醒状态
@@ -368,20 +359,22 @@ public struct EventParam{
 public struct EventDB{
     public init() {}
     public var age: Int32 = 0
-    public var doubleAge: Double = 0
     public var beginDate: Date?
+    public var doubleAge: Double = 0
     public var constellation: String?
     public var content: String?
-    public var fromDateText: String?
     public var count: Int32 = 0
     public var createDate: Date?
     public var date: String?
     public var emailAddr: String?
-    public var festivals: String?
+    public var fromDateText: String?
     public var formalTime: String?
     public var hasEmailRemind: Bool = false
     public var hasWeixinRemind: Bool = false
     public var id: Int32 = 0
+    public var lastNotificationDate: Date?
+    public var leadTime: String?
+    public var leftSmsCount: Int32 = 0
     public var intercycle: Int32 = 0
     public var interval: Double?
     public var intervalDay: Int32 = 0
@@ -389,29 +382,20 @@ public struct EventDB{
     public var introduce: String?
     public var isEmailBinded: Bool = false
     public var isEmailOpen: Bool = false
+    public var isLeapMonth = false
     public var isLoop: Bool = false
     public var isToday: Bool = false
     public var isWeixinBinded: Bool = false
     public var isWeixinOpen: Bool = false
-    public var lastNotificationDate: Date?
-    public var leadTime: String?
-    public var leftSmsCount: Int32 = 0
-    public var loopInterval: Int32 = 0
     public var isIgnoreYear = false
     public var isLunar: Bool = false
     public var lunarDate: String?
     public var lunarDay: Int32 = 1
     public var lunarMonth: Int32 = 1
     public var lunarYear: Int32 = 2000
-    public var isLeapMonth = false
-    public var mode: Int32?
     public var nextLeadTime: String?
     public var nextNotificationDate: Date?
     public var nowBeginning: String?
-    public var param1: String?
-    public var param2: String?
-    public var param3: String?
-    public var phone: String?
     public var remindStatus: Int32?
     public var remindText: String?
     public var ring: String?
@@ -617,15 +601,11 @@ extension DataManager{
             "ignoreYear": eventParam.isIgnoreYear,
             "phone": "",
             "type": "\(eventParam.type)",
-            "festivals": "",
             "lunar": eventParam.isLunar ? "1" : "0",
             "lunarYear": "\(eventParam.lunarYear)",
             "lunarMonth": "\(eventParam.lunarMonth)",
             "lunarDay": "\(eventParam.lunarDay)",
-            "isLeapMonth": eventParam.isLeapMonth ? "1" : "0",
-            "param1": eventParam.param1,
-            "param2": eventParam.param2,
-            "param3": eventParam.param3
+            "isLeapMonth": eventParam.isLeapMonth ? "1" : "0"
         ]
         
         Session.session(withAction: Actions.addEvent, withRequestMethod: .post, withParam: dict) { (codeResult, message, data) in
@@ -669,20 +649,6 @@ extension DataManager{
                 let beginningModel = BeginningModel()
                 beginningModel.list.removeAll()
                 
-//                eventParam.beginningModel = self.getBeginningModel(fromBeginningList: event.beginningList, andBeginningNext: event.beginningNext!) ?? BeginningModel()
-//                eventParam.count = Int(event.count!)
-//                eventParam.frequencyModel = self.getFrequencyModel(fromFrequency: event.frequency) ?? FrequencyModel()
-//                eventParam.hasEmailRemind = event.hasEmailRemind
-//                eventParam.hasWeixinRemind = event.hasWeixinRemind
-//                eventParam.intercycle = Int(event.intercycle)
-//                eventParam.introduce = event.introduce ?? ""
-//                eventParam.isLunar = event.isLunar
-//                eventParam.param1 = event.param1 ?? ""
-//                eventParam.param2 = event.param2 ?? ""
-//                eventParam.param3 = event.param3 ?? ""
-//                eventParam.sound = event.sound ?? ""
-//                eventParam.ring = Ring(rawValue: event.ring ?? "boy") ?? Ring.boy
-//                eventParam.type = Int(event.type) //EventType(rawValue: Int(event.type)) ?? EventType.custom
                 closure(.success, message, eventParam)
             }
         }
@@ -720,16 +686,12 @@ extension DataManager{
             "email": event.hasEmailRemind ? "1" : "0",
             "phone": "",
             "type": "\(event.type)",
-            "festivals": "",
             "ignoreYear": event.isIgnoreYear,
             "lunar": event.isLunar ? "1" : "0",
             "lunarYear": "\(event.lunarYear)",
             "lunarMonth": "\(event.lunarMonth)",
             "lunarDay": "\(event.lunarDay)",
-            "isLeapMonth": event.isLeapMonth ? "1" : "0",
-            "param1": event.param1 ?? "",
-            "param2": event.param2 ?? "",
-            "param3": event.param3 ?? ""
+            "isLeapMonth": event.isLeapMonth ? "1" : "0"
         ]
         
         Session.session(withAction: Actions.updateEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
@@ -928,10 +890,6 @@ extension DataManager{
         event.intervalText = jsonDic["intervalText"] as? String
         event.formalTime = jsonDic["formalTime"] as? String
         
-        //详情信息
-        if let mode = jsonDic["mode"] as? Int32 {                   //事件重复方式 0:不重复、1:每天 2:工作日(五天制) 3:工作日(六天制) 4:法定工作日 5:每周 6:每月 7:每年 8:自定义
-            event.mode = mode
-        }
         //频率 0:不重复 1:分钟 2:小时 3:日 4周 5:月 6:年
         //时间周期，如果是每日、每周、每年，格式1,12,14(各时间点以,隔开)，如果是每月,格式为0:1,2(:前面0为按日期1为按星期，1,2为各时间点,时间点以,隔开。如果是每月第一个星期二，格式为1:1,3)
         //获取周期，频率，周期详情（封装对象）
@@ -948,14 +906,13 @@ extension DataManager{
         if let isLunar = jsonDic["isLunar"] as? Int{                 //是否农历：0否、1是
             event.isLunar = isLunar == 1
         }
-        event.lunarYear = jsonDic["iosLunarYear"] as? Int32 ?? 2000
-        event.lunarMonth = jsonDic["iosLunarMonth"] as? Int32 ?? 1
-        event.lunarDay = jsonDic["iosLunarDay"] as? Int32 ?? 1
+        event.lunarYear = jsonDic["lunarYear"] as? Int32 ?? 2000
+        event.lunarMonth = jsonDic["lunarMonth"] as? Int32 ?? 1
+        event.lunarDay = jsonDic["lunarDay"] as? Int32 ?? 1
         if let isLeapMonth = jsonDic["isLeapMonth"] as? Int{
             event.isLeapMonth = isLeapMonth == 1
         }
 
-        event.festivals = jsonDic["festivals"] as? String           //农历|公历
         event.ring = jsonDic["ring"] as? String                     //铃声
         event.sound = jsonDic["ring"] as? String
         
@@ -974,9 +931,6 @@ extension DataManager{
         if let today = jsonDic["today"] as? String{                 //是否是今天：0否、1是
             event.isToday = today == "1"
         }
-        event.param1 = jsonDic["param1"] as? String
-        event.param2 = jsonDic["param2"] as? String
-        event.param3 = jsonDic["param3"] as? String
         
         event.zodiac = jsonDic["zodiac"] as? String                 //生肖
         event.zodiacIcon = jsonDic["zodiacIcon"] as? String ?? ""              //生肖图片

@@ -247,17 +247,19 @@ public final class StepManager: NSObject {
             guard let list = results, !list.isEmpty else{
                 DispatchQueue.main.async {
                     //未开启权限则从网络获取
-                    DataManager.share().getStepLogList(withPage: 1, withPageSize: lastdays, closure: { (codeResult, message, stepModelList) in
+                    let endDate = Date()
+                    let beginDate = endDate.offset(with: -lastdays + 1)
+                    DataManager.share().getStepsDetailLogList(withBeginDate: beginDate, withEndDate: endDate, closure: { (codeResult, message, stepModelList) in
                         guard codeResult == .success else{
                             closure(.failure, [])
                             return
                         }
                         var result = [(Date, Int, Int)]()
                         for i in 0..<lastdays{
-                            guard i < stepModelList.count else{
+                            guard i < stepModelList.log.count else{
                                 continue
                             }
-                            let stepModel = stepModelList[i]
+                            let stepModel = stepModelList.log[i]
                             result.append((stepModel.date, stepModel.step, stepModel.distanceM))
                         }
                         closure(.success, result)

@@ -34,7 +34,7 @@ class Session {
                     return
                 }
                 
-                debugPrint(result)
+               debugPrint(result)
                 
                 guard let code = result["code"] as? Int, let message = result["message"] as? String else {
                     closure(CodeResult.failure, "解析数据错误", nil)
@@ -89,7 +89,7 @@ class Session {
                     
                     if action != Actions.register{
                         //为获取到uuid则禁止做其他请求
-                        if let uuid = MemberManager.share().uuid{
+                        if let uuid = MemberManager.share().uuid, uuid != ""{
                             tempParam["uid"] = uuid
                         }else{
                             DataManager.share().register(closure: { (result, message, uid) in

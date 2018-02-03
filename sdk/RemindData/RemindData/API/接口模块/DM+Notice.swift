@@ -40,12 +40,9 @@ extension DataManager{
                     hasOther = has == 1
                 }
                 
-                
                 guard let recordsData = dataDic["records"] as? [[String: Any]] else{
                     return
                 }
-                
-                
                 
                 //解析并保存数据到本地数据库
                 let dataHandler = DataHandler.share()

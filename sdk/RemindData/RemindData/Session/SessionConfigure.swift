@@ -9,8 +9,8 @@
 import Foundation
 
 public struct Urls {
-    public static let host                 = "https://ios-api.mc.cn/restful/"
-    public static let iconHost                 = "https://ios-api.mc.cn/"
+    public static let host                 = true ? "http://120.79.52.214/appwall_remind/restful/" : "https://ios-api.mc.cn/restful/"
+    public static let iconHost             = "https://ios-api.mc.cn/"
 }
 
 //请求类型
