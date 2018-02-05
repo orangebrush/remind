@@ -36,32 +36,31 @@ extension DataHandler{
 //        let predicate = NSPredicate(format: "idfa = \"\(idfa)\"")
 //        request.predicate = predicate
         
-        do{
-            let resultList = try context.fetch(request)
-            if resultList.isEmpty {
-                return insertMember()
-            }else{
-                //判断idfa修改的情况
-                let result = resultList.first
-                if let dbIdfa = result?.idfa {
-                    let idfa = MemberManager.share().idfa
-                    if idfa != dbIdfa{
-                        let allEvents = getAllEvents()
-                        for event in allEvents{
-                            result?.removeFromEventList(event)
-                        }
-                        let allEventClients = getAllEventClients()
-                        for eventClient in allEventClients{
-                            result?.removeFromEventClientList(eventClient)
-                        }
-                        commit()
-                    }
-                }
-                return result
-            }
-        }catch let error{
-            debugPrint("<Core Data> fetch error: \(error)")
+
+        guard let resultList = try? context.fetch(request) else {
             return nil
+        }
+        
+        if resultList.isEmpty {
+            return insertMember()
+        }else{
+            //判断idfa修改的情况
+            let result = resultList.first
+            if let dbIdfa = result?.idfa {
+                let idfa = MemberManager.share().idfa
+                if idfa != dbIdfa{
+                    let allEvents = getAllEvents()
+                    for event in allEvents{
+                        result?.removeFromEventList(event)
+                    }
+                    let allEventClients = getAllEventClients()
+                    for eventClient in allEventClients{
+                        result?.removeFromEventClientList(eventClient)
+                    }
+                    commit()
+                }
+            }
+            return result
         }
     }
 }

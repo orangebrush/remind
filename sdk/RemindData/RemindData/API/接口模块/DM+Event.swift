@@ -58,16 +58,11 @@ public class BeginningModel: NSObject {
             
             let (cycle0, value0) = arg0
             let (cycle1, value1) = arg1
-            if cycle0.rawValue < cycle1.rawValue{
-                return true
-            }else if cycle0.rawValue > cycle1.rawValue{
-                return false
-            }else{
-                if value0 < value1{
-                    return true
-                }
+
+            if cycle0.rawValue == cycle1.rawValue {
+                return value0 > value1
             }
-            return false
+            return cycle0.rawValue > cycle1.rawValue
         })
         
         for (index, tuple) in sortedEventBeginningList.enumerated(){
@@ -85,9 +80,9 @@ public class BeginningModel: NSObject {
             case .day:
                 prefixValue = "天"
             case .week:
-                prefixValue = "星期"
+                prefixValue = "个星期"
             case .month:
-                prefixValue = "月"
+                prefixValue = "个月"
             case .year:
                 prefixValue = "年"
             default:

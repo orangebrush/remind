@@ -387,19 +387,29 @@ public final class StepManager: NSObject {
                 guard let deviceName = (sample as! HKQuantitySample).device?.name, deviceName != "Apple Watch" else{
                     continue
                 }
-                
+
                 let quantity = (sample as! HKQuantitySample).quantity
                 let startDate = (sample as! HKQuantitySample).startDate
                 let endDate = (sample as! HKQuantitySample).endDate
                 let meter = quantity.doubleValue(for: HKUnit.meter())
                 
                 let components = calendar.dateComponents([.year, .month, .day], from: startDate)
-                if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay{
+                let endComponents = calendar.dateComponents([.year, .month, .day], from: endDate)
+                if components.year! == tempYear && components.month! == tempMonth && components.day! == tempDay ||
+                (endComponents.year! == tempYear && endComponents.month! == tempMonth && endComponents.day! == tempDay){
                     if let deviceName = (sample as! HKQuantitySample).device?.name {
                         if deviceName == "Apple Watch"{
-                            tempDistanceMsFromWatch += Int(meter)
+                            if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day! {
+                                tempDistanceMsFromWatch += Int(meter)
+                            }else {
+                                tempDistanceMsFromWatch += Int(meter / 2)
+                            }
                         }else if deviceName == "iPhone" {
-                            tempDistanceMs += Int(meter)
+                            if components.year! == endComponents.year! && components.month! == endComponents.month! && components.day! == endComponents.day! {
+                                tempDistanceMs += Int(meter)
+                            }else {
+                                tempDistanceMs += Int(meter / 2)
+                            }
                         }
                     }
                 }else{
