@@ -209,7 +209,7 @@ public class FrequencyModel: NSObject{
         case .month:
             result += per == 1 ? "月" : "\(per)个月的"
             if baseOnWeek{
-                if weeksTuple.0 == 5{
+                if weeksTuple.0 == 6{
                     result += "最后一个\(list[weeksTuple.1 - 1])"
                 }else{
                     result += "第\(weeksTuple.0)个\(list[weeksTuple.1 - 1])"
@@ -231,7 +231,7 @@ public class FrequencyModel: NSObject{
                 result += "的"
             }
             if baseOnWeek{
-                if weeksTuple.0 == 5{
+                if weeksTuple.0 == 6{
                     result += "最后一个\(list[weeksTuple.1 - 1])"
                 }else{
                     result += "第\(weeksTuple.0)个\(list[weeksTuple.1 - 1])"

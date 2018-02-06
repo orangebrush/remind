@@ -329,6 +329,35 @@ public final class StepManager: NSObject {
                 resultList.append((d, maxStep, 0))
             }
             
+            //补0
+            var tempList = [(Date, Int, Int)]()
+            for i in 0..<lastdays {
+                var needCreate = true
+                
+                let realDate = Date().offset(with: -i).GMT()
+                let year = calendar.component(.year, from: realDate)
+                let month = calendar.component(.month, from: realDate)
+                let day = calendar.component(.day, from: realDate)
+                for result in resultList {
+                    let resultDate = result.0
+                    let resultYear = calendar.component(.year, from: resultDate)
+                    let resultMonth = calendar.component(.month, from: resultDate)
+                    let resultDay = calendar.component(.day, from: resultDate)
+                    if resultYear == year && resultMonth == month && resultDay == day {
+                        needCreate = false
+                        break
+                    }
+                }
+                
+                if needCreate {
+                    //补
+                    tempList.append((realDate, 0, 0))
+                }
+            }
+            for t in tempList{
+                resultList.append(t)
+            }
+            
             //获取距离
             self.getDistanceMList(byLastdays: lastdays, closure: { (distanceMList) in
 //                guard resultList.count == distanceMList.count else{

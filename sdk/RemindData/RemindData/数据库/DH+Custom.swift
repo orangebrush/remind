@@ -15,9 +15,15 @@ public enum CustomType{
 
 
 extension DataHandler{
+    static var localCustom: Custom?
+    
     //MARK:- 获取自定义
     func getCustom() -> Custom?{
-        return getMember()?.custom
+        if DataHandler.localCustom != nil {
+            return DataHandler.localCustom
+        }
+        DataHandler.localCustom = getMember()?.custom
+        return DataHandler.localCustom
     }
     
     ///设置自定义颜色或者图片： customType:自定义数据（无自定义数据则传对应类型） index: 标记
@@ -79,6 +85,7 @@ extension DataHandler{
             
             return commit()
         }
+        DataHandler.localCustom = nil
     }
     
     ///@param0: 是否为颜色 @param1: 是否为默认 @param2:下标 @param3:自定义颜色 @param4:自定义图片
