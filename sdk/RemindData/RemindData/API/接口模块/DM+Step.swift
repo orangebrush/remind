@@ -51,7 +51,7 @@ extension DataManager{
             let jsonDic = [
                 "step": "\(stepModel.step)",
                 "distance": "\(stepModel.distanceM)",
-                "createTime": "\(Int(stepModel.date.timeIntervalSince1970 * 1000))"
+                "createTime": "\(Int64(stepModel.date.timeIntervalSince1970 * 1000))"
             ]
             jsonDicList.append(jsonDic)
         }        

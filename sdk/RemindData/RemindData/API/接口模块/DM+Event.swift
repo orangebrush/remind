@@ -399,7 +399,6 @@ public struct EventDB{
     public var status: Int32 = 0
     public var text3: String?
     public var time: String?
-    public var time2: String?
     public var type: Int32 = 0
     public var typeName: String?
     public var updateDate: Date?
@@ -922,7 +921,6 @@ extension DataManager{
         }
         event.date = jsonDic["date"] as? String                     //时间日期、下一个节日
         event.time = jsonDic["time"] as? String                     //事件时间 x月x日 星期x
-        event.time2 = jsonDic["time2"] as? String
         if let today = jsonDic["today"] as? String{                 //是否是今天：0否、1是
             event.isToday = today == "1"
         }
