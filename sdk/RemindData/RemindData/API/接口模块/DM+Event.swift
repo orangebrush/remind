@@ -193,7 +193,7 @@ public class FrequencyModel: NSObject{
                 result += "\(per)个星期的"
                 if sortedWeekdays == [2, 3, 4, 5, 6]{
                     result += "工作日"
-                }else if sortedWeekdays == [1, 7]{
+                }else if sortedWeekdays == [7, 1]{
                     result += "周末"
                 }else{
                     result += "星期"
