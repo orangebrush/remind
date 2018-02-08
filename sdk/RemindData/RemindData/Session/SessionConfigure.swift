@@ -9,7 +9,7 @@
 import Foundation
 
 public struct Urls {
-    public static let host                 = true ? "http://120.79.52.214/appwall_remind/restful/" : "https://ios-api.mc.cn/restful/"
+    public static let host                 = true ? "http://119.23.209.26/restful/" : "https://ios-api.mc.cn/restful/"
     public static let iconHost             = "https://ios-api.mc.cn/"
 }
 
