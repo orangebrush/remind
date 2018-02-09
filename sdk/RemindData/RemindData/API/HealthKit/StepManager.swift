@@ -50,8 +50,11 @@ public final class StepManager: NSObject {
                 }
                 return
             }
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "openStepRemiand"), object: nil)
-            
+            self.isOpenHealthKit(closure: { (confrim) in
+                if confrim {
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "openStepRemiand"), object: nil)
+                }
+            })
             // UserDefaults.standard.set(true, forKey: "frist_step_notif")
             debugPrint("同意获取healthkit数据")
             
@@ -59,8 +62,38 @@ public final class StepManager: NSObject {
         }
     }
     
-    public func isOpenHealthKit()->Bool{
-        return  healthStore?.authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.stepCount)!) == .sharingAuthorized &&  healthStore?.authorizationStatus(for: HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier.distanceWalkingRunning)!) == .sharingAuthorized
+    ///判断是否开启健康权限
+    public func isOpenHealthKit(closure: @escaping (Bool)->()){
+        
+        guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else{
+            closure(false)
+            return
+        }
+        
+        let timeSortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        
+        
+        let predicate = predicateForSamples(byDays: 30)
+        let query = HKSampleQuery(sampleType: stepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [timeSortDescriptor]) { (query, results, error) in
+            guard error == nil else{
+                DispatchQueue.main.async {
+                    closure(false)
+                }
+                return
+            }
+            
+            guard let list = results, !list.isEmpty else{
+                DispatchQueue.main.async {
+                   closure(false)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {                
+                closure(true)
+            }
+        }
+        healthStore?.execute(query)
     }
     
     
@@ -215,10 +248,7 @@ public final class StepManager: NSObject {
         
         healthStore?.execute(query)
     }
-    
 
-    
-    
     
     
     
@@ -360,13 +390,6 @@ public final class StepManager: NSObject {
             
             //获取距离
             self.getDistanceMList(byLastdays: lastdays, closure: { (distanceMList) in
-//                guard resultList.count == distanceMList.count else{
-//                    DispatchQueue.main.async {
-//                        closure(.failure, [])
-//                    }
-//                    return
-//                }
-                
                 for (index, element) in distanceMList.enumerated(){
                     if index < resultList.count {
                         resultList[index].2 = element.1

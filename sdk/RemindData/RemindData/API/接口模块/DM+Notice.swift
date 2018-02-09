@@ -109,26 +109,26 @@ extension DataManager{
     }
     
     //MARK:- 获取未读消息个数
-    public func getUnreadNoticeCount(withLastId lastId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ count: Int)->()){
-        let dic = ["id": lastId]
+    public func getUnreadNoticeCount(withLastId localLastId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ count: Int, _ lastId: Int)->()){
+        let dic = ["id": localLastId]
         Session.session(withAction: Actions.getNoticesCount, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             DispatchQueue.main.async {
                 guard codeResult == .success else{
-                    closure(.failure, message, 0)
+                    closure(.failure, message, 0, 0)
                     return
                 }
                 
                 guard let dataDic = data as? [String: Any] else {
-                    closure(.failure, "json data error", 0)
+                    closure(.failure, "json data error", 0, 0)
                     return
                 }
                 
-                guard let count = dataDic["count"] as? Int else {
-                    closure(.failure, "count not existed", 0)
+                guard let count = dataDic["count"] as? Int, let lastId = dataDic["maxId"] as? Int else {
+                    closure(.failure, "count not existed", 0, 0)
                     return
                 }
                 
-                closure(.success, message, count)
+                closure(.success, message, count, lastId)
             }
         }
     }
