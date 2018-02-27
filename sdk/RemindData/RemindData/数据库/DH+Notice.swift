@@ -61,11 +61,11 @@ extension DataHandler{
     }
     
     //MARK:- 获取最后一个提醒的id(如果为第一次的话id为0)
-    func getLastNoticeId() -> Int{
+    public func getLastNoticeId() -> Int{
         let all = getAllNotices()
         let sortAll = all.sorted{$0.id<$1.id}
-
-        return Int(sortAll.first?.id ?? 0)
+        
+        return Int(sortAll.last?.id ?? 0)
     }
     
     //MARK:- 获取单个提醒
@@ -88,6 +88,28 @@ extension DataHandler{
         }
     }
     
+    //MARK:- 根据条件获取提醒
+    public func getNotices(byConditionFormat conditionFormat: String, withFetchLimit fetchLimit: Int = 20) -> [Notice] {
+        let request: NSFetchRequest<Notice> = Notice.fetchRequest()
+        
+        let predicate = NSPredicate(format: conditionFormat)
+        request.predicate = predicate
+        
+        request.fetchLimit = fetchLimit
+
+        let needReversed = conditionFormat == "id!=0"
+        let sort = NSSortDescriptor(key: "id", ascending: needReversed ? false : true)
+        
+        request.sortDescriptors = [sort]
+        
+        do{
+            let resultList = try context.fetch(request)
+            return needReversed ? resultList.reversed() : resultList
+        }catch let error{
+            debugPrint("<Core Data> fetch error: \(error)")
+            return []
+        }
+    }
     
     
     //MARK:- 获取所有提醒

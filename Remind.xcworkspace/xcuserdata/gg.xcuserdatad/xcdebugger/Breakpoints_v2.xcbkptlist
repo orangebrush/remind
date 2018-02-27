@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.597589"
+            timestampString = "541406603.993396"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "974"
-            endingLineNumber = "974"
+            startingLineNumber = "990"
+            endingLineNumber = "990"
             landmarkName = "hasBeginningCell()"
             landmarkType = "7">
          </BreakpointContent>
@@ -26,7 +26,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x9996;&#x9875;/vc/DetailViewController.swift"
-            timestampString = "539242370.9508621"
+            timestampString = "541156220.490925"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "95"
@@ -42,11 +42,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "sdk/RemindData/RemindData/API/&#x63a5;&#x53e3;&#x6a21;&#x5757;/DM+Event.swift"
-            timestampString = "539746434.597804"
+            timestampString = "541406603.993482"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "592"
-            endingLineNumber = "592"
+            startingLineNumber = "614"
+            endingLineNumber = "614"
             landmarkName = "addEvent(withEventParam:closure:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -74,7 +74,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x9996;&#x9875;/vc/EventViewController.swift"
-            timestampString = "539320990.295002"
+            timestampString = "541156220.491006"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "220"
@@ -90,12 +90,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x9996;&#x9875;/vc/EventViewController.swift"
-            timestampString = "539320990.29505"
+            timestampString = "541156220.491042"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "383"
             endingLineNumber = "383"
-            landmarkName = "edtingBtnClick(_:)"
+            landmarkName = "endRefreshEvent(_:_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -170,7 +170,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "sdk/RemindData/RemindData/API/&#x63a5;&#x53e3;&#x6a21;&#x5757;/DM+Event.swift"
-            timestampString = "539746434.598586"
+            timestampString = "541406603.993626"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "175"
@@ -186,11 +186,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.598622"
+            timestampString = "541406603.993662"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1134"
-            endingLineNumber = "1134"
+            startingLineNumber = "1159"
+            endingLineNumber = "1159"
             landmarkName = "tableView(_:cellForRowAt:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -218,11 +218,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "sdk/RemindData/RemindData/API/&#x63a5;&#x53e3;&#x6a21;&#x5757;/DM+Event.swift"
-            timestampString = "539746434.5986741"
+            timestampString = "541406603.993719"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "607"
-            endingLineNumber = "607"
+            startingLineNumber = "640"
+            endingLineNumber = "640"
             landmarkName = "addEvent(withEventParam:closure:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -234,11 +234,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "sdk/RemindData/RemindData/API/&#x63a5;&#x53e3;&#x6a21;&#x5757;/DM+Event.swift"
-            timestampString = "539746434.598706"
+            timestampString = "541406603.993753"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1044"
-            endingLineNumber = "1044"
+            startingLineNumber = "1102"
+            endingLineNumber = "1102"
             landmarkName = "decoderFrequency(withEventId:byFrequencyCycle:withPer:withTimesStr:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -250,7 +250,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/CustomViewController.swift"
-            timestampString = "539574388.930185"
+            timestampString = "541154597.662169"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "260"
@@ -298,13 +298,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/CustomViewController.swift"
-            timestampString = "539574388.930293"
+            timestampString = "541154597.66224"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "196"
             endingLineNumber = "196"
-            landmarkName = "CustomViewController"
-            landmarkType = "3">
+            landmarkName = "tabTouchDown()"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -314,11 +314,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.598784"
+            timestampString = "541406603.993837"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1282"
-            endingLineNumber = "1282"
+            startingLineNumber = "1302"
+            endingLineNumber = "1302"
             landmarkName = "tableView(_:cellForRowAt:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -330,7 +330,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/&#x6bcf;&#x65e5;&#x63d0;&#x9192;&#x65f6;&#x95f4;&#x9009;&#x62e9;&#x9875;&#x9762;/EventTimeVC.swift"
-            timestampString = "539162316.540732"
+            timestampString = "541156220.491302"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "150"
@@ -346,11 +346,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/&#x6bcf;&#x65e5;&#x63d0;&#x9192;&#x65f6;&#x95f4;&#x9009;&#x62e9;&#x9875;&#x9762;/EventTimeVC.swift"
-            timestampString = "539162316.540767"
+            timestampString = "541156220.491335"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "188"
-            endingLineNumber = "188"
+            startingLineNumber = "189"
+            endingLineNumber = "189"
             landmarkName = "collectionView(_:willDisplay:forItemAt:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -362,11 +362,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.5988441"
+            timestampString = "541406603.993908"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "644"
-            endingLineNumber = "644"
+            startingLineNumber = "649"
+            endingLineNumber = "649"
             landmarkName = "save(_:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -378,11 +378,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.598878"
+            timestampString = "541406603.9939491"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "650"
-            endingLineNumber = "650"
+            startingLineNumber = "655"
+            endingLineNumber = "655"
             landmarkName = "save(_:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -394,11 +394,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "sdk/RemindData/RemindData/API/&#x63a5;&#x53e3;&#x6a21;&#x5757;/DM+Event.swift"
-            timestampString = "539746434.598911"
+            timestampString = "541406603.993988"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "545"
-            endingLineNumber = "545"
+            startingLineNumber = "567"
+            endingLineNumber = "567"
             landmarkName = "getEventInfo(withEventId:closure:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -410,7 +410,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/&#x7f16;&#x8f91;&#x5668;/GANDatePicker.swift"
-            timestampString = "539144466.255056"
+            timestampString = "541395617.200621"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "252"
@@ -447,8 +447,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "466"
             endingLineNumber = "466"
-            landmarkName = "pickerView(_:numberOfRowsInComponent:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -463,8 +463,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "501"
             endingLineNumber = "501"
-            landmarkName = "pickerView(_:numberOfRowsInComponent:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -490,11 +490,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Event/&#x4e8b;&#x4ef6;&#x7f16;&#x8f91;&#x5668;/EventEditorVC.swift"
-            timestampString = "539746434.599177"
+            timestampString = "541406603.9940929"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1156"
-            endingLineNumber = "1156"
+            startingLineNumber = "1181"
+            endingLineNumber = "1181"
             landmarkName = "tableView(_:cellForRowAt:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -506,13 +506,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/Home/vc/HomeTableViewController.swift"
-            timestampString = "539574388.930933"
+            timestampString = "541156220.4915431"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "91"
             endingLineNumber = "91"
-            landmarkName = "refreshStock()"
-            landmarkType = "7">
+            landmarkName = "HomeTableViewController"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -527,8 +527,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "407"
             endingLineNumber = "407"
-            landmarkName = "getCurLunarDate()"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -543,8 +543,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "734"
             endingLineNumber = "734"
-            landmarkName = "pickerView(_:didSelectRow:inComponent:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -559,8 +559,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "392"
             endingLineNumber = "392"
-            landmarkName = "getCurLunarDate()"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -575,24 +575,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "51"
             endingLineNumber = "51"
-            landmarkName = "solarDate"
-            landmarkType = "24">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "app/Remind/Remind/AppDelegate.swift"
-            timestampString = "539574388.9311531"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "186"
-            endingLineNumber = "186"
-            landmarkName = "application(_:didReceive:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -639,8 +623,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "362"
             endingLineNumber = "362"
-            landmarkName = "getCurLunarDate()"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -687,8 +671,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "712"
             endingLineNumber = "712"
-            landmarkName = "pickerView(_:didSelectRow:inComponent:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -703,8 +687,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "715"
             endingLineNumber = "715"
-            landmarkName = "pickerView(_:didSelectRow:inComponent:)"
-            landmarkType = "7">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -810,12 +794,44 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "app/Remind/Remind/CustomViewController.swift"
-            timestampString = "539574388.93203"
+            timestampString = "541154597.6627721"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "374"
             endingLineNumber = "374"
-            landmarkName = "tabBar(_:didSelect:)"
+            landmarkName = "viewWillDisappear(_:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "app/Remind/Remind/AppDelegate.swift"
+            timestampString = "541403735.574286"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "320"
+            endingLineNumber = "320"
+            landmarkName = "jumpFromRemote(withMsgType:withMsgParam:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "app/Remind/Remind/AppDelegate.swift"
+            timestampString = "541403735.574319"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "186"
+            endingLineNumber = "186"
+            landmarkName = "application(_:didReceive:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

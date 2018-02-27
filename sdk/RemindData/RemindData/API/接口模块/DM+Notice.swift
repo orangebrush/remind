@@ -10,7 +10,7 @@ import Foundation
 
 extension DataManager{
     
-    public func getNoticeListFromClient(){
+    func getNoticeListFromClient(){
         
     }
     
@@ -23,6 +23,20 @@ extension DataManager{
             //"page": "\(page)",
             "pageSize": "\(pageSize)"
         ]
+        
+        //判断网络是否可用，否则获取本地数据
+        guard isNetworkEnable() else {
+            if isNew {
+                //closure(.failure, "网络连接错误", false, [])
+                let results = DataHandler.share().getNotices(byConditionFormat: "id!=0")
+                closure(.success, "获取本地历史提醒成功", false, results)
+            }else {
+                let results = DataHandler.share().getNotices(byConditionFormat: "id<\(id)")
+                closure(.success, "获取本地历史提醒成功", false, results)
+            }
+            return
+        }
+        
         Session.session(withAction: isNew ? Actions.getNewestNotices : Actions.getAllNotices, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             DispatchQueue.main.async {
                 guard codeResult == .success else{
@@ -91,7 +105,6 @@ extension DataManager{
                     if let extra = (recordData["extra"] as? [String:Any]){
                         if let lunarYear = extra["lunarYear"] as? Int32{
                             notice.lunarYear = lunarYear
-                        
                         }
                         if let ignoreYear = extra["ignoreYear"] as? Int{
                             notice.ignoreYear = ignoreYear == 1
@@ -103,7 +116,22 @@ extension DataManager{
                 //提交修改
                 dataHandler.commit()
                 
-                closure(.success, message, hasOther, noticeList)
+                //获取本地已存储数据并返回
+                var format = ""
+                if isNew {
+                    var results = noticeList
+                    if results.isEmpty {
+                        format = "id!=0"
+                        results += DataHandler.share().getNotices(byConditionFormat: format, withFetchLimit: pageSize - results.count)
+                    }else if results.count < pageSize {
+                        
+                    }
+                    closure(.success, message, hasOther, results)
+                }else {
+                    format = "id<\(id)"
+                    let localNotices = DataHandler.share().getNotices(byConditionFormat: format, withFetchLimit: pageSize)
+                    closure(.success, message, hasOther, localNotices)
+                }
             }
         }
     }
@@ -123,7 +151,7 @@ extension DataManager{
                     return
                 }
                 
-                guard let count = dataDic["count"] as? Int, let lastId = dataDic["maxId"] as? Int else {
+                guard let count = dataDic["count"] as? Int, let lastId = dataDic["maxid"] as? Int else {
                     closure(.failure, "count not existed", 0, 0)
                     return
                 }
@@ -145,19 +173,37 @@ extension DataManager{
     
     //MARK:- 删除提醒
     public func deleteNotice(withNoticeId noticeId: Int, closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        guard isNetworkEnable() else {
+            closure(.failure, "连接网络失败")
+            return
+        }
+        
         let dic = ["id": "\(noticeId)"]
         Session.session(withAction: Actions.deleteNotice, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             DispatchQueue.main.async {
                 closure(codeResult, message)
+                if codeResult == .success {
+                    DataHandler.share().deleteNotice(withNoticeId: noticeId)
+                }
             }
         }
     }
     
     //MARK:- 删除所有提醒
     public func deleteAllNotices(closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        guard isNetworkEnable() else {
+            closure(.failure, "连接网络失败")
+            return
+        }
+        
         Session.session(withAction: Actions.deleteAllNotices, withRequestMethod: .post, withParam: [:]) { (codeResult, message, data) in
             DispatchQueue.main.async {
                 closure(codeResult, message)
+                if codeResult == .success {
+                    for notice in DataHandler.share().getAllNotices(){
+                        DataHandler.share().deleteNotice(withNoticeId: Int(notice.id))
+                    }
+                }
             }
         }
     }

@@ -348,6 +348,10 @@ public struct EventParam{
     public var remindText = ""
     ///提醒状态
     public var remindStatus = RemindStatusType.normal
+    ///本地图标
+    public var icon = ""
+    ///网络图标base64
+    public var iconImage: UIImage?
 }
 
 //返回事件模型
@@ -406,6 +410,24 @@ public struct EventDB{
     public var zodiac: String?
     ///生肖图片
     public var zodiacIcon = ""
+    
+    ///本地图标
+    public var icon = ""
+    ///网络图标
+    public var iconImage: UIImage?
+    
+    ///获取需显示的图片
+    public func iconShot() -> UIImage? {
+        if let image = iconImage {
+            return image
+        }
+        
+        if let image = UIImage(named: "eventIcon_" + icon) {
+            return image
+        }
+        
+        return UIImage(named: "event_" + "\(type)")
+    }
     
     ///预提醒
     public var beginningList = [BeginningDB]()
@@ -579,7 +601,7 @@ extension DataManager{
     //MARK:- 添加事件
     public func addEvent(withEventParam eventParam: EventParam, closure: @escaping (_ codeResult: CodeResult, _ message: String, _ eventId: Int)->()){
         //事件重复方式。0:不重复、1:每天、2:工作日(五天制)、3:工作日(六天制)、4:法定工作日、5:每周、6:每月、7:每年、8:自定义（目前生日、节日和纪念日写7，其余写8）
-        let dict: [String: Any] = [
+        var dict: [String: Any] = [
             "introduce": eventParam.introduce,
             "beginTime": eventParam.beginDate.formatString(with: "yyyy-MM-dd HH:mm:ss"),
             "mode": (eventParam.type == 1 || eventParam.type == 2 || eventParam.type == 3) ? "7" : "8",
@@ -599,8 +621,19 @@ extension DataManager{
             "lunarYear": "\(eventParam.lunarYear)",
             "lunarMonth": "\(eventParam.lunarMonth)",
             "lunarDay": "\(eventParam.lunarDay)",
-            "isLeapMonth": eventParam.isLeapMonth ? "1" : "0"
+            "isLeapMonth": eventParam.isLeapMonth ? "1" : "0",
+            "icon": eventParam.icon
         ]
+        
+        //添加图片
+        if let iconImage = eventParam.iconImage {
+            if let data = UIImageJPEGRepresentation(iconImage, 1) {
+                let encodedImageStr = data.base64EncodedString(options: .endLineWithCarriageReturn)
+                dict["iconBase64"] = encodedImageStr
+            }else {
+                print("图片转二进制数据失败")
+            }
+        }
         
         Session.session(withAction: Actions.addEvent, withRequestMethod: .post, withParam: dict) { (codeResult, message, data) in
             DispatchQueue.main.async {
@@ -664,7 +697,7 @@ extension DataManager{
         let beginningModel = getBeginningModel(fromBeginningList: event.beginningList, andBeginningNext: event.beginningNext)
         let beginning = (beginningModel?.encoderList()) ?? ""
         
-        let dic: [String: Any] = [
+        var dic: [String: Any] = [
             "eventId": id,
             "introduce": event.introduce ?? "",
             "beginTime": beginTime,
@@ -685,8 +718,19 @@ extension DataManager{
             "lunarYear": "\(event.lunarYear)",
             "lunarMonth": "\(event.lunarMonth)",
             "lunarDay": "\(event.lunarDay)",
-            "isLeapMonth": event.isLeapMonth ? "1" : "0"
+            "isLeapMonth": event.isLeapMonth ? "1" : "0",
+            "icon": event.icon
         ]
+        
+        //添加图片
+        if let iconImage = event.iconImage {
+            if let data = UIImageJPEGRepresentation(iconImage, 1) {
+                let encodedImageStr = data.base64EncodedString(options: .endLineWithCarriageReturn)
+                dic["iconBase64"] = encodedImageStr
+            }else {
+                print("图片转二进制数据失败")
+            }
+        }
         
         Session.session(withAction: Actions.updateEvent, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             DispatchQueue.main.async {
@@ -952,6 +996,20 @@ extension DataManager{
         if let email = jsonDic["email"] as? Int{
             event.isEmailOpen = email == 1 && event.isEmailBinded
         }
+        
+        //获取事件本地图片
+        event.icon = jsonDic["icon"] as? String ?? ""
+        //获取网络图片
+        if let iconBase64 = jsonDic["iconBase64"] as? String {
+            //let decodedImageData = Data.init(base64Encoded: iconBase64, options: .ignoreUnknownCharacters)
+            if let url = URL(string: iconBase64) {
+                if let data = try? Data.init(contentsOf: url) {
+                    let image = UIImage(data: data)
+                    event.iconImage = image
+                }
+            }
+        }
+        
         DataHandler.share().commit()
         return event
     }

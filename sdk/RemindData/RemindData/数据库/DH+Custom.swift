@@ -8,7 +8,7 @@
 
 import Foundation
 public enum CustomType{
-    case color(UIColor?)
+    case colors([UIColor?])
     case img(UIImage?)
 }
 
@@ -36,19 +36,34 @@ extension DataHandler{
         custom.index = Int32(index ?? 0)
         
         switch customType {
-        case .color(let color):
+        case .colors(let colors):
             custom.isImage = false
             
             var red: CGFloat = 0
             var green: CGFloat = 0
             var blue: CGFloat = 0
             var alpha: CGFloat = 0
-            color?.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-            custom.r = Float(red)
-            custom.g = Float(green)
-            custom.b = Float(blue)
-            custom.a = Float(alpha)
-            
+            var red1: CGFloat = 0
+            var green1: CGFloat = 0
+            var blue1: CGFloat = 0
+            var alpha1: CGFloat = 0
+            if index == nil {
+                if colors.count == 2 {
+                    colors[0]?.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+                    colors[1]?.getRed(&red1, green: &green1, blue: &blue1, alpha: &alpha1)
+                    custom.r = Float(red)
+                    custom.g = Float(green)
+                    custom.b = Float(blue)
+                    custom.a = Float(alpha)
+                    custom.r1 = Float(red1)
+                    custom.g1 = Float(green1)
+                    custom.b1 = Float(blue1)
+                    custom.a1 = Float(alpha1)
+                }else {
+                    print("需传入两个颜色值")
+                    return false
+                }
+            }
             return commit()
         case .img(let img):
             custom.isImage = true
@@ -89,9 +104,9 @@ extension DataHandler{
     }
     
     ///@param0: 是否为颜色 @param1: 是否为默认 @param2:下标 @param3:自定义颜色 @param4:自定义图片
-    public func getCustomColorOrImage(closure: (_ isColor: Bool, _ isDefault: Bool, _ index: Int, _ color: UIColor?, _ image: UIImage?)->()) {
+    public func getCustomColorOrImage(closure: (_ isColor: Bool, _ isDefault: Bool, _ index: Int, _ color: UIColor?, _ color1: UIColor?, _ image: UIImage?)->()) {
         guard let custom = getCustom() else{
-            closure(true, false, 0, nil, nil)
+            closure(true, false, 0, nil, nil, nil)
             return
         }
         
@@ -99,13 +114,19 @@ extension DataHandler{
         let g = custom.g
         let b = custom.b
         let a = custom.a
+        
+        let r1 = custom.r1
+        let g1 = custom.g1
+        let b1 = custom.b1
+        let a1 = custom.a1
 
         let isImage = custom.isImage
-        let color = UIColor.init(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: CGFloat(a))
+        let color = UIColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: CGFloat(a))
+        let color1 = UIColor(red: CGFloat(r1), green: CGFloat(g1), blue: CGFloat(b1), alpha: CGFloat(a1))
         var image: UIImage?
         if let data = custom.bgImg{
             image = UIImage.init(data: data)
         }
-        closure(isImage, custom.isCustom, Int(custom.index), isImage ? nil : color, isImage ? image : nil)
+        closure(isImage, custom.isCustom, Int(custom.index), isImage ? nil : color, isImage ? nil : color1, isImage ? image : nil)
     }
 }

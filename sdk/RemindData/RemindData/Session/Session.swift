@@ -53,6 +53,11 @@ class Session {
             }
         }
         
+        guard DataManager.share().isNetworkEnable() else {
+            closure(.failure, "网络不可用", nil)
+            return
+        }
+        
         //post or get
         let isPost = requestMethod == .post
         do{
