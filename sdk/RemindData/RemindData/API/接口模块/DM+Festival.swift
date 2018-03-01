@@ -51,6 +51,31 @@ public struct FestivalSettingFieldModel{
     public var isBindingWeixin = false
     ///设置卡片显示的节日节气数 或 方式 类型值
     public var showType: (rawValue: String, text: String) = ("","")
+    ///需提醒的节气id
+    public var remindIdList = [Int]()
+    ///不需要提醒的节气ID
+    public var noRemindIdList = [Int]()
+    
+    public func showRemindIdListString() -> String{
+        var result = ""
+        for (index, element) in remindIdList.enumerated() {
+            if index != 0 {
+                result += ","
+            }
+            result += "\(element)"
+        }
+        return result
+    }
+    public func showNoRemindIdListString() -> String {
+        var result = ""
+        for (index, element) in noRemindIdList.enumerated() {
+            if index != 0 {
+                result += ","
+            }
+            result += "\(element)"
+        }
+        return result
+    }
 }
 
 ///节日节气卡片信息模型
@@ -204,7 +229,9 @@ extension DataManager{
             "enable": "\(festivalSettingModel.field.isNotif)",
             "byEmail": "\(festivalSettingModel.field.byEmail)",
             "byWeixin": "\(festivalSettingModel.field.byWeixin)",
-            "strategy": festivalSettingModel.field.showType.rawValue
+            "strategy": festivalSettingModel.field.showType.rawValue,
+            "remindIds": festivalSettingModel.field.showRemindIdListString(),
+            "noRemindIds": festivalSettingModel.field.showNoRemindIdListString()
         ]
         
         let dic: [String: Any] = [
@@ -315,7 +342,7 @@ extension DataManager{
         if let bgImg = festivalData["bgImg"] as? String{
             festival.bgImg = bgImg
         }
-
+        festival.isRemind = festivalData["isRemind"] as? Bool ?? false
         return festival
     }
 }

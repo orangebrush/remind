@@ -19,6 +19,7 @@ public enum CardType{
     case step(String, StepModel)
     case holiday(String, [HolidayModel])
     case eventClient(String, [EventClientModel])
+    case calendar(String,String)
     
     ///获取名称
     public func name() -> String{
@@ -39,6 +40,8 @@ public enum CardType{
         case .eventClient(let n, _):
             result = n
         case .holiday(let n, _):
+            result = n
+        case .calendar(let n,_):
             result = n
         }
         return result
@@ -64,6 +67,8 @@ public enum CardType{
             result = l
         case .holiday(_, let l):
             result = l
+        case .calendar(_, _):
+            result = []
         }
         return result
     }
@@ -79,7 +84,7 @@ public struct Card{
 }
 
 public enum CardSettingType: Int{
-    case weather = 1, festival, birthday, event, eventClient, stock, steps
+    case weather = 1, festival, birthday, event, eventClient, stock, steps , holiday , calendar 
 }
 
 
@@ -235,6 +240,8 @@ public struct FestivalModel {
     public var ganZhi = ""
     ///是否已选择
     public var selected = false
+    ///是否提醒
+    public var isRemind = false
 }
 
 //生日模型
@@ -277,6 +284,33 @@ public struct BirthdayModel {
     public var isIgnoreYear = false
     ///生肖图片
     public var zodiacIcon = ""
+    
+    ///本地图标
+    public var icon = ""
+    ///网络图标
+    public var iconImage: UIImage?
+    
+    ///获取需显示的图片
+    public func iconShot() -> UIImage? {
+        if let image = iconImage {
+            return image
+        }
+        
+        let list = icon.components(separatedBy: "_")
+        if list.count == 2 {
+            let iconType = list[0]
+            if iconType == "9"{
+                if let image = UIImage(named: "event_" + "\(type)") {
+                    return image
+                }
+            }
+            if let image = UIImage(named: "eventIcon_" + icon) {
+                return image
+            }
+        }
+        
+        return UIImage(named: "event_" + "\(type)")
+    }
 }
 
 //重要事件模型
@@ -313,6 +347,33 @@ public struct EventModel {
     public var age = 0
     ///double Age 纪念日周年
     public var doubleAge: Double = 0
+    
+    ///本地图标
+    public var icon = ""
+    ///网络图标
+    public var iconImage: UIImage?
+    
+    ///获取需显示的图片
+    public func iconShot() -> UIImage? {
+        if let image = iconImage {
+            return image
+        }
+        
+        let list = icon.components(separatedBy: "_")
+        if list.count == 2 {
+            let iconType = list[0]
+            if iconType == "9"{
+                if let image = UIImage(named: "event_" + "\(type)") {
+                    return image
+                }
+            }
+            if let image = UIImage(named: "eventIcon_" + icon) {
+                return image
+            }
+        }
+        
+        return UIImage(named: "event_" + "\(type)")
+    }
 }
 
 //每日提醒类型

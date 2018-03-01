@@ -67,7 +67,7 @@ public class BeginningModel: NSObject {
         
         for (index, tuple) in sortedEventBeginningList.enumerated(){
             if index != 0{
-                value += ","
+                value += ", "
             }
             value += "\(tuple.1)"
             
@@ -352,6 +352,14 @@ public struct EventParam{
     public var icon = ""
     ///网络图标base64
     public var iconImage: UIImage?
+    ///是否开启提醒
+    public var enable = true
+    ///是否遵循法定工作日
+    public var isFollowLawful = true
+    ///是否过双历生日
+    public var isDoubleBirthday = true
+    ///提醒时间
+    public var remindTimes = Times()
 }
 
 //返回事件模型
@@ -422,10 +430,19 @@ public struct EventDB{
             return image
         }
         
-        if let image = UIImage(named: "eventIcon_" + icon) {
-            return image
+        let list = icon.components(separatedBy: "_")
+        if list.count == 2 {
+            let iconType = list[0]
+            if iconType == "9"{
+                if let image = UIImage(named: "event_" + "\(type)") {
+                    return image
+                }
+            }
+            if let image = UIImage(named: "eventIcon_" + icon) {
+                return image
+            }
         }
-        
+
         return UIImage(named: "event_" + "\(type)")
     }
     
@@ -434,6 +451,15 @@ public struct EventDB{
     public var beginningNext: BeginningDB?
     ///周期
     public var frequency = FrequencyDB()
+    
+    ///是否开启提醒
+    public var enable = true
+    ///是否遵循法定工作日
+    public var isFollowLawful = true
+    ///是否过双历生日
+    public var isDoubleBirthday = true
+    ///提醒时间
+    public var remindTimes = Times()
     
     ///显示
     public func showDate() -> String{
@@ -1008,6 +1034,13 @@ extension DataManager{
                     event.iconImage = image
                 }
             }
+        }
+        
+        event.enable = jsonDic["enable"] as? Bool ?? false
+        event.isFollowLawful = jsonDic["isFollowLawful"] as? Bool ?? false
+        event.isDoubleBirthday = jsonDic["isDoubleBirthday"] as? Bool ?? false
+        if let remindTimesStr = jsonDic["remindTimes"] as? String {
+            event.remindTimes = decoderTimes(withTimesStr: remindTimesStr)
         }
         
         DataHandler.share().commit()

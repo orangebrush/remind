@@ -133,6 +133,18 @@ extension DataManager{
                             }
                             birthday.typeName = birthdayData["typeName"] as? String ?? ""
                             birthday.zodiacIcon = birthdayData["zodiacIcon"] as? String ?? ""              //生肖图片
+                            //获取事件本地图片
+                            birthday.icon = birthdayData["icon"] as? String ?? ""
+                            //获取网络图片
+                            if let iconBase64 = birthdayData["iconBase64"] as? String {
+                                //let decodedImageData = Data.init(base64Encoded: iconBase64, options: .ignoreUnknownCharacters)
+                                if let url = URL(string: iconBase64) {
+                                    if let data = try? Data.init(contentsOf: url) {
+                                        let image = UIImage(data: data)
+                                        birthday.iconImage = image
+                                    }
+                                }
+                            }
                             birthdayList.append(birthday)
                         }
                     }
@@ -183,6 +195,17 @@ extension DataManager{
                             event.content = eventData["content"] as? String ?? ""
                             event.age = eventData["age"] as? Int ?? 0
                             event.doubleAge = eventData["doubleAge"] as? Double ?? 0
+                            //获取事件本地图片
+                            event.icon = eventData["icon"] as? String ?? ""
+                            //获取网络图片
+                            if let iconBase64 = eventData["iconBase64"] as? String {
+                                if let url = URL(string: iconBase64) {
+                                    if let data = try? Data.init(contentsOf: url) {
+                                        let image = UIImage(data: data)
+                                        event.iconImage = image
+                                    }
+                                }
+                            }
                             eventList.append(event)
                         }
                     }
@@ -296,6 +319,23 @@ extension DataManager{
                     eventClientCard.cardId = eventClientDicData["tabId"] as? Int ?? 0
                     cardList.append(eventClientCard)
                 }
+                //股票
+                if let calendarDicData = dicData["calendar"] as? [String: Any]{
+                    var name = ""
+                    if let calendarName = calendarDicData["name"] as? String{
+                        name = calendarName
+                    }
+                    
+                    //卡片排序
+                    let sort = calendarDicData["sort"] as? Int ?? 0
+                    
+                    var calendarCard = Card()
+                    calendarCard.type = CardType.calendar(name,"日历")
+                    calendarCard.sort = sort
+                    calendarCard.cardId = calendarDicData["tabId"] as? Int ?? 0
+                    cardList.append(calendarCard)
+                }
+                
                 closure(.success, message, cardList, tabInfo)
             }
         }
