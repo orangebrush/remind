@@ -8,6 +8,31 @@
 
 import Foundation
 
+extension Notice {
+    ///用于返回notice头像
+    public func iconShot() -> UIImage? {
+        if let imageData = iconImageData {
+            return UIImage(data: imageData)
+        }else if let iconStr = icon {
+            let list = iconStr.components(separatedBy: "_")
+            if list.count == 2 {
+                let iconType = list[0]
+                if iconType == "9"{
+                    if let image = UIImage(named: "event_" + "\(type)") {
+                        return image
+                    }
+                }
+                if let image = UIImage(named: "eventIcon_" + iconStr) {
+                    return image
+                }
+            }
+            
+            return UIImage(named: "event_" + "\(type)")
+        }
+        return nil
+    }
+}
+
 extension DataManager{
     
     func getNoticeListFromClient(){
@@ -101,6 +126,16 @@ extension DataManager{
                     }
                     if let isOperatedInt = recordData["status"] as? Int32{              //0:不再提醒可以操作,1:不再提醒不可以操作
                         notice.isOperated = isOperatedInt == 0
+                    }
+                    if let icon = recordData["icon"] as? String {
+                        notice.icon = icon
+                    }
+                    if let iconBase64 = recordData["iconBase64"] as? String {
+                        if let url = URL(string: iconBase64) {
+                            notice.iconImageData = try? Data.init(contentsOf: url)
+                        }
+                    }else {
+                        notice.iconImageData = nil
                     }
                     if let extra = (recordData["extra"] as? [String:Any]){
                         if let lunarYear = extra["lunarYear"] as? Int32{

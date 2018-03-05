@@ -34,7 +34,7 @@ class Session {
                     return
                 }
                 
-               //debugPrint(result)
+               debugPrint(result)
                 
                 guard let code = result["code"] as? Int, let message = result["message"] as? String else {
                     closure(CodeResult.failure, "解析数据错误", nil)

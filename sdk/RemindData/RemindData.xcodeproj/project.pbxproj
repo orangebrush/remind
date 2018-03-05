@@ -145,6 +145,7 @@
 		C65248EA201A09A6009433FB /* DM+Calendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DM+Calendar.swift"; sourceTree = "<group>"; };
 		C65248FD201B0E26009433FB /* DM+Holiday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DM+Holiday.swift"; sourceTree = "<group>"; };
 		C656AA2E1FFD07F600B1FA53 /* DM+Stock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DM+Stock.swift"; sourceTree = "<group>"; };
+		C6798DE6204D3B390082F942 /* Model 1.0.2.19(180303).xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Model 1.0.2.19(180303).xcdatamodel"; sourceTree = "<group>"; };
 		C6CBC71B1FE8A5410038BD75 /* NotifManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifManager.swift; sourceTree = "<group>"; };
 		C6CBC7221FE8B9160038BD75 /* SDKInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = SDKInfo.plist; sourceTree = "<group>"; };
 		C6CBC7281FE8BA340038BD75 /* PlistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlistManager.swift; sourceTree = "<group>"; };
@@ -767,9 +768,10 @@
 		C63E62AF1FD544E900F9A9CC /* Model.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				C6798DE6204D3B390082F942 /* Model 1.0.2.19(180303).xcdatamodel */,
 				C63E62B01FD544E900F9A9CC /* Model.xcdatamodel */,
 			);
-			currentVersion = C63E62B01FD544E900F9A9CC /* Model.xcdatamodel */;
+			currentVersion = C6798DE6204D3B390082F942 /* Model 1.0.2.19(180303).xcdatamodel */;
 			path = Model.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

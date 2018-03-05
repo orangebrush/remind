@@ -172,8 +172,12 @@ public struct WeatherModel {
     public var imgStr = ""
     ///未来天气列表2~7天
     public var dailyList = [WeatherModel]()
+    ///首页前后5天数据
+    public var home_dailyList = [WeatherModel]()
     ///空气质量(优良)
     public var quality = ""
+    ///天气描述
+    public var description = ""
 }
 
 ///节日类型（后台未确定类型值固定）

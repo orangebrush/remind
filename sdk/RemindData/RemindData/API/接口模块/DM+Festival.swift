@@ -55,7 +55,8 @@ public struct FestivalSettingFieldModel{
     public var remindIdList = [Int]()
     ///不需要提醒的节气ID
     public var noRemindIdList = [Int]()
-    
+    ///是否开启提醒
+    public var enable = false
     public func showRemindIdListString() -> String{
         var result = ""
         for (index, element) in remindIdList.enumerated() {
@@ -82,7 +83,6 @@ public struct FestivalSettingFieldModel{
 public struct FestivalSettingModel{
     ///设置id（自动处理上传）
     var setId = 0
-    
     public var field = FestivalSettingFieldModel()
     ///包含的节日类型与选择个数
     public var festivalTypeList = [FestivalTypeModel]()
@@ -152,6 +152,7 @@ extension DataManager{
                 }
                 
                 festivalSetting.setId = dicData["setId"] as? Int ?? 0                       //设置id（用于后台查询，私有）
+               
                 
                 //field
                 guard let fieldDicData = dicData["setFields"] as? [String: Any] else{
@@ -162,6 +163,7 @@ extension DataManager{
                 festivalSetting.field.ring = fieldDicData["ring"] as? String ?? ""              //提醒铃声
                 festivalSetting.field.intervalMin = fieldDicData["interval"] as? Int ?? 0   //提醒间隔
                 festivalSetting.field.count = fieldDicData["count"] as? Int ?? 0            //提醒次数
+                festivalSetting.field.enable = fieldDicData["enable"] as? Bool ?? false                  //是否开启提醒
                 if let timeStr = fieldDicData["times"] as? String{                          //提醒时间
                     festivalSetting.field.time = Date(withDateStr: "2000-01-01 " + timeStr, withFormatStr: "yyyy-MM-dd HH:mm")
                 }
@@ -226,7 +228,7 @@ extension DataManager{
             "count": "\(festivalSettingModel.field.count)",
             "times": festivalSettingModel.field.time.formatString(with: "HH:mm"),
             "prealertTimes": festivalSettingModel.field.beginningModel.encoderList(),
-            "enable": "\(festivalSettingModel.field.isNotif)",
+            "enable": "\(festivalSettingModel.field.enable)",
             "byEmail": "\(festivalSettingModel.field.byEmail)",
             "byWeixin": "\(festivalSettingModel.field.byWeixin)",
             "strategy": festivalSettingModel.field.showType.rawValue,

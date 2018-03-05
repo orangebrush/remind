@@ -287,6 +287,7 @@ extension DataManager{
         weather.week = jsonData["week"] as? String ?? ""         //周几
         weather.lunar = jsonData["lunar"] as? String ?? ""       //农历日期
         weather.weather = jsonData["weather"] as? String ?? ""   //天气情况
+        weather.description = jsonData["description"] as? String ?? ""   //未来天气概况
         if let aqi = jsonData["aqi"] as? String{                 //空气质量指数
             weather.aqi = aqi
         }
@@ -316,6 +317,12 @@ extension DataManager{
             for dailyData in dailyDataList{
                 let dailyWeather = getWeather(fromJSON: dailyData)
                 weather.dailyList.append(dailyWeather)
+            }
+        }
+        if let dailyDataList = jsonData["dailyList"] as? [[String: Any]]{
+            for dailyData in dailyDataList{
+                let dailyWeather = getWeather(fromJSON: dailyData)
+                weather.home_dailyList.append(dailyWeather)
             }
         }
         
