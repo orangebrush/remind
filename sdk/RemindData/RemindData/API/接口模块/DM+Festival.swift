@@ -271,6 +271,26 @@ extension DataManager{
         }
     }
     
+    ///根据类型保存节日列表（传枚举类型）
+    public func setFestivalList(byFestivalType festivalTypeRawValue: Int, withFestivalIdList idList: [Int], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
+        var listStr = ""
+        for (index, id) in idList.enumerated() {
+            if index != 0 {
+                listStr += ","
+            }
+            listStr += "\(id)"
+        }
+        let dic = [
+            "type": "\(festivalTypeRawValue)",
+            "festivals": listStr,
+        ]
+        Session.session(withAction: Actions.setFestivalListByType, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
+            DispatchQueue.main.async {
+                closure(codeResult, message)
+            }
+        }
+    }
+    
     ///设置关注节日
     public func setSelectedFestival(withFestivalType festivalTypeRawValue: Int, withFestivalIdList festivalIdList: [Int], closure: @escaping (_ codeResult: CodeResult, _ message: String)->()){
         var idStrList = ""

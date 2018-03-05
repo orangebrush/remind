@@ -105,6 +105,7 @@ struct Actions {
     static let getFestivalSetting       = "festival/tab_info"                   //获取节日设置
     static let setFestivalSetting       = "festival/tab_set"                    //修改节日设置
     static let getFestivalListByType    = "festival/type/festival_list"         //根据类型获取节日列表
+    static let setFestivalListByType    = "festival/remind/save"                //根据类型设置节日列表
     static let setSelectedFestival      = "festival/save"                       //设置关注节日
     
     static let getHolidaySetting        = "holiday/set/get"                     //获取节假日设置

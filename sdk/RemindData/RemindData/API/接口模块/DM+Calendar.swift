@@ -48,13 +48,15 @@ public struct CalendarModel{
 
 extension DataManager{
     
+    static var index = 0
     ///获取万年历数据
     public func getCalendarData(withDate date: Date, fromFirstDay flag: Bool = true, closure: @escaping (CodeResult, String, CalendarModel)->()){
         let dic = [
             "beginDate":
                 flag ? date.formatString(with: "yyyy") + "-01-01" : date.formatString(with: "yyyy-MM-dd")
         ]
-        
+        DataManager.index += 1
+        print("0000开始-------------------------\(DataManager.index)")
         Session.session(withAction: Actions.getCalendarData, withRequestMethod: .post, withParam: dic) { (codeResult, message, data) in
             var calendarModel = CalendarModel()
             guard codeResult == .success else{
@@ -110,6 +112,7 @@ extension DataManager{
             self.localCalendarModel[year] = calendarModel
             
             DispatchQueue.main.async {
+                print("0011开始-------------------------\(DataManager.index)")
                 closure(.success, message, calendarModel)
             }
         }

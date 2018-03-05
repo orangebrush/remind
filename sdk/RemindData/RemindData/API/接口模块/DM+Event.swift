@@ -648,9 +648,12 @@ extension DataManager{
             "lunarMonth": "\(eventParam.lunarMonth)",
             "lunarDay": "\(eventParam.lunarDay)",
             "isLeapMonth": eventParam.isLeapMonth ? "1" : "0",
-            "icon": eventParam.icon
+            "icon": eventParam.icon,
+            "isDoubleBirthday": eventParam.isDoubleBirthday,
+            "isFollowLawful": eventParam.isFollowLawful,
+            "enable": eventParam.enable,
+            "remindTimes": eventParam.remindTimes.encoderTimes(forServer: true)
         ]
-        
         //添加图片
         if let iconImage = eventParam.iconImage {
             if let data = UIImageJPEGRepresentation(iconImage, 1) {
@@ -745,7 +748,11 @@ extension DataManager{
             "lunarMonth": "\(event.lunarMonth)",
             "lunarDay": "\(event.lunarDay)",
             "isLeapMonth": event.isLeapMonth ? "1" : "0",
-            "icon": event.icon
+            "icon": event.icon,
+            "isDoubleBirthday": event.isDoubleBirthday,
+            "isFollowLawful": event.isFollowLawful,
+            "enable": event.enable,
+            "remindTimes": event.remindTimes.encoderTimes(forServer: true)
         ]
         
         //添加图片

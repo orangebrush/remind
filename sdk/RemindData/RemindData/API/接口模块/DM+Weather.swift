@@ -291,13 +291,13 @@ extension DataManager{
             weather.aqi = aqi
         }
         if let temp = jsonData["temp"] as? String{                  //温度
-            weather.temp = Int(temp) ?? 0
+            weather.temp = Int(round(Double(temp) ?? 0))
         }
         if let tempHigh = jsonData["tempHigh"] as? String{          //最高温度
-            weather.tempHigh = Int(tempHigh) ?? 0
+            weather.tempHigh = Int(round(Double(tempHigh) ?? 0))
         }
         if let tempLow = jsonData["tempLow"] as? String{            //最低温度
-            weather.tempLow = Int(tempLow) ?? 0
+            weather.tempLow = Int(round(Double(tempLow) ?? 0))
         }
         if let aqiInfoData = jsonData["aqiInfo"] as? [String: String]{       //空气质量指数详情
             var aqiInfo = AqiInfoModel()

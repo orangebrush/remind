@@ -34,7 +34,7 @@ class Session {
                     return
                 }
                 
-               debugPrint(result)
+               //debugPrint(result)
                 
                 guard let code = result["code"] as? Int, let message = result["message"] as? String else {
                     closure(CodeResult.failure, "解析数据错误", nil)
@@ -80,6 +80,7 @@ class Session {
             
             //生成url
             guard let url = URL(string: urlStr) else{
+                closure(.failure, "<Sesstion> url生成错误", nil)
                 return
             }
             
@@ -103,6 +104,7 @@ class Session {
                                     return
                                 }
                             })
+                            closure(.failure, "正在注册", nil)
                             return
                             //tempParam["uid"] = ""
                         }
