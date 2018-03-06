@@ -107,9 +107,11 @@ extension DataManager{
                 }
             }
             
-            //缓存到本地    
-            let year = Calendar.current.component(.year, from: date)
-            self.localCalendarModel[year] = calendarModel
+            //缓存到本地
+            if flag {
+                let year = Calendar.current.component(.year, from: date)
+                self.localCalendarModel[year] = calendarModel
+            }
             
             DispatchQueue.main.async {
                 print("0011开始-------------------------\(DataManager.index)")
