@@ -26,7 +26,6 @@ extension Notice {
                     return image
                 }
             }
-            
             return UIImage(named: "event_" + "\(type)")
         }
         return nil
